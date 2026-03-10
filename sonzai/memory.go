@@ -1,0 +1,87 @@
+package sonzai
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+)
+
+// MemoryResource provides memory operations for an agent.
+type MemoryResource struct {
+	http *httpClient
+}
+
+// List returns the memory tree for an agent.
+func (m *MemoryResource) List(ctx context.Context, agentID string, opts *MemoryListOptions) (*MemoryResponse, error) {
+	params := map[string]string{}
+	if opts != nil {
+		if opts.UserID != "" {
+			params["user_id"] = opts.UserID
+		}
+		if opts.InstanceID != "" {
+			params["instance_id"] = opts.InstanceID
+		}
+		if opts.ParentID != "" {
+			params["parent_id"] = opts.ParentID
+		}
+		if opts.IncludeContents {
+			params["include_contents"] = "true"
+		}
+		if opts.Limit > 0 {
+			params["limit"] = strconv.Itoa(opts.Limit)
+		}
+	}
+
+	var result MemoryResponse
+	err := m.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Search searches agent memories.
+func (m *MemoryResource) Search(ctx context.Context, agentID string, opts MemorySearchOptions) (*MemorySearchResponse, error) {
+	params := map[string]string{
+		"q": opts.Query,
+	}
+	if opts.InstanceID != "" {
+		params["instance_id"] = opts.InstanceID
+	}
+	if opts.Limit > 0 {
+		params["limit"] = strconv.Itoa(opts.Limit)
+	}
+
+	var result MemorySearchResponse
+	err := m.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/search", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Timeline returns the memory timeline for an agent.
+func (m *MemoryResource) Timeline(ctx context.Context, agentID string, opts *MemoryTimelineOptions) (*MemoryTimelineResponse, error) {
+	params := map[string]string{}
+	if opts != nil {
+		if opts.UserID != "" {
+			params["user_id"] = opts.UserID
+		}
+		if opts.InstanceID != "" {
+			params["instance_id"] = opts.InstanceID
+		}
+		if opts.Start != "" {
+			params["start"] = opts.Start
+		}
+		if opts.End != "" {
+			params["end"] = opts.End
+		}
+	}
+
+	var result MemoryTimelineResponse
+	err := m.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/timeline", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
