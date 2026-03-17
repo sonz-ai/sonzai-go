@@ -60,7 +60,9 @@ type Client struct {
 	// Voices provides the global voice catalog.
 	Voices *VoicesResource
 
-	// http is the underlying HTTP transport for low-level access.
+	// Webhooks provides webhook registration and management.
+	Webhooks *WebhooksResource
+
 	http *httpClient
 }
 
@@ -90,9 +92,10 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 	http := newHTTPClient(cfg.baseURL, apiKey, cfg.timeout)
 
 	return &Client{
-		Agents: newAgentsResource(http),
-		Eval:   eval.New(http),
-		Voices: &VoicesResource{http: http},
-		http:   http,
+		Agents:   newAgentsResource(http),
+		Eval:     eval.New(http),
+		Voices:   &VoicesResource{http: http},
+		Webhooks: &WebhooksResource{http: http},
+		http:     http,
 	}
 }
