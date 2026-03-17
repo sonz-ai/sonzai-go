@@ -76,7 +76,9 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 
 	if resp.StatusCode >= 400 {
 		msg := string(respBody)
-		var errResp struct{ Error string `json:"error"` }
+		var errResp struct {
+			Error string `json:"error"`
+		}
 		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
 			msg = errResp.Error
 		}
@@ -86,7 +88,8 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 	return respBody, nil
 }
 
-func (c *httpClient) get(ctx context.Context, path string, params map[string]string, result interface{}) error {
+// Get performs an HTTP GET request and unmarshals the response into result.
+func (c *httpClient) Get(ctx context.Context, path string, params map[string]string, result interface{}) error {
 	data, err := c.request(ctx, http.MethodGet, path, nil, params)
 	if err != nil {
 		return err
@@ -94,7 +97,8 @@ func (c *httpClient) get(ctx context.Context, path string, params map[string]str
 	return json.Unmarshal(data, result)
 }
 
-func (c *httpClient) post(ctx context.Context, path string, body interface{}, result interface{}) error {
+// Post performs an HTTP POST request and unmarshals the response into result.
+func (c *httpClient) Post(ctx context.Context, path string, body interface{}, result interface{}) error {
 	data, err := c.request(ctx, http.MethodPost, path, body, nil)
 	if err != nil {
 		return err
@@ -105,7 +109,8 @@ func (c *httpClient) post(ctx context.Context, path string, body interface{}, re
 	return nil
 }
 
-func (c *httpClient) put(ctx context.Context, path string, body interface{}, result interface{}) error {
+// Put performs an HTTP PUT request and unmarshals the response into result.
+func (c *httpClient) Put(ctx context.Context, path string, body interface{}, result interface{}) error {
 	data, err := c.request(ctx, http.MethodPut, path, body, nil)
 	if err != nil {
 		return err
@@ -116,7 +121,20 @@ func (c *httpClient) put(ctx context.Context, path string, body interface{}, res
 	return nil
 }
 
-func (c *httpClient) del(ctx context.Context, path string, result interface{}) error {
+// Patch performs an HTTP PATCH request and unmarshals the response into result.
+func (c *httpClient) Patch(ctx context.Context, path string, body interface{}, result interface{}) error {
+	data, err := c.request(ctx, http.MethodPatch, path, body, nil)
+	if err != nil {
+		return err
+	}
+	if result != nil {
+		return json.Unmarshal(data, result)
+	}
+	return nil
+}
+
+// Delete performs an HTTP DELETE request and unmarshals the response into result.
+func (c *httpClient) Delete(ctx context.Context, path string, result interface{}) error {
 	data, err := c.request(ctx, http.MethodDelete, path, nil, nil)
 	if err != nil {
 		return err
@@ -127,8 +145,8 @@ func (c *httpClient) del(ctx context.Context, path string, result interface{}) e
 	return nil
 }
 
-// streamSSE sends a request and calls the callback for each parsed SSE event.
-func (c *httpClient) streamSSE(ctx context.Context, method, path string, body interface{}, callback func(json.RawMessage) error) error {
+// StreamSSE sends a request and calls the callback for each parsed SSE event.
+func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body interface{}, callback func(json.RawMessage) error) error {
 	u, err := url.Parse(c.baseURL + path)
 	if err != nil {
 		return fmt.Errorf("invalid URL: %w", err)
@@ -162,7 +180,9 @@ func (c *httpClient) streamSSE(ctx context.Context, method, path string, body in
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(resp.Body)
 		msg := string(respBody)
-		var errResp struct{ Error string `json:"error"` }
+		var errResp struct {
+			Error string `json:"error"`
+		}
 		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
 			msg = errResp.Error
 		}

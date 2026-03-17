@@ -27,10 +27,22 @@ type SessionEndOptions struct {
 	Messages        []ChatMessage `json:"messages,omitempty"`
 }
 
+// SessionToolsOptions configures tools for a session.
+type SessionToolsOptions struct {
+	Tools []ToolDefinition `json:"tools"`
+}
+
+// ToolDefinition defines an external tool available during a session.
+type ToolDefinition struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+}
+
 // Start begins a chat session.
 func (s *SessionsResource) Start(ctx context.Context, agentID string, opts SessionStartOptions) (*SessionResponse, error) {
 	var result SessionResponse
-	err := s.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/start", agentID), opts, &result)
+	err := s.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/start", agentID), opts, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +52,17 @@ func (s *SessionsResource) Start(ctx context.Context, agentID string, opts Sessi
 // End concludes a chat session.
 func (s *SessionsResource) End(ctx context.Context, agentID string, opts SessionEndOptions) (*SessionResponse, error) {
 	var result SessionResponse
-	err := s.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/end", agentID), opts, &result)
+	err := s.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/end", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// SetTools configures the tools available for a session.
+func (s *SessionsResource) SetTools(ctx context.Context, agentID, sessionID string, opts SessionToolsOptions) (*SessionResponse, error) {
+	var result SessionResponse
+	err := s.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/%s/tools", agentID, sessionID), opts, &result)
 	if err != nil {
 		return nil, err
 	}

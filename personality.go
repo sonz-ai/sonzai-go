@@ -24,7 +24,17 @@ func (p *PersonalityResource) Get(ctx context.Context, agentID string, opts *Per
 	}
 
 	var result PersonalityResponse
-	err := p.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/personality", agentID), params, &result)
+	err := p.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/personality", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Update updates the personality Big5 scores for an agent.
+func (p *PersonalityResource) Update(ctx context.Context, agentID string, opts PersonalityUpdateOptions) (*PersonalityUpdateResponse, error) {
+	var result PersonalityUpdateResponse
+	err := p.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/personality", agentID), opts, &result)
 	if err != nil {
 		return nil, err
 	}

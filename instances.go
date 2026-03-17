@@ -13,7 +13,7 @@ type InstancesResource struct {
 // List returns all instances for an agent.
 func (i *InstancesResource) List(ctx context.Context, agentID string) (*InstanceListResponse, error) {
 	var result InstanceListResponse
-	err := i.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/instances", agentID), nil, &result)
+	err := i.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/instances", agentID), nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func (i *InstancesResource) Create(ctx context.Context, agentID, name, descripti
 	}
 
 	var result AgentInstance
-	err := i.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/instances", agentID), body, &result)
+	err := i.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/instances", agentID), body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (i *InstancesResource) Create(ctx context.Context, agentID, name, descripti
 // Get returns a specific instance.
 func (i *InstancesResource) Get(ctx context.Context, agentID, instanceID string) (*AgentInstance, error) {
 	var result AgentInstance
-	err := i.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/instances/%s", agentID, instanceID), nil, &result)
+	err := i.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/instances/%s", agentID, instanceID), nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -47,13 +47,13 @@ func (i *InstancesResource) Get(ctx context.Context, agentID, instanceID string)
 
 // Delete deletes an instance.
 func (i *InstancesResource) Delete(ctx context.Context, agentID, instanceID string) error {
-	return i.http.del(ctx, fmt.Sprintf("/api/v1/agents/%s/instances/%s", agentID, instanceID), nil)
+	return i.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/instances/%s", agentID, instanceID), nil)
 }
 
 // Reset resets an instance (clears all context data).
 func (i *InstancesResource) Reset(ctx context.Context, agentID, instanceID string) (*AgentInstance, error) {
 	var result AgentInstance
-	err := i.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/instances/%s/reset", agentID, instanceID), nil, &result)
+	err := i.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/instances/%s/reset", agentID, instanceID), nil, &result)
 	if err != nil {
 		return nil, err
 	}

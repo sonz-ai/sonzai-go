@@ -33,7 +33,7 @@ func (m *MemoryResource) List(ctx context.Context, agentID string, opts *MemoryL
 	}
 
 	var result MemoryResponse
-	err := m.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory", agentID), params, &result)
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory", agentID), params, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (m *MemoryResource) Search(ctx context.Context, agentID string, opts Memory
 	}
 
 	var result MemorySearchResponse
-	err := m.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/search", agentID), params, &result)
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/search", agentID), params, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,48 @@ func (m *MemoryResource) Timeline(ctx context.Context, agentID string, opts *Mem
 	}
 
 	var result MemoryTimelineResponse
-	err := m.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/timeline", agentID), params, &result)
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/timeline", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ListFacts returns atomic facts for an agent, optionally filtered by category.
+func (m *MemoryResource) ListFacts(ctx context.Context, agentID string, opts *FactListOptions) (*FactListResponse, error) {
+	params := map[string]string{}
+	if opts != nil {
+		if opts.UserID != "" {
+			params["user_id"] = opts.UserID
+		}
+		if opts.Category != "" {
+			params["category"] = opts.Category
+		}
+		if opts.Limit > 0 {
+			params["limit"] = strconv.Itoa(opts.Limit)
+		}
+		if opts.Offset > 0 {
+			params["offset"] = strconv.Itoa(opts.Offset)
+		}
+	}
+
+	var result FactListResponse
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Reset deletes all memory for an agent, optionally scoped to a single user.
+func (m *MemoryResource) Reset(ctx context.Context, agentID string, opts *MemoryResetOptions) (*MemoryResetResponse, error) {
+	path := fmt.Sprintf("/api/v1/agents/%s/memory", agentID)
+	if opts != nil && opts.UserID != "" {
+		path += "?user_id=" + opts.UserID
+	}
+
+	var result MemoryResetResponse
+	err := m.http.Delete(ctx, path, &result)
 	if err != nil {
 		return nil, err
 	}

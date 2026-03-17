@@ -14,11 +14,16 @@
 //	    fmt.Print(event.Content())
 //	    return nil
 //	})
+//
+//	// Evaluate agent quality
+//	result, err := client.Eval.Evaluate(ctx, "agent-id", eval.EvaluateOptions{...})
 package sonzai
 
 import (
 	"os"
 	"time"
+
+	"github.com/sonz-ai/sonzai-go/eval"
 )
 
 const (
@@ -46,9 +51,17 @@ func WithTimeout(d time.Duration) ClientOption {
 
 // Client is the Sonzai Character Engine API client.
 type Client struct {
-	Agents        *AgentsResource
-	EvalTemplates *EvalTemplatesResource
-	EvalRuns      *EvalRunsResource
+	// Agents provides chat, memory, personality, and other agent-scoped operations.
+	Agents *AgentsResource
+
+	// Eval provides evaluation, simulation, and benchmarking operations.
+	Eval *eval.Client
+
+	// Voices provides the global voice catalog.
+	Voices *VoicesResource
+
+	// http is the underlying HTTP transport for low-level access.
+	http *httpClient
 }
 
 // NewClient creates a new Sonzai client with the given API key.
@@ -77,8 +90,9 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 	http := newHTTPClient(cfg.baseURL, apiKey, cfg.timeout)
 
 	return &Client{
-		Agents:        newAgentsResource(http),
-		EvalTemplates: newEvalTemplatesResource(http),
-		EvalRuns:      newEvalRunsResource(http),
+		Agents: newAgentsResource(http),
+		Eval:   eval.New(http),
+		Voices: &VoicesResource{http: http},
+		http:   http,
 	}
 }

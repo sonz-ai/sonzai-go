@@ -15,6 +15,11 @@ type AgentsResource struct {
 	Sessions      *SessionsResource
 	Instances     *InstancesResource
 	Notifications *NotificationsResource
+	CustomState   *CustomStateResource
+	Image         *ImageResource
+	Voice         *VoiceResource
+	Wakeups       *WakeupResource
+	Generation    *GenerationResource
 }
 
 func newAgentsResource(http *httpClient) *AgentsResource {
@@ -25,6 +30,11 @@ func newAgentsResource(http *httpClient) *AgentsResource {
 		Sessions:      &SessionsResource{http: http},
 		Instances:     &InstancesResource{http: http},
 		Notifications: &NotificationsResource{http: http},
+		CustomState:   &CustomStateResource{http: http},
+		Image:         &ImageResource{http: http},
+		Voice:         &VoiceResource{http: http},
+		Wakeups:       &WakeupResource{http: http},
+		Generation:    &GenerationResource{http: http},
 	}
 }
 
@@ -33,7 +43,7 @@ func (a *AgentsResource) Chat(ctx context.Context, agentID string, opts ChatOpti
 	var parts []string
 	var usage *ChatUsage
 
-	err := a.http.streamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", agentID), opts, func(raw json.RawMessage) error {
+	err := a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", agentID), opts, func(raw json.RawMessage) error {
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
 			return nil // skip malformed events
@@ -58,7 +68,7 @@ func (a *AgentsResource) Chat(ctx context.Context, agentID string, opts ChatOpti
 
 // ChatStream sends a chat message and calls the callback for each streaming event.
 func (a *AgentsResource) ChatStream(ctx context.Context, agentID string, opts ChatOptions, callback func(ChatStreamEvent) error) error {
-	return a.http.streamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", agentID), opts, func(raw json.RawMessage) error {
+	return a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", agentID), opts, func(raw json.RawMessage) error {
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
 			return nil
@@ -67,58 +77,30 @@ func (a *AgentsResource) ChatStream(ctx context.Context, agentID string, opts Ch
 	})
 }
 
-// Evaluate evaluates an agent against a template.
-func (a *AgentsResource) Evaluate(ctx context.Context, agentID string, messages []ChatMessage, templateID string, configOverride map[string]interface{}) (*EvaluationResult, error) {
-	body := map[string]interface{}{
-		"messages":    messages,
-		"template_id": templateID,
-	}
-	if configOverride != nil {
-		body["config_override"] = configOverride
-	}
+// ChatStreamChannel sends a chat message and returns a channel of streaming events.
+// The channel is closed when the stream ends or the context is cancelled.
+func (a *AgentsResource) ChatStreamChannel(ctx context.Context, agentID string, opts ChatOptions) (<-chan ChatStreamEvent, <-chan error) {
+	ch := make(chan ChatStreamEvent, 64)
+	errCh := make(chan error, 1)
 
-	var result EvaluationResult
-	if err := a.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/evaluate", agentID), body, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
+	go func() {
+		defer close(ch)
+		defer close(errCh)
 
-// Simulate runs a simulation and calls the callback for each streaming event.
-func (a *AgentsResource) Simulate(ctx context.Context, agentID string, body map[string]interface{}, callback func(SimulationEvent) error) error {
-	return a.http.streamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/simulate", agentID), body, func(raw json.RawMessage) error {
-		var event SimulationEvent
-		if err := json.Unmarshal(raw, &event); err != nil {
-			return nil
+		err := a.ChatStream(ctx, agentID, opts, func(event ChatStreamEvent) error {
+			select {
+			case ch <- event:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		})
+		if err != nil {
+			errCh <- err
 		}
-		return callback(event)
-	})
-}
+	}()
 
-// RunEval runs simulation + evaluation combined.
-func (a *AgentsResource) RunEval(ctx context.Context, agentID string, body map[string]interface{}, callback func(SimulationEvent) error) error {
-	return a.http.streamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/run-eval", agentID), body, func(raw json.RawMessage) error {
-		var event SimulationEvent
-		if err := json.Unmarshal(raw, &event); err != nil {
-			return nil
-		}
-		return callback(event)
-	})
-}
-
-// EvalOnly re-evaluates an existing run.
-func (a *AgentsResource) EvalOnly(ctx context.Context, agentID string, templateID, sourceRunID string, callback func(SimulationEvent) error) error {
-	body := map[string]interface{}{
-		"template_id":   templateID,
-		"source_run_id": sourceRunID,
-	}
-	return a.http.streamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/eval-only", agentID), body, func(raw json.RawMessage) error {
-		var event SimulationEvent
-		if err := json.Unmarshal(raw, &event); err != nil {
-			return nil
-		}
-		return callback(event)
-	})
+	return ch, errCh
 }
 
 // GetMood returns the current mood for an agent.
@@ -131,7 +113,7 @@ func (a *AgentsResource) GetMood(ctx context.Context, agentID string, userID, in
 		params["instance_id"] = instanceID
 	}
 	var result map[string]interface{}
-	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood", agentID), params, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood", agentID), params, &result)
 	return result, err
 }
 
@@ -145,7 +127,21 @@ func (a *AgentsResource) GetMoodHistory(ctx context.Context, agentID string, use
 		params["instance_id"] = instanceID
 	}
 	var result map[string]interface{}
-	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood-history", agentID), params, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood-history", agentID), params, &result)
+	return result, err
+}
+
+// GetMoodAggregate returns aggregated mood statistics for an agent.
+func (a *AgentsResource) GetMoodAggregate(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	if instanceID != "" {
+		params["instance_id"] = instanceID
+	}
+	var result map[string]interface{}
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood/aggregate", agentID), params, &result)
 	return result, err
 }
 
@@ -159,7 +155,7 @@ func (a *AgentsResource) GetRelationships(ctx context.Context, agentID string, u
 		params["instance_id"] = instanceID
 	}
 	var result map[string]interface{}
-	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/relationships", agentID), params, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/relationships", agentID), params, &result)
 	return result, err
 }
 
@@ -173,7 +169,7 @@ func (a *AgentsResource) GetHabits(ctx context.Context, agentID string, userID, 
 		params["instance_id"] = instanceID
 	}
 	var result map[string]interface{}
-	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/habits", agentID), params, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/habits", agentID), params, &result)
 	return result, err
 }
 
@@ -187,7 +183,7 @@ func (a *AgentsResource) GetGoals(ctx context.Context, agentID string, userID, i
 		params["instance_id"] = instanceID
 	}
 	var result map[string]interface{}
-	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/goals", agentID), params, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/goals", agentID), params, &result)
 	return result, err
 }
 
@@ -201,7 +197,7 @@ func (a *AgentsResource) GetInterests(ctx context.Context, agentID string, userI
 		params["instance_id"] = instanceID
 	}
 	var result map[string]interface{}
-	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/interests", agentID), params, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/interests", agentID), params, &result)
 	return result, err
 }
 
@@ -215,13 +211,33 @@ func (a *AgentsResource) GetDiary(ctx context.Context, agentID string, userID, i
 		params["instance_id"] = instanceID
 	}
 	var result map[string]interface{}
-	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/diary", agentID), params, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/diary", agentID), params, &result)
 	return result, err
 }
 
 // GetUsers returns users for an agent.
 func (a *AgentsResource) GetUsers(ctx context.Context, agentID string) (map[string]interface{}, error) {
 	var result map[string]interface{}
-	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/users", agentID), nil, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/users", agentID), nil, &result)
 	return result, err
+}
+
+// TriggerEvent triggers a game event / activity for an agent.
+func (a *AgentsResource) TriggerEvent(ctx context.Context, agentID string, opts TriggerEventOptions) (*TriggerEventResponse, error) {
+	var result TriggerEventResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/events", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Dialogue initiates a dialogue with an agent.
+func (a *AgentsResource) Dialogue(ctx context.Context, agentID string, opts DialogueOptions) (*DialogueResponse, error) {
+	var result DialogueResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/dialogue", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }

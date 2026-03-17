@@ -34,7 +34,7 @@ func (n *NotificationsResource) List(ctx context.Context, agentID string, opts *
 	}
 
 	var result NotificationListResponse
-	err := n.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/notifications", agentID), params, &result)
+	err := n.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/notifications", agentID), params, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (n *NotificationsResource) List(ctx context.Context, agentID string, opts *
 // Consume marks a notification as consumed.
 func (n *NotificationsResource) Consume(ctx context.Context, agentID, messageID string) (*SessionResponse, error) {
 	var result SessionResponse
-	err := n.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/notifications/%s/consume", agentID, messageID), nil, &result)
+	err := n.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/notifications/%s/consume", agentID, messageID), nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (n *NotificationsResource) History(ctx context.Context, agentID string, lim
 	}
 
 	var result NotificationListResponse
-	err := n.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/notifications/history", agentID), params, &result)
+	err := n.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/notifications/history", agentID), params, &result)
 	if err != nil {
 		return nil, err
 	}
