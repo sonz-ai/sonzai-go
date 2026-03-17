@@ -89,13 +89,6 @@ type AgentToolCapabilities struct {
 }
 
 // ChatOptions configures a chat request.
-// ToolDefinition describes a tool that the agent can invoke during chat.
-type ToolDefinition struct {
-	Name        string      `json:"name"`
-	Description string      `json:"description,omitempty"`
-	Parameters  interface{} `json:"parameters,omitempty"`
-}
-
 type ChatOptions struct {
 	Messages             []ChatMessage         `json:"messages"`
 	UserID               string                `json:"user_id,omitempty"`
