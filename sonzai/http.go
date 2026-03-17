@@ -116,6 +116,17 @@ func (c *httpClient) put(ctx context.Context, path string, body interface{}, res
 	return nil
 }
 
+func (c *httpClient) patch(ctx context.Context, path string, body interface{}, result interface{}) error {
+	data, err := c.request(ctx, http.MethodPatch, path, body, nil)
+	if err != nil {
+		return err
+	}
+	if result != nil {
+		return json.Unmarshal(data, result)
+	}
+	return nil
+}
+
 func (c *httpClient) del(ctx context.Context, path string, result interface{}) error {
 	data, err := c.request(ctx, http.MethodDelete, path, nil, nil)
 	if err != nil {

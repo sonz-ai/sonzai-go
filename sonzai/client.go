@@ -47,6 +47,7 @@ func WithTimeout(d time.Duration) ClientOption {
 // Client is the Sonzai Character Engine API client.
 type Client struct {
 	Agents        *AgentsResource
+	Voice         *VoiceResource
 	EvalTemplates *EvalTemplatesResource
 	EvalRuns      *EvalRunsResource
 }
@@ -78,6 +79,7 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 
 	return &Client{
 		Agents:        newAgentsResource(http),
+		Voice:         &VoiceResource{http: http},
 		EvalTemplates: newEvalTemplatesResource(http),
 		EvalRuns:      newEvalRunsResource(http),
 	}

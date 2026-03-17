@@ -15,6 +15,8 @@ type AgentsResource struct {
 	Sessions      *SessionsResource
 	Instances     *InstancesResource
 	Notifications *NotificationsResource
+	Generation    *GenerationResource
+	CustomStates  *CustomStatesResource
 }
 
 func newAgentsResource(http *httpClient) *AgentsResource {
@@ -25,7 +27,115 @@ func newAgentsResource(http *httpClient) *AgentsResource {
 		Sessions:      &SessionsResource{http: http},
 		Instances:     &InstancesResource{http: http},
 		Notifications: &NotificationsResource{http: http},
+		Generation:    &GenerationResource{http: http},
+		CustomStates:  &CustomStatesResource{http: http},
 	}
+}
+
+// Create creates a new agent.
+func (a *AgentsResource) Create(ctx context.Context, params CreateAgentParams) (*CreateAgentResult, error) {
+	var result CreateAgentResult
+	if err := a.http.post(ctx, "/api/v1/agents", params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Get retrieves an agent profile by ID.
+func (a *AgentsResource) Get(ctx context.Context, agentID string) (*AgentProfile, error) {
+	var result AgentProfile
+	if err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s", agentID), nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Update updates an agent's profile.
+func (a *AgentsResource) Update(ctx context.Context, agentID string, params UpdateAgentParams) (*UpdateAgentResult, error) {
+	var result UpdateAgentResult
+	if err := a.http.patch(ctx, fmt.Sprintf("/api/v1/agents/%s", agentID), params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Delete deletes an agent.
+func (a *AgentsResource) Delete(ctx context.Context, agentID string) error {
+	return a.http.del(ctx, fmt.Sprintf("/api/v1/agents/%s", agentID), nil)
+}
+
+// Dialogue generates agent dialogue.
+func (a *AgentsResource) Dialogue(ctx context.Context, agentID string, params AgentDialogueParams) (*AgentDialogueResult, error) {
+	var result AgentDialogueResult
+	if err := a.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/dialogue", agentID), params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// TriggerGameEvent fires a game event for async processing.
+func (a *AgentsResource) TriggerGameEvent(ctx context.Context, agentID string, params TriggerGameEventParams) (*TriggerGameEventResult, error) {
+	var result TriggerGameEventResult
+	if err := a.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/events", agentID), params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetConstellation returns constellation graph data for an agent.
+func (a *AgentsResource) GetConstellation(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	if instanceID != "" {
+		params["instance_id"] = instanceID
+	}
+	var result map[string]interface{}
+	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/constellation", agentID), params, &result)
+	return result, err
+}
+
+// GetBreakthroughs returns breakthrough data for an agent.
+func (a *AgentsResource) GetBreakthroughs(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	if instanceID != "" {
+		params["instance_id"] = instanceID
+	}
+	var result map[string]interface{}
+	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/breakthroughs", agentID), params, &result)
+	return result, err
+}
+
+// GetWakeups returns wakeup schedule data for an agent.
+func (a *AgentsResource) GetWakeups(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	if instanceID != "" {
+		params["instance_id"] = instanceID
+	}
+	var result map[string]interface{}
+	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/wakeups", agentID), params, &result)
+	return result, err
+}
+
+// GetMoodAggregate returns aggregated mood data for an agent.
+func (a *AgentsResource) GetMoodAggregate(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	if instanceID != "" {
+		params["instance_id"] = instanceID
+	}
+	var result map[string]interface{}
+	err := a.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood/aggregate", agentID), params, &result)
+	return result, err
 }
 
 // Chat sends a chat message and returns the aggregated response.

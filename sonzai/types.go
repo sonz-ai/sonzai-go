@@ -1,5 +1,7 @@
 package sonzai
 
+import "encoding/json"
+
 // ---------------------------------------------------------------------------
 // Chat
 // ---------------------------------------------------------------------------
@@ -359,6 +361,461 @@ type EvalTemplate struct {
 // EvalTemplateListResponse is the response from listing eval templates.
 type EvalTemplateListResponse struct {
 	Templates []EvalTemplate `json:"templates"`
+}
+
+// ---------------------------------------------------------------------------
+// Agent CRUD
+// ---------------------------------------------------------------------------
+
+// Big5Scores represents the Big Five personality trait scores (0.0-1.0).
+type Big5Scores struct {
+	Openness          float64 `json:"openness"`
+	Conscientiousness float64 `json:"conscientiousness"`
+	Extraversion      float64 `json:"extraversion"`
+	Agreeableness     float64 `json:"agreeableness"`
+	Neuroticism       float64 `json:"neuroticism"`
+	Confidence        float64 `json:"confidence,omitempty"`
+}
+
+// SDKPersonalityDimensions contains BFAS personality aspect scores (0-100 scale).
+type SDKPersonalityDimensions struct {
+	Intellect       float64 `json:"intellect"`
+	Aesthetic       float64 `json:"aesthetic"`
+	Industriousness float64 `json:"industriousness"`
+	Orderliness     float64 `json:"orderliness"`
+	Enthusiasm      float64 `json:"enthusiasm"`
+	Assertiveness   float64 `json:"assertiveness"`
+	Compassion      float64 `json:"compassion"`
+	Politeness      float64 `json:"politeness"`
+	Withdrawal      float64 `json:"withdrawal"`
+	Volatility      float64 `json:"volatility"`
+}
+
+// AgentToolCapabilities specifies which built-in Sonzai tools to enable.
+type AgentToolCapabilities struct {
+	WebSearch       bool `json:"web_search"`
+	RememberName    bool `json:"remember_name"`
+	ImageGeneration bool `json:"image_generation"`
+}
+
+// CreateAgentParams contains the parameters for creating a new agent.
+type CreateAgentParams struct {
+	AgentID           string                    `json:"agent_id,omitempty"`
+	UserID            string                    `json:"user_id"`
+	AgentName         string                    `json:"agent_name"`
+	Gender            string                    `json:"gender"`
+	Bio               string                    `json:"bio,omitempty"`
+	AvatarURL         string                    `json:"avatar_url,omitempty"`
+	Big5              Big5Scores                `json:"big5"`
+	Language          string                    `json:"language,omitempty"`
+	ModelTier         int                       `json:"model_tier,omitempty"`
+	PersonalityPrompt string                    `json:"personality_prompt,omitempty"`
+	SpeechPatterns    []string                  `json:"speech_patterns,omitempty"`
+	TrueInterests     []string                  `json:"true_interests,omitempty"`
+	TrueDislikes      []string                  `json:"true_dislikes,omitempty"`
+	UserDisplayName   string                    `json:"user_display_name,omitempty"`
+	Dimensions        *SDKPersonalityDimensions `json:"dimensions,omitempty"`
+	ToolCapabilities  *AgentToolCapabilities    `json:"tool_capabilities,omitempty"`
+}
+
+// CreateAgentResult contains the result of agent creation.
+type CreateAgentResult struct {
+	AgentID string `json:"agent_id"`
+	Status  string `json:"status"`
+}
+
+// AgentProfile contains the retrieved agent profile.
+type AgentProfile struct {
+	AgentID     string     `json:"agent_id"`
+	Name        string     `json:"name"`
+	Bio         string     `json:"bio"`
+	Gender      string     `json:"gender"`
+	AvatarURL   string     `json:"avatar_url"`
+	Big5        Big5Scores `json:"big5"`
+	OwnerUserID string     `json:"owner_user_id"`
+	CreatedAt   string     `json:"created_at,omitempty"`
+}
+
+// UpdateAgentParams contains the parameters for updating an agent.
+type UpdateAgentParams struct {
+	Name             string                    `json:"name,omitempty"`
+	Bio              string                    `json:"bio,omitempty"`
+	AvatarURL        string                    `json:"avatar_url,omitempty"`
+	Big5             *Big5Scores               `json:"big5,omitempty"`
+	Dimensions       *SDKPersonalityDimensions `json:"dimensions,omitempty"`
+	ToolCapabilities *AgentToolCapabilities    `json:"tool_capabilities,omitempty"`
+}
+
+// UpdateAgentResult contains the result of an agent update.
+type UpdateAgentResult struct {
+	Success bool `json:"success"`
+}
+
+// ---------------------------------------------------------------------------
+// Memory Seed / Facts / Reset
+// ---------------------------------------------------------------------------
+
+// MemoryCandidate represents a candidate memory to store.
+type MemoryCandidate struct {
+	Content    string   `json:"content,omitempty"`
+	FactType   string   `json:"fact_type,omitempty"`
+	Importance float64  `json:"importance,omitempty"`
+	Entities   []string `json:"entities,omitempty"`
+}
+
+// SeedMemoriesParams contains the parameters for seeding initial memories.
+type SeedMemoriesParams struct {
+	UserID     string            `json:"user_id"`
+	Memories   []MemoryCandidate `json:"memories"`
+	InstanceID string            `json:"instance_id,omitempty"`
+}
+
+// SeedMemoriesResult contains the result of memory seeding.
+type SeedMemoriesResult struct {
+	MemoriesCreated int `json:"memories_created"`
+}
+
+// ListFactsOptions configures a list facts request.
+type ListFactsOptions struct {
+	UserID     string
+	Limit      int
+	FactType   string
+	InstanceID string
+}
+
+// StoredFact represents a fact stored in the platform's memory system.
+type StoredFact struct {
+	FactID       string  `json:"fact_id"`
+	Content      string  `json:"content"`
+	FactType     string  `json:"fact_type"`
+	Importance   float64 `json:"importance"`
+	Confidence   float64 `json:"confidence"`
+	Entity       string  `json:"entity"`
+	SourceType   string  `json:"source_type"`
+	MentionCount int     `json:"mention_count"`
+	CreatedAt    string  `json:"created_at,omitempty"`
+	UpdatedAt    string  `json:"updated_at,omitempty"`
+}
+
+// ListFactsResult contains the result of listing facts.
+type ListFactsResult struct {
+	Facts      []StoredFact `json:"facts"`
+	TotalCount int          `json:"total_count"`
+}
+
+// ResetMemoryParams contains the parameters for resetting an agent's memories.
+type ResetMemoryParams struct {
+	UserID     string `json:"user_id"`
+	InstanceID string `json:"instance_id,omitempty"`
+}
+
+// ResetMemoryResult contains the result of a memory reset.
+type ResetMemoryResult struct {
+	Success      bool `json:"success"`
+	FactsDeleted int  `json:"facts_deleted"`
+	NodesDeleted int  `json:"nodes_deleted"`
+}
+
+// ---------------------------------------------------------------------------
+// Personality Update
+// ---------------------------------------------------------------------------
+
+// UpdatePersonalityParams contains the parameters for updating personality.
+type UpdatePersonalityParams struct {
+	Big5       Big5Scores                `json:"big5"`
+	Dimensions *SDKPersonalityDimensions `json:"dimensions,omitempty"`
+}
+
+// UpdatePersonalityResult contains the result of a personality update.
+type UpdatePersonalityResult struct {
+	Success bool `json:"success"`
+}
+
+// ---------------------------------------------------------------------------
+// Voice
+// ---------------------------------------------------------------------------
+
+// EmotionalContext provides emotional hints for TTS generation.
+type EmotionalContext struct {
+	Themes []string `json:"themes,omitempty"`
+	Tone   string   `json:"tone,omitempty"`
+}
+
+// TextToSpeechParams contains the parameters for text-to-speech.
+type TextToSpeechParams struct {
+	AgentID          string            `json:"agent_id"`
+	Text             string            `json:"text"`
+	VoiceName        string            `json:"voice_name,omitempty"`
+	Language         string            `json:"language,omitempty"`
+	EmotionalContext *EmotionalContext `json:"emotional_context,omitempty"`
+}
+
+// TextToSpeechResult contains the TTS result.
+type TextToSpeechResult struct {
+	Audio       []byte `json:"audio"`
+	ContentType string `json:"content_type"`
+	VoiceName   string `json:"voice_name"`
+	DurationMs  int    `json:"duration_ms,omitempty"`
+}
+
+// VoiceMatchParams contains the parameters for voice matching.
+type VoiceMatchParams struct {
+	AgentID         string     `json:"agent_id,omitempty"`
+	Big5            Big5Scores `json:"big5"`
+	PreferredGender string     `json:"preferred_gender,omitempty"`
+}
+
+// VoiceMatchResult contains the voice match result.
+type VoiceMatchResult struct {
+	VoiceID    string  `json:"voice_id"`
+	VoiceName  string  `json:"voice_name"`
+	MatchScore float64 `json:"match_score"`
+	Reasoning  string  `json:"reasoning"`
+}
+
+// VoiceInfo represents a single available voice.
+type VoiceInfo struct {
+	Name   string `json:"name"`
+	Gender string `json:"gender"`
+}
+
+// ListVoicesResult contains the available voices.
+type ListVoicesResult struct {
+	Voices []VoiceInfo `json:"voices"`
+}
+
+// VoiceChatParams contains the parameters for a single voice chat turn.
+type VoiceChatParams struct {
+	AgentID     string `json:"agent_id"`
+	UserID      string `json:"user_id"`
+	Audio       []byte `json:"audio"`
+	AudioFormat string `json:"audio_format"`
+	VoiceName   string `json:"voice_name,omitempty"`
+	Language    string `json:"language,omitempty"`
+	InstanceID  string `json:"instance_id,omitempty"`
+}
+
+// VoiceChatResult contains the voice chat result.
+type VoiceChatResult struct {
+	Transcript      string          `json:"transcript"`
+	Response        string          `json:"response"`
+	Audio           []byte          `json:"audio"`
+	ContentType     string          `json:"content_type"`
+	SideEffectsJSON json.RawMessage `json:"side_effects_json,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Content Generation
+// ---------------------------------------------------------------------------
+
+// GenerateBioParams contains the parameters for bio generation.
+type GenerateBioParams struct {
+	UserID     string `json:"user_id,omitempty"`
+	CurrentBio string `json:"current_bio,omitempty"`
+	Style      string `json:"style,omitempty"`
+	InstanceID string `json:"instance_id,omitempty"`
+}
+
+// GenerateBioResult contains the generated bio.
+type GenerateBioResult struct {
+	Bio        string  `json:"bio"`
+	Tone       string  `json:"tone"`
+	Confidence float64 `json:"confidence"`
+}
+
+// GenerateImageParams contains the parameters for image generation.
+type GenerateImageParams struct {
+	Prompt         string `json:"prompt"`
+	NegativePrompt string `json:"negative_prompt,omitempty"`
+	Model          string `json:"model,omitempty"`
+	Provider       string `json:"provider,omitempty"`
+}
+
+// GenerateImageResult contains the generated image details.
+type GenerateImageResult struct {
+	Success          bool   `json:"success"`
+	ImageID          string `json:"image_id"`
+	PublicURL        string `json:"public_url"`
+	MimeType         string `json:"mime_type"`
+	GenerationTimeMs int64  `json:"generation_time_ms"`
+	Error            string `json:"error,omitempty"`
+}
+
+// GenerateCharacterParams contains the parameters for full character generation.
+type GenerateCharacterParams struct {
+	UserID      string   `json:"user_id,omitempty"`
+	Name        string   `json:"name"`
+	Gender      string   `json:"gender"`
+	Description string   `json:"description"`
+	Fields      []string `json:"fields,omitempty"`
+}
+
+// SDKInteractionPreferences contains conversation style preferences.
+type SDKInteractionPreferences struct {
+	ConversationPace    string `json:"conversation_pace"`
+	Formality           string `json:"formality"`
+	HumorStyle          string `json:"humor_style"`
+	EmotionalExpression string `json:"emotional_expression"`
+}
+
+// SDKBehavioralTraits contains behavioral response patterns.
+type SDKBehavioralTraits struct {
+	ResponseLength    string `json:"response_length"`
+	QuestionFrequency string `json:"question_frequency"`
+	EmpathyStyle      string `json:"empathy_style"`
+	ConflictApproach  string `json:"conflict_approach"`
+}
+
+// GenerateCharacterUsage contains token usage for generation.
+type GenerateCharacterUsage struct {
+	PromptTokens     int64  `json:"prompt_tokens"`
+	CompletionTokens int64  `json:"completion_tokens"`
+	TotalTokens      int64  `json:"total_tokens"`
+	Model            string `json:"model"`
+}
+
+// GenerateCharacterResult contains the generated character profile.
+type GenerateCharacterResult struct {
+	Bio               string                    `json:"bio"`
+	PersonalityPrompt string                    `json:"personality_prompt"`
+	Big5              *Big5Scores               `json:"big5,omitempty"`
+	SpeechPatterns    []string                  `json:"speech_patterns,omitempty"`
+	TrueInterests     []string                  `json:"true_interests,omitempty"`
+	TrueDislikes      []string                  `json:"true_dislikes,omitempty"`
+	PrimaryTraits     []string                  `json:"primary_traits,omitempty"`
+	Preferences       *SDKInteractionPreferences `json:"preferences,omitempty"`
+	Behaviors         *SDKBehavioralTraits       `json:"behaviors,omitempty"`
+	Dimensions        *SDKPersonalityDimensions  `json:"dimensions,omitempty"`
+	Usage             *GenerateCharacterUsage    `json:"usage,omitempty"`
+}
+
+// ModelConfig specifies LLM provider and model settings for generation.
+type ModelConfig struct {
+	Provider    string  `json:"provider"`
+	Model       string  `json:"model"`
+	Temperature float64 `json:"temperature"`
+	MaxTokens   int     `json:"max_tokens"`
+}
+
+// LoreGenerationContext provides world context for LLM-based lore generation.
+type LoreGenerationContext struct {
+	WorldDescription         string            `json:"world_description"`
+	EntityTerminology        map[string]string `json:"entity_terminology,omitempty"`
+	OriginPromptInstructions string            `json:"origin_prompt_instructions,omitempty"`
+}
+
+// IdentityMemoryTemplate defines a template for identity memories.
+type IdentityMemoryTemplate struct {
+	Template   string   `json:"template"`
+	FactType   string   `json:"fact_type"`
+	Importance float64  `json:"importance"`
+	Entities   []string `json:"entities,omitempty"`
+}
+
+// GenerateSeedMemoriesParams contains parameters for generating seed memories via LLM.
+type GenerateSeedMemoriesParams struct {
+	UserID                       string                   `json:"user_id,omitempty"`
+	AgentName                    string                   `json:"agent_name"`
+	Big5                         Big5Scores               `json:"big5"`
+	PersonalityPrompt            string                   `json:"personality_prompt,omitempty"`
+	TrueInterests                []string                 `json:"true_interests,omitempty"`
+	TrueDislikes                 []string                 `json:"true_dislikes,omitempty"`
+	SpeechPatterns               []string                 `json:"speech_patterns,omitempty"`
+	CreatorDisplayName           string                   `json:"creator_display_name,omitempty"`
+	StaticLoreMemories           []MemoryCandidate        `json:"static_lore_memories,omitempty"`
+	LoreGenerationContext        *LoreGenerationContext   `json:"lore_generation_context,omitempty"`
+	IdentityMemoryTemplates      []IdentityMemoryTemplate `json:"identity_memory_templates,omitempty"`
+	GenerateOriginStory          bool                     `json:"generate_origin_story,omitempty"`
+	GeneratePersonalizedMemories bool                     `json:"generate_personalized_memories,omitempty"`
+	ModelConfig                  *ModelConfig             `json:"model_config,omitempty"`
+	StoreMemories                bool                     `json:"store_memories,omitempty"`
+}
+
+// GenerateSeedMemoriesResult contains the result of seed memory generation.
+type GenerateSeedMemoriesResult struct {
+	Memories       []MemoryCandidate `json:"memories"`
+	MemoriesStored int               `json:"memories_stored"`
+}
+
+// ---------------------------------------------------------------------------
+// Dialogue
+// ---------------------------------------------------------------------------
+
+// AgentDialogueParams contains the parameters for agent dialogue generation.
+type AgentDialogueParams struct {
+	UserID        string        `json:"user_id,omitempty"`
+	Messages      []ChatMessage `json:"messages,omitempty"`
+	RequestType   string        `json:"request_type,omitempty"`
+	SceneGuidance string        `json:"scene_guidance,omitempty"`
+	InstanceID    string        `json:"instance_id,omitempty"`
+}
+
+// AgentDialogueResult contains the dialogue generation result.
+type AgentDialogueResult struct {
+	Response        string          `json:"response,omitempty"`
+	SideEffectsJSON json.RawMessage `json:"side_effects_json,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Game Events
+// ---------------------------------------------------------------------------
+
+// TriggerGameEventParams contains the parameters for triggering a game event.
+type TriggerGameEventParams struct {
+	UserID           string            `json:"user_id,omitempty"`
+	EventType        string            `json:"event_type"`
+	EventDescription string            `json:"event_description,omitempty"`
+	Metadata         map[string]string `json:"metadata,omitempty"`
+	Language         string            `json:"language,omitempty"`
+	InstanceID       string            `json:"instance_id,omitempty"`
+}
+
+// TriggerGameEventResult contains the result of a game event trigger.
+type TriggerGameEventResult struct {
+	Accepted bool   `json:"accepted"`
+	EventID  string `json:"event_id,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Custom States
+// ---------------------------------------------------------------------------
+
+// CustomState represents a custom state key-value entry.
+type CustomState struct {
+	StateID   string          `json:"state_id"`
+	AgentID   string          `json:"agent_id"`
+	Key       string          `json:"key"`
+	Value     json.RawMessage `json:"value"`
+	CreatedAt string          `json:"created_at,omitempty"`
+	UpdatedAt string          `json:"updated_at,omitempty"`
+}
+
+// CustomStateListResponse is the response from listing custom states.
+type CustomStateListResponse struct {
+	States []CustomState `json:"states"`
+}
+
+// CustomStateCreateParams contains the parameters for creating a custom state.
+type CustomStateCreateParams struct {
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
+}
+
+// CustomStateUpdateParams contains the parameters for updating a custom state.
+type CustomStateUpdateParams struct {
+	Value interface{} `json:"value"`
+}
+
+// ---------------------------------------------------------------------------
+// Constellation / Breakthroughs / Wakeups
+// ---------------------------------------------------------------------------
+
+// MoodState represents an agent's emotional state in PAD dimensions.
+type MoodState struct {
+	Valence     float64 `json:"valence"`
+	Arousal     float64 `json:"arousal"`
+	Tension     float64 `json:"tension"`
+	Affiliation float64 `json:"affiliation"`
 }
 
 // ---------------------------------------------------------------------------

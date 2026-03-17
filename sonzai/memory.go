@@ -6,6 +6,52 @@ import (
 	"strconv"
 )
 
+// Seed imports bulk initial memories for an agent.
+func (m *MemoryResource) Seed(ctx context.Context, agentID string, params SeedMemoriesParams) (*SeedMemoriesResult, error) {
+	var result SeedMemoriesResult
+	err := m.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/seed", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ListFacts returns stored facts for an agent.
+func (m *MemoryResource) ListFacts(ctx context.Context, agentID string, opts *ListFactsOptions) (*ListFactsResult, error) {
+	params := map[string]string{}
+	if opts != nil {
+		if opts.UserID != "" {
+			params["user_id"] = opts.UserID
+		}
+		if opts.InstanceID != "" {
+			params["instance_id"] = opts.InstanceID
+		}
+		if opts.FactType != "" {
+			params["fact_type"] = opts.FactType
+		}
+		if opts.Limit > 0 {
+			params["limit"] = strconv.Itoa(opts.Limit)
+		}
+	}
+
+	var result ListFactsResult
+	err := m.http.get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Reset deletes all memories for an agent-user pair.
+func (m *MemoryResource) Reset(ctx context.Context, agentID string, params ResetMemoryParams) (*ResetMemoryResult, error) {
+	var result ResetMemoryResult
+	err := m.http.post(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/reset", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // MemoryResource provides memory operations for an agent.
 type MemoryResource struct {
 	http *httpClient

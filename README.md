@@ -54,6 +54,30 @@ client := sonzai.NewClient("")
 
 ## Usage
 
+### Agent Lifecycle
+
+```go
+// Create an agent
+result, err := client.Agents.Create(ctx, sonzai.CreateAgentParams{
+	UserID:    "user-123",
+	AgentName: "Luna",
+	Gender:    "female",
+	Big5:      sonzai.Big5Scores{Openness: 0.8, Conscientiousness: 0.6, Extraversion: 0.7, Agreeableness: 0.85, Neuroticism: 0.3},
+})
+
+// Get agent profile
+agent, err := client.Agents.Get(ctx, "agent-id")
+
+// Update agent
+_, err := client.Agents.Update(ctx, "agent-id", sonzai.UpdateAgentParams{
+	Name: "Luna v2",
+	Bio:  "An updated bio",
+})
+
+// Delete agent
+err := client.Agents.Delete(ctx, "agent-id")
+```
+
 ### Chat (Streaming)
 
 ```go
@@ -102,15 +126,40 @@ timeline, err := client.Agents.Memory.Timeline(ctx, "agent-id", &sonzai.MemoryTi
 	Start:  "2026-01-01",
 	End:    "2026-03-01",
 })
+
+// Seed memories
+seedResult, err := client.Agents.Memory.Seed(ctx, "agent-id", sonzai.SeedMemoriesParams{
+	UserID: "user-123",
+	Memories: []sonzai.MemoryCandidate{
+		{Content: "Likes coffee", FactType: "preference", Importance: 0.7},
+		{Content: "Lives in Singapore", FactType: "location", Importance: 0.9},
+	},
+})
+
+// List facts
+facts, err := client.Agents.Memory.ListFacts(ctx, "agent-id", &sonzai.ListFactsOptions{
+	UserID: "user-123", FactType: "preference", Limit: 50,
+})
+
+// Reset memories
+resetResult, err := client.Agents.Memory.Reset(ctx, "agent-id", sonzai.ResetMemoryParams{
+	UserID: "user-123",
+})
 ```
 
 ### Personality
 
 ```go
+// Get personality
 personality, err := client.Agents.Personality.Get(ctx, "agent-id", nil)
 fmt.Printf("Name: %s\n", personality.Profile.Name)
 fmt.Printf("Openness: %.2f\n", personality.Profile.Big5.Openness.Score)
 fmt.Printf("Warmth: %d/10\n", personality.Profile.Dimensions.Warmth)
+
+// Update personality
+_, err := client.Agents.Personality.Update(ctx, "agent-id", sonzai.UpdatePersonalityParams{
+	Big5: sonzai.Big5Scores{Openness: 0.9, Conscientiousness: 0.7},
+})
 ```
 
 ### Sessions
@@ -165,16 +214,109 @@ _, err := client.Agents.Notifications.Consume(ctx, "agent-id", "msg-id")
 history, err := client.Agents.Notifications.History(ctx, "agent-id", 50)
 ```
 
+### Voice
+
+```go
+// Text-to-Speech
+tts, err := client.Voice.TextToSpeech(ctx, sonzai.TextToSpeechParams{
+	AgentID: "agent-id", Text: "Hello world!", VoiceName: "alloy",
+})
+
+// Match personality to voice
+match, err := client.Voice.VoiceMatch(ctx, sonzai.VoiceMatchParams{
+	Big5: sonzai.Big5Scores{Openness: 0.8, Extraversion: 0.7},
+})
+
+// List available voices
+voices, err := client.Voice.ListVoices(ctx, "") // or "female", "male"
+
+// Single-turn voice chat (STT -> LLM -> TTS)
+voiceResult, err := client.Voice.VoiceChat(ctx, sonzai.VoiceChatParams{
+	AgentID: "agent-id", UserID: "user-123", AudioFormat: "wav",
+	Audio: audioBytes,
+})
+```
+
+### Content Generation
+
+```go
+// Generate bio
+bio, err := client.Agents.Generation.GenerateBio(ctx, "agent-id", sonzai.GenerateBioParams{
+	UserID: "user-123", Style: "poetic",
+})
+
+// Generate image
+img, err := client.Agents.Generation.GenerateImage(ctx, "agent-id", sonzai.GenerateImageParams{
+	Prompt: "A cute cat in a garden",
+})
+
+// Generate full character profile
+char, err := client.Agents.Generation.GenerateCharacter(ctx, "agent-id", sonzai.GenerateCharacterParams{
+	Name: "Luna", Gender: "female", Description: "A warm and curious companion",
+})
+
+// Generate seed memories via LLM
+seeds, err := client.Agents.Generation.GenerateSeedMemories(ctx, "agent-id", sonzai.GenerateSeedMemoriesParams{
+	AgentName: "Luna", Big5: sonzai.Big5Scores{Openness: 0.8},
+	GenerateOriginStory: true, StoreMemories: true,
+})
+```
+
+### Dialogue
+
+```go
+dialogue, err := client.Agents.Dialogue(ctx, "agent-id", sonzai.AgentDialogueParams{
+	UserID: "user-123", SceneGuidance: "casual greeting at a cafe",
+})
+fmt.Println(dialogue.Response)
+```
+
+### Game Events
+
+```go
+event, err := client.Agents.TriggerGameEvent(ctx, "agent-id", sonzai.TriggerGameEventParams{
+	UserID:           "user-123",
+	EventType:        "achievement",
+	EventDescription: "Player reached level 10",
+	Metadata:         map[string]string{"level": "10"},
+})
+```
+
+### Custom States
+
+```go
+// List
+states, err := client.Agents.CustomStates.List(ctx, "agent-id")
+
+// Create
+state, err := client.Agents.CustomStates.Create(ctx, "agent-id", sonzai.CustomStateCreateParams{
+	Key: "player_level", Value: 10,
+})
+
+// Update
+_, err := client.Agents.CustomStates.Update(ctx, "agent-id", "state-id", sonzai.CustomStateUpdateParams{
+	Value: 15,
+})
+
+// Delete
+err := client.Agents.CustomStates.Delete(ctx, "agent-id", "state-id")
+```
+
 ### Context Engine Data
 
 ```go
 mood, err := client.Agents.GetMood(ctx, "agent-id", "user-123", "")
+moodHistory, err := client.Agents.GetMoodHistory(ctx, "agent-id", "user-123", "")
+moodAggregate, err := client.Agents.GetMoodAggregate(ctx, "agent-id", "user-123", "")
 relationships, err := client.Agents.GetRelationships(ctx, "agent-id", "user-123", "")
 habits, err := client.Agents.GetHabits(ctx, "agent-id", "", "")
 goals, err := client.Agents.GetGoals(ctx, "agent-id", "", "")
 interests, err := client.Agents.GetInterests(ctx, "agent-id", "", "")
 diary, err := client.Agents.GetDiary(ctx, "agent-id", "", "")
 users, err := client.Agents.GetUsers(ctx, "agent-id")
+constellation, err := client.Agents.GetConstellation(ctx, "agent-id", "user-123", "")
+breakthroughs, err := client.Agents.GetBreakthroughs(ctx, "agent-id", "user-123", "")
+wakeups, err := client.Agents.GetWakeups(ctx, "agent-id", "user-123", "")
 ```
 
 ### Evaluation

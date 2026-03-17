@@ -364,6 +364,464 @@ func TestEvalRunsList(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Agent CRUD
+// ---------------------------------------------------------------------------
+
+func TestAgentCreate(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 201, CreateAgentResult{AgentID: "agent-new", Status: "created"})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Create(context.Background(), CreateAgentParams{
+		UserID: "user-1", AgentName: "Luna", Gender: "female",
+		Big5: Big5Scores{Openness: 0.8, Conscientiousness: 0.6},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.AgentID != "agent-new" {
+		t.Fatalf("expected 'agent-new', got '%s'", result.AgentID)
+	}
+}
+
+func TestAgentGet(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/api/v1/agents/agent-1" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, AgentProfile{AgentID: "agent-1", Name: "Luna", Gender: "female"})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Get(context.Background(), "agent-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Name != "Luna" {
+		t.Fatalf("expected 'Luna', got '%s'", result.Name)
+	}
+}
+
+func TestAgentUpdate(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" || r.URL.Path != "/api/v1/agents/agent-1" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, UpdateAgentResult{Success: true})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Update(context.Background(), "agent-1", UpdateAgentParams{Name: "Luna v2"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Success {
+		t.Fatal("expected success")
+	}
+}
+
+func TestAgentDelete(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" || r.URL.Path != "/api/v1/agents/agent-1" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(204)
+	})
+	defer server.Close()
+
+	err := client.Agents.Delete(context.Background(), "agent-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Memory Seed / Facts / Reset
+// ---------------------------------------------------------------------------
+
+func TestMemorySeed(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents/agent-1/memory/seed" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, SeedMemoriesResult{MemoriesCreated: 3})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Memory.Seed(context.Background(), "agent-1", SeedMemoriesParams{
+		UserID: "user-1",
+		Memories: []MemoryCandidate{
+			{Content: "Likes coffee", FactType: "preference", Importance: 0.7},
+			{Content: "Lives in Singapore", FactType: "location", Importance: 0.9},
+			{Content: "Works as engineer", FactType: "occupation", Importance: 0.8},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.MemoriesCreated != 3 {
+		t.Fatalf("expected 3, got %d", result.MemoriesCreated)
+	}
+}
+
+func TestMemoryListFacts(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/agents/agent-1/memory/facts" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("fact_type") != "preference" {
+			t.Fatalf("expected fact_type=preference, got %s", r.URL.Query().Get("fact_type"))
+		}
+		jsonResponse(w, 200, ListFactsResult{
+			Facts:      []StoredFact{{FactID: "f1", Content: "Likes coffee", FactType: "preference"}},
+			TotalCount: 1,
+		})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Memory.ListFacts(context.Background(), "agent-1", &ListFactsOptions{
+		UserID: "user-1", FactType: "preference",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.TotalCount != 1 {
+		t.Fatalf("expected 1, got %d", result.TotalCount)
+	}
+	if result.Facts[0].Content != "Likes coffee" {
+		t.Fatalf("expected 'Likes coffee', got '%s'", result.Facts[0].Content)
+	}
+}
+
+func TestMemoryReset(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents/agent-1/memory/reset" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, ResetMemoryResult{Success: true, FactsDeleted: 5, NodesDeleted: 2})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Memory.Reset(context.Background(), "agent-1", ResetMemoryParams{UserID: "user-1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Success || result.FactsDeleted != 5 {
+		t.Fatalf("expected success with 5 facts deleted, got %+v", result)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Personality Update
+// ---------------------------------------------------------------------------
+
+func TestPersonalityUpdate(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" || r.URL.Path != "/api/v1/agents/agent-1/personality" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, UpdatePersonalityResult{Success: true})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Personality.Update(context.Background(), "agent-1", UpdatePersonalityParams{
+		Big5: Big5Scores{Openness: 0.9, Conscientiousness: 0.7},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Success {
+		t.Fatal("expected success")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Voice
+// ---------------------------------------------------------------------------
+
+func TestVoiceTTS(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/voice/tts" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, TextToSpeechResult{ContentType: "audio/mp3", VoiceName: "alloy", DurationMs: 1500})
+	})
+	defer server.Close()
+
+	result, err := client.Voice.TextToSpeech(context.Background(), TextToSpeechParams{
+		AgentID: "agent-1", Text: "Hello world",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.VoiceName != "alloy" {
+		t.Fatalf("expected 'alloy', got '%s'", result.VoiceName)
+	}
+}
+
+func TestVoiceMatch(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/voice/match" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, VoiceMatchResult{VoiceID: "v1", VoiceName: "nova", MatchScore: 0.92})
+	})
+	defer server.Close()
+
+	result, err := client.Voice.VoiceMatch(context.Background(), VoiceMatchParams{
+		Big5: Big5Scores{Openness: 0.8, Extraversion: 0.7},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.VoiceName != "nova" {
+		t.Fatalf("expected 'nova', got '%s'", result.VoiceName)
+	}
+}
+
+func TestVoiceListVoices(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/voice/voices" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, ListVoicesResult{
+			Voices: []VoiceInfo{{Name: "alloy", Gender: "neutral"}, {Name: "nova", Gender: "female"}},
+		})
+	})
+	defer server.Close()
+
+	result, err := client.Voice.ListVoices(context.Background(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Voices) != 2 {
+		t.Fatalf("expected 2 voices, got %d", len(result.Voices))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Generation
+// ---------------------------------------------------------------------------
+
+func TestGenerateBio(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents/agent-1/generate-bio" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, GenerateBioResult{Bio: "A curious soul...", Tone: "warm", Confidence: 0.9})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Generation.GenerateBio(context.Background(), "agent-1", GenerateBioParams{
+		UserID: "user-1", Style: "poetic",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Bio != "A curious soul..." {
+		t.Fatalf("expected 'A curious soul...', got '%s'", result.Bio)
+	}
+}
+
+func TestGenerateImage(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents/agent-1/image/generate" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, GenerateImageResult{Success: true, ImageID: "img-1", PublicURL: "https://cdn.example.com/img.png"})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Generation.GenerateImage(context.Background(), "agent-1", GenerateImageParams{
+		Prompt: "A cute cat",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Success || result.ImageID != "img-1" {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+}
+
+func TestGenerateCharacter(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents/agent-1/generate-character" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, GenerateCharacterResult{
+			Bio:               "A warm and curious companion",
+			PersonalityPrompt: "You are warm...",
+			Big5:              &Big5Scores{Openness: 0.85},
+		})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Generation.GenerateCharacter(context.Background(), "agent-1", GenerateCharacterParams{
+		Name: "Luna", Gender: "female", Description: "A warm companion",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Big5 == nil || result.Big5.Openness != 0.85 {
+		t.Fatalf("unexpected Big5: %+v", result.Big5)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Dialogue
+// ---------------------------------------------------------------------------
+
+func TestDialogue(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents/agent-1/dialogue" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, AgentDialogueResult{Response: "Hello there!"})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.Dialogue(context.Background(), "agent-1", AgentDialogueParams{
+		UserID: "user-1", SceneGuidance: "casual greeting",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Response != "Hello there!" {
+		t.Fatalf("expected 'Hello there!', got '%s'", result.Response)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Game Events
+// ---------------------------------------------------------------------------
+
+func TestTriggerGameEvent(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents/agent-1/events" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, TriggerGameEventResult{Accepted: true, EventID: "evt-1"})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.TriggerGameEvent(context.Background(), "agent-1", TriggerGameEventParams{
+		UserID:    "user-1",
+		EventType: "achievement",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Accepted {
+		t.Fatal("expected accepted")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Custom States
+// ---------------------------------------------------------------------------
+
+func TestCustomStatesList(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/agents/agent-1/custom-states" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, CustomStateListResponse{
+			States: []CustomState{{StateID: "s1", Key: "level", AgentID: "agent-1"}},
+		})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.CustomStates.List(context.Background(), "agent-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.States) != 1 || result.States[0].Key != "level" {
+		t.Fatalf("unexpected states: %+v", result.States)
+	}
+}
+
+func TestCustomStatesCreate(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/agents/agent-1/custom-states" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 201, CustomState{StateID: "s2", Key: "score"})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.CustomStates.Create(context.Background(), "agent-1", CustomStateCreateParams{
+		Key: "score", Value: 100,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Key != "score" {
+		t.Fatalf("expected 'score', got '%s'", result.Key)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Context Engine Extended
+// ---------------------------------------------------------------------------
+
+func TestGetConstellation(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/agents/agent-1/constellation" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]interface{}{"nodes": []interface{}{}, "edges": []interface{}{}})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.GetConstellation(context.Background(), "agent-1", "user-1", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+}
+
+func TestGetBreakthroughs(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/agents/agent-1/breakthroughs" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]interface{}{"breakthroughs": []interface{}{}})
+	})
+	defer server.Close()
+
+	result, err := client.Agents.GetBreakthroughs(context.Background(), "agent-1", "user-1", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// New Resource Wiring
+// ---------------------------------------------------------------------------
+
+func TestNewClientCreatesAllResources(t *testing.T) {
+	c := NewClient("test-key")
+	if c.Voice == nil {
+		t.Fatal("Voice is nil")
+	}
+	if c.Agents.Generation == nil {
+		t.Fatal("Generation is nil")
+	}
+	if c.Agents.CustomStates == nil {
+		t.Fatal("CustomStates is nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Error Handling
 // ---------------------------------------------------------------------------
 
