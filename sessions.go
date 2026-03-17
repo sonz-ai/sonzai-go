@@ -60,9 +60,10 @@ func (s *SessionsResource) End(ctx context.Context, agentID string, opts Session
 }
 
 // SetTools configures the tools available for a session.
+// The Platform API expects a raw JSON array as the request body.
 func (s *SessionsResource) SetTools(ctx context.Context, agentID, sessionID string, opts SessionToolsOptions) (*SessionResponse, error) {
 	var result SessionResponse
-	err := s.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/%s/tools", agentID, sessionID), opts, &result)
+	err := s.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/%s/tools", agentID, sessionID), opts.Tools, &result)
 	if err != nil {
 		return nil, err
 	}
