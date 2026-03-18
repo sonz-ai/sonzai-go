@@ -106,6 +106,7 @@ type ChatOptions struct {
 	Timezone             string                `json:"timezone,omitempty"`
 	ToolCapabilities     *AgentToolCapabilities `json:"tool_capabilities,omitempty"`
 	ToolDefinitions      []ToolDefinition       `json:"tool_definitions,omitempty"`
+	MaxTurns             int                    `json:"max_turns,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
