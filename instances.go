@@ -59,3 +59,13 @@ func (i *InstancesResource) Reset(ctx context.Context, agentID, instanceID strin
 	}
 	return &result, nil
 }
+
+// Update updates an existing agent instance.
+func (i *InstancesResource) Update(ctx context.Context, agentID, instanceID string, opts UpdateInstanceOptions) (*AgentInstance, error) {
+	var result AgentInstance
+	err := i.http.Patch(ctx, fmt.Sprintf("/api/v1/agents/%s/instances/%s", agentID, instanceID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
