@@ -458,3 +458,262 @@ type DialogueMessage struct {
 	Role      string `json:"role"`
 	Content   string `json:"content"`
 }
+
+// ---------------------------------------------------------------------------
+// Agent List
+// ---------------------------------------------------------------------------
+
+// AgentListOptions configures an agent list request.
+type AgentListOptions struct {
+	PageSize  int    `json:"page_size,omitempty"`
+	Cursor    string `json:"cursor,omitempty"`
+	Search    string `json:"search,omitempty"`
+	ProjectID string `json:"project_id,omitempty"`
+}
+
+// AgentIndex represents a summary of an agent in a list.
+type AgentIndex struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Bio       string `json:"bio,omitempty"`
+	Gender    string `json:"gender,omitempty"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+	Status    string `json:"status,omitempty"`
+	ProjectID string `json:"project_id,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
+}
+
+// AgentListResponse is the response from listing agents.
+type AgentListResponse struct {
+	Items      []AgentIndex `json:"items"`
+	NextCursor string       `json:"next_cursor,omitempty"`
+	HasMore    bool         `json:"has_more"`
+}
+
+// ---------------------------------------------------------------------------
+// Agent Status
+// ---------------------------------------------------------------------------
+
+// SetStatusResponse is the response from setting agent status.
+type SetStatusResponse struct {
+	Success  bool   `json:"success"`
+	AgentID  string `json:"agent_id"`
+	IsActive bool   `json:"is_active"`
+}
+
+// ---------------------------------------------------------------------------
+// Agent Project
+// ---------------------------------------------------------------------------
+
+// UpdateProjectResponse is the response from updating agent project.
+type UpdateProjectResponse struct {
+	Success   bool   `json:"success"`
+	AgentID   string `json:"agent_id"`
+	ProjectID string `json:"project_id,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Agent Capabilities
+// ---------------------------------------------------------------------------
+
+// CustomToolDefinition represents a custom tool definition for an agent.
+type CustomToolDefinition struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+}
+
+// AgentCapabilities represents the capabilities enabled for an agent.
+type AgentCapabilities struct {
+	WebSearch       bool                   `json:"webSearch"`
+	RememberName    bool                   `json:"rememberName"`
+	ImageGeneration bool                   `json:"imageGeneration"`
+	CustomTools     []CustomToolDefinition `json:"customTools,omitempty"`
+}
+
+// UpdateCapabilitiesOptions configures a capabilities update request.
+type UpdateCapabilitiesOptions struct {
+	WebSearch       *bool `json:"webSearch,omitempty"`
+	RememberName    *bool `json:"rememberName,omitempty"`
+	ImageGeneration *bool `json:"imageGeneration,omitempty"`
+}
+
+// CustomToolListResponse is the response from listing custom tools.
+type CustomToolListResponse struct {
+	Tools []CustomToolDefinition `json:"tools"`
+}
+
+// CreateCustomToolOptions configures a custom tool creation request.
+type CreateCustomToolOptions struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+}
+
+// UpdateCustomToolOptions configures a custom tool update request.
+type UpdateCustomToolOptions struct {
+	Description string                 `json:"description,omitempty"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Consolidation & Summaries
+// ---------------------------------------------------------------------------
+
+// ConsolidateOptions configures a consolidation request.
+type ConsolidateOptions struct {
+	Period string `json:"period,omitempty"`
+	UserID string `json:"user_id,omitempty"`
+}
+
+// SummariesOptions configures a summaries request.
+type SummariesOptions struct {
+	Period string
+	Limit  int
+}
+
+// MemorySummary represents a memory consolidation summary.
+type MemorySummary struct {
+	AgentID     string  `json:"agent_id,omitempty"`
+	Stage       string  `json:"stage,omitempty"`
+	SummaryText string  `json:"summary_text,omitempty"`
+	Timestamp   string  `json:"timestamp,omitempty"`
+	FactCount   int     `json:"fact_count,omitempty"`
+	Confidence  float64 `json:"confidence,omitempty"`
+}
+
+// SummariesResponse is the response from the summaries endpoint.
+type SummariesResponse struct {
+	Summaries []MemorySummary `json:"summaries"`
+}
+
+// ---------------------------------------------------------------------------
+// Time Machine
+// ---------------------------------------------------------------------------
+
+// TimeMachineOptions configures a time machine request.
+type TimeMachineOptions struct {
+	At         string `json:"at"`
+	UserID     string `json:"user_id,omitempty"`
+	InstanceID string `json:"instance_id,omitempty"`
+}
+
+// TimeMachineMoodSnapshot represents a mood snapshot at a point in time.
+type TimeMachineMoodSnapshot struct {
+	Valence     float64 `json:"valence"`
+	Arousal     float64 `json:"arousal"`
+	Tension     float64 `json:"tension"`
+	Affiliation float64 `json:"affiliation"`
+	Label       string  `json:"label"`
+}
+
+// TimeMachineResponse is the response from the time machine endpoint.
+type TimeMachineResponse struct {
+	PersonalityAt      map[string]interface{}   `json:"personality_at,omitempty"`
+	CurrentPersonality map[string]interface{}   `json:"current_personality,omitempty"`
+	EvolutionEvents    []PersonalityShift       `json:"evolution_events,omitempty"`
+	MoodAt             *TimeMachineMoodSnapshot `json:"mood_at,omitempty"`
+	RequestedAt        string                   `json:"requested_at,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Batch Personality
+// ---------------------------------------------------------------------------
+
+// BatchPersonalityEntry represents a single entry in a batch personality response.
+type BatchPersonalityEntry struct {
+	Profile        PersonalityProfile `json:"profile"`
+	EvolutionCount int                `json:"evolution_count"`
+}
+
+// BatchPersonalityResponse is the response from the batch personality endpoint.
+type BatchPersonalityResponse struct {
+	Personalities map[string]BatchPersonalityEntry `json:"personalities"`
+}
+
+// ---------------------------------------------------------------------------
+// Personality Extensions
+// ---------------------------------------------------------------------------
+
+// SignificantMoment represents a significant moment in agent history.
+type SignificantMoment struct {
+	AgentID           string  `json:"agent_id,omitempty"`
+	MomentID          string  `json:"moment_id,omitempty"`
+	Timestamp         string  `json:"timestamp,omitempty"`
+	Description       string  `json:"description,omitempty"`
+	SignificanceScore float64 `json:"significance_score,omitempty"`
+}
+
+// SignificantMomentsResponse is the response from the significant moments endpoint.
+type SignificantMomentsResponse struct {
+	Moments []SignificantMoment `json:"moments"`
+}
+
+// PersonalityShift represents a personality trait shift event.
+type PersonalityShift struct {
+	AgentID       string  `json:"agent_id,omitempty"`
+	TraitName     string  `json:"trait_name,omitempty"`
+	TraitCategory string  `json:"trait_category,omitempty"`
+	OldValue      float64 `json:"old_value,omitempty"`
+	NewValue      float64 `json:"new_value,omitempty"`
+	Delta         float64 `json:"delta,omitempty"`
+	Timestamp     string  `json:"timestamp,omitempty"`
+	Reason        string  `json:"reason,omitempty"`
+}
+
+// RecentShiftsResponse is the response from the recent shifts endpoint.
+type RecentShiftsResponse struct {
+	Shifts []PersonalityShift `json:"shifts"`
+}
+
+// UserPersonalityOverlay represents a per-user personality overlay.
+type UserPersonalityOverlay struct {
+	AgentID       string                  `json:"agent_id"`
+	UserID        string                  `json:"user_id"`
+	Big5          *Big5                   `json:"big5,omitempty"`
+	Dimensions    *PersonalityDimensions  `json:"dimensions,omitempty"`
+	Preferences   *PersonalityPreferences `json:"preferences,omitempty"`
+	Behaviors     *PersonalityBehaviors   `json:"behaviors,omitempty"`
+	PrimaryTraits []string                `json:"primary_traits,omitempty"`
+	CreatedAt     string                  `json:"created_at,omitempty"`
+	UpdatedAt     string                  `json:"updated_at,omitempty"`
+}
+
+// UserOverlaysListResponse is the response from listing user overlays.
+type UserOverlaysListResponse struct {
+	Overlays []UserPersonalityOverlay `json:"overlays"`
+}
+
+// UserOverlayDetailResponse is the response from getting a user overlay detail.
+type UserOverlayDetailResponse struct {
+	Overlay   UserPersonalityOverlay `json:"overlay"`
+	Base      PersonalityProfile     `json:"base"`
+	Evolution []PersonalityShift     `json:"evolution"`
+}
+
+// UserOverlayOptions configures a user overlay request.
+type UserOverlayOptions struct {
+	InstanceID string `json:"instance_id,omitempty"`
+	Since      string `json:"since,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Fact History
+// ---------------------------------------------------------------------------
+
+// FactHistoryResponse is the response from the fact history endpoint.
+type FactHistoryResponse struct {
+	Current          AtomicFact   `json:"current"`
+	PreviousVersions []AtomicFact `json:"previous_versions"`
+}
+
+// ---------------------------------------------------------------------------
+// Update Instance
+// ---------------------------------------------------------------------------
+
+// UpdateInstanceOptions configures an instance update request.
+type UpdateInstanceOptions struct {
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	Status      string `json:"status,omitempty"`
+}

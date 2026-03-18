@@ -241,3 +241,108 @@ func (a *AgentsResource) Dialogue(ctx context.Context, agentID string, opts Dial
 	}
 	return &result, nil
 }
+
+// List returns a paginated list of agents.
+func (a *AgentsResource) List(ctx context.Context, opts AgentListOptions) (*AgentListResponse, error) {
+	params := map[string]string{}
+	if opts.PageSize > 0 {
+		params["page_size"] = fmt.Sprintf("%d", opts.PageSize)
+	}
+	if opts.Cursor != "" {
+		params["cursor"] = opts.Cursor
+	}
+	if opts.Search != "" {
+		params["search"] = opts.Search
+	}
+	if opts.ProjectID != "" {
+		params["project_id"] = opts.ProjectID
+	}
+	var result AgentListResponse
+	err := a.http.Get(ctx, "/api/v1/agents", params, &result)
+	return &result, err
+}
+
+// SetStatus sets the active status for an agent.
+func (a *AgentsResource) SetStatus(ctx context.Context, agentID string, isActive bool) (*SetStatusResponse, error) {
+	var result SetStatusResponse
+	err := a.http.Patch(ctx, fmt.Sprintf("/api/v1/agents/%s/status", agentID), map[string]interface{}{"is_active": isActive}, &result)
+	return &result, err
+}
+
+// UpdateProject updates the project assignment for an agent.
+func (a *AgentsResource) UpdateProject(ctx context.Context, agentID string, projectID string) (*UpdateProjectResponse, error) {
+	var result UpdateProjectResponse
+	err := a.http.Patch(ctx, fmt.Sprintf("/api/v1/agents/%s/project", agentID), map[string]interface{}{"project_id": projectID}, &result)
+	return &result, err
+}
+
+// GetCapabilities returns the capabilities for an agent.
+func (a *AgentsResource) GetCapabilities(ctx context.Context, agentID string) (*AgentCapabilities, error) {
+	var result AgentCapabilities
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/capabilities", agentID), nil, &result)
+	return &result, err
+}
+
+// UpdateCapabilities updates the capabilities for an agent.
+func (a *AgentsResource) UpdateCapabilities(ctx context.Context, agentID string, opts UpdateCapabilitiesOptions) (*AgentCapabilities, error) {
+	var result AgentCapabilities
+	err := a.http.Patch(ctx, fmt.Sprintf("/api/v1/agents/%s/capabilities", agentID), opts, &result)
+	return &result, err
+}
+
+// Consolidate triggers memory consolidation for an agent.
+func (a *AgentsResource) Consolidate(ctx context.Context, agentID string, opts ConsolidateOptions) error {
+	return a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/consolidate", agentID), opts, nil)
+}
+
+// GetSummaries returns memory summaries for an agent.
+func (a *AgentsResource) GetSummaries(ctx context.Context, agentID string, opts SummariesOptions) (*SummariesResponse, error) {
+	params := map[string]string{}
+	if opts.Period != "" {
+		params["period"] = opts.Period
+	}
+	if opts.Limit > 0 {
+		params["limit"] = fmt.Sprintf("%d", opts.Limit)
+	}
+	var result SummariesResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/summaries", agentID), params, &result)
+	return &result, err
+}
+
+// GetTimeMachine returns a point-in-time snapshot of agent personality and mood.
+func (a *AgentsResource) GetTimeMachine(ctx context.Context, agentID string, opts TimeMachineOptions) (*TimeMachineResponse, error) {
+	params := map[string]string{"at": opts.At}
+	if opts.UserID != "" {
+		params["user_id"] = opts.UserID
+	}
+	if opts.InstanceID != "" {
+		params["instance_id"] = opts.InstanceID
+	}
+	var result TimeMachineResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/timemachine", agentID), params, &result)
+	return &result, err
+}
+
+// ListCustomTools returns the custom tools for an agent.
+func (a *AgentsResource) ListCustomTools(ctx context.Context, agentID string) (*CustomToolListResponse, error) {
+	var result CustomToolListResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/tools", agentID), nil, &result)
+	return &result, err
+}
+
+// CreateCustomTool creates a custom tool for an agent.
+func (a *AgentsResource) CreateCustomTool(ctx context.Context, agentID string, opts CreateCustomToolOptions) (*CustomToolDefinition, error) {
+	var result CustomToolDefinition
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/tools", agentID), opts, &result)
+	return &result, err
+}
+
+// UpdateCustomTool updates a custom tool for an agent.
+func (a *AgentsResource) UpdateCustomTool(ctx context.Context, agentID string, toolName string, opts UpdateCustomToolOptions) error {
+	return a.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/%s", agentID, toolName), opts, nil)
+}
+
+// DeleteCustomTool deletes a custom tool for an agent.
+func (a *AgentsResource) DeleteCustomTool(ctx context.Context, agentID string, toolName string) error {
+	return a.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/%s", agentID, toolName), nil)
+}

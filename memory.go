@@ -126,3 +126,13 @@ func (m *MemoryResource) Reset(ctx context.Context, agentID string, opts *Memory
 	}
 	return &result, nil
 }
+
+// GetFactHistory returns the version history for a specific fact.
+func (m *MemoryResource) GetFactHistory(ctx context.Context, agentID, factID string) (*FactHistoryResponse, error) {
+	var result FactHistoryResponse
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/fact/%s/history", agentID, factID), nil, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
