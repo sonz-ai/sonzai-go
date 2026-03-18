@@ -41,12 +41,8 @@ type ChatStreamEvent struct {
 	FullContent       string          `json:"full_content,omitempty"`
 	FinishReason      string          `json:"finish_reason,omitempty"`
 	ContinuationToken string          `json:"continuation_token,omitempty"`
-	ResponseCookie    string          `json:"response_cookie,omitempty"`
 	MessageCount      int             `json:"message_count,omitempty"`
 	SideEffectsJSON   json.RawMessage `json:"side_effects,omitempty"`
-	EnrichedContext   json.RawMessage `json:"enriched_context,omitempty"`
-	BuildDurationMs   int64           `json:"build_duration_ms,omitempty"`
-	UsedFastPath      bool            `json:"used_fast_path,omitempty"`
 	ErrorMessage      string          `json:"error_message,omitempty"`
 	ErrorCode         string          `json:"error_code,omitempty"`
 	IsTokenError      bool            `json:"is_token_error,omitempty"`
@@ -98,7 +94,6 @@ type ChatOptions struct {
 	Provider             string                `json:"provider,omitempty"`
 	Model                string                `json:"model,omitempty"`
 	ContinuationToken    string                `json:"continuation_token,omitempty"`
-	AiServiceCookie      string                `json:"ai_service_cookie,omitempty"`
 	RequestType          string                `json:"request_type,omitempty"`
 	Language             string                `json:"language,omitempty"`
 	CompiledSystemPrompt string                `json:"compiled_system_prompt,omitempty"`
@@ -436,9 +431,8 @@ type TriggerEventResponse struct {
 
 // DialogueOptions configures a dialogue request.
 type DialogueOptions struct {
-	UserID              string          `json:"user_id,omitempty"`
-	EnrichedContextJSON json.RawMessage `json:"enriched_context,omitempty"`
-	Messages            []ChatMessage   `json:"messages,omitempty"`
+	UserID        string        `json:"user_id,omitempty"`
+	Messages      []ChatMessage `json:"messages,omitempty"`
 	RequestType         string          `json:"request_type,omitempty"`
 	SceneGuidance       string          `json:"scene_guidance,omitempty"`
 	ToolConfigJSON      json.RawMessage `json:"tool_config,omitempty"`

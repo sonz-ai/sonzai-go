@@ -16,8 +16,6 @@ type ImageGenerateOptions struct {
 	NegativePrompt string `json:"negative_prompt,omitempty"`
 	Model          string `json:"model,omitempty"`
 	Provider       string `json:"provider,omitempty"`
-	OutputBucket   string `json:"output_bucket,omitempty"`
-	OutputPath     string `json:"output_path,omitempty"`
 }
 
 // ImageGenerateResponse is the response from image generation.

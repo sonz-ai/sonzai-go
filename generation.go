@@ -2,7 +2,6 @@ package sonzai
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 )
 
@@ -17,7 +16,6 @@ type GenerateBioOptions struct {
 	Gender              string          `json:"gender,omitempty"`
 	Description         string          `json:"description,omitempty"`
 	UserID              string          `json:"user_id,omitempty"`
-	EnrichedContextJSON json.RawMessage `json:"enriched_context_json,omitempty"`
 	CurrentBio          string          `json:"current_bio,omitempty"`
 	Style               string          `json:"style,omitempty"`
 	InstanceID          string          `json:"instance_id,omitempty"`
