@@ -42,6 +42,8 @@
 //   - client.Agents.Notifications — Proactive notification management
 //   - client.Agents.CustomState — Arbitrary key-value state storage
 //   - client.Agents.Image — Image generation
+//   - client.Agents.Priming — User priming, metadata, and batch import
+//   - client.Knowledge — Project-scoped knowledge base (documents, graph, schemas, search, analytics)
 //   - client.Eval — Evaluation, simulation, and benchmarking (separate sub-package)
 //   - client.Eval.Templates — Evaluation template CRUD
 //   - client.Eval.Runs — Evaluation run management

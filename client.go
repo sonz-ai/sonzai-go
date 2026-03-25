@@ -54,6 +54,10 @@ type Client struct {
 	// Agents provides chat, memory, personality, and other agent-scoped operations.
 	Agents *AgentsResource
 
+	// Knowledge provides project-scoped knowledge base operations
+	// (documents, graph nodes, schemas, search, analytics).
+	Knowledge *KnowledgeResource
+
 	// Eval provides evaluation, simulation, and benchmarking operations.
 	Eval *eval.Client
 
@@ -92,10 +96,11 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 	http := newHTTPClient(cfg.baseURL, apiKey, cfg.timeout)
 
 	return &Client{
-		Agents:   newAgentsResource(http),
-		Eval:     eval.New(http),
-		Voices:   &VoicesResource{http: http},
-		Webhooks: &WebhooksResource{http: http},
-		http:     http,
+		Agents:    newAgentsResource(http),
+		Knowledge: &KnowledgeResource{http: http},
+		Eval:      eval.New(http),
+		Voices:    &VoicesResource{http: http},
+		Webhooks:  &WebhooksResource{http: http},
+		http:      http,
 	}
 }

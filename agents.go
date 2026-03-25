@@ -20,6 +20,7 @@ type AgentsResource struct {
 	Voice         *VoiceResource
 	Wakeups       *WakeupResource
 	Generation    *GenerationResource
+	Priming       *PrimingResource
 }
 
 func newAgentsResource(http *httpClient) *AgentsResource {
@@ -35,6 +36,7 @@ func newAgentsResource(http *httpClient) *AgentsResource {
 		Voice:         &VoiceResource{http: http},
 		Wakeups:       &WakeupResource{http: http},
 		Generation:    &GenerationResource{http: http},
+		Priming:       &PrimingResource{http: http},
 	}
 }
 
