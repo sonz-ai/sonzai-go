@@ -39,11 +39,32 @@ type Category struct {
 // Simulation
 // ---------------------------------------------------------------------------
 
-// SimulateOptions configures a simulation or run-eval request.
+// SessionConfig configures a single session within a simulation.
+type SessionConfig struct {
+	Greeting    string `json:"greeting,omitempty"`
+	Scenario    string `json:"scenario,omitempty"`
+	Instruction string `json:"instruction,omitempty"`
+}
+
+// SimulateOptions configures a simulation request (POST /simulate).
 type SimulateOptions struct {
-	UserPersona interface{} `json:"user_persona,omitempty"`
-	Config      interface{} `json:"config,omitempty"`
-	TemplateID  string      `json:"template_id,omitempty"`
+	Sessions       []SessionConfig        `json:"sessions,omitempty"`
+	UserPersona    interface{}            `json:"user_persona,omitempty"`
+	Config         interface{}            `json:"config,omitempty"`
+	Model          string                 `json:"model,omitempty"`
+	ConfigOverride map[string]interface{} `json:"config_override,omitempty"`
+}
+
+// RunEvalOptions configures a run-eval request (POST /run-eval).
+type RunEvalOptions struct {
+	TemplateID           string                 `json:"template_id"`
+	AdaptationTemplateID string                 `json:"adaptation_template_id,omitempty"`
+	QualityOnly          bool                   `json:"quality_only,omitempty"`
+	Sessions             []SessionConfig        `json:"sessions,omitempty"`
+	UserPersona          interface{}            `json:"user_persona,omitempty"`
+	SimulationConfig     interface{}            `json:"simulation_config,omitempty"`
+	Model                string                 `json:"model,omitempty"`
+	ConfigOverride       map[string]interface{} `json:"config_override,omitempty"`
 }
 
 // SimulationEvent represents a single SSE event from a simulation.
@@ -61,8 +82,10 @@ type SimulationEvent struct {
 
 // ReEvalOptions configures a re-evaluation request.
 type ReEvalOptions struct {
-	TemplateID  string `json:"template_id"`
-	SourceRunID string `json:"source_run_id"`
+	TemplateID           string `json:"template_id"`
+	SourceRunID          string `json:"source_run_id"`
+	AdaptationTemplateID string `json:"adaptation_template_id,omitempty"`
+	QualityOnly          bool   `json:"quality_only,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -152,9 +175,13 @@ type Run struct {
 	TotalSessions    int                    `json:"total_sessions"`
 	TotalTurns       int                    `json:"total_turns"`
 	SimulatedMinutes int                    `json:"simulated_minutes"`
-	TotalCostUSD     float64                `json:"total_cost_usd"`
-	CreatedAt        string                 `json:"created_at,omitempty"`
-	CompletedAt      string                 `json:"completed_at,omitempty"`
+	TotalCostUSD               float64                `json:"total_cost_usd"`
+	SimulationCostUSD          float64                `json:"simulation_cost_usd,omitempty"`
+	EvaluationCostUSD          float64                `json:"evaluation_cost_usd,omitempty"`
+	AdaptationTemplateID       string                 `json:"adaptation_template_id,omitempty"`
+	AdaptationTemplateSnapshot map[string]interface{} `json:"adaptation_template_snapshot,omitempty"`
+	CreatedAt                  string                 `json:"created_at,omitempty"`
+	CompletedAt                string                 `json:"completed_at,omitempty"`
 }
 
 // RunListResponse is the response from listing eval runs.
