@@ -62,6 +62,93 @@ func main() {
 
 See the [examples](examples/) directory for more.
 
+## Evaluation & Simulation
+
+```go
+import "github.com/sonz-ai/sonzai-go/eval"
+
+// Synchronous evaluation
+result, _ := client.Eval.Evaluate(ctx, "agent-id", eval.EvaluateOptions{
+    Messages:   []eval.Message{{Role: "user", Content: "Hello"}},
+    TemplateID: "template-uuid",
+})
+fmt.Printf("Score: %.2f\n", result.Score)
+
+// Simulation (streaming — launches run, then streams events)
+ref, _ := client.Eval.Simulate(ctx, "agent-id", eval.SimulateOptions{
+    UserPersona: map[string]any{"name": "Alex", "background": "Student"},
+    Config:      map[string]any{"max_sessions": 2, "max_turns_per_session": 5},
+}, func(event eval.SimulationEvent) error {
+    fmt.Printf("[%s] %s\n", event.Type, event.Message)
+    return nil
+})
+
+// Fire-and-forget (returns RunRef immediately)
+ref, _ := client.Eval.SimulateAsync(ctx, "agent-id", eval.SimulateOptions{
+    Config: map[string]any{"max_sessions": 2},
+})
+fmt.Printf("Run started: %s\n", ref.RunID)
+
+// Reconnect to stream later
+client.Eval.Runs.StreamEvents(ctx, ref.RunID, 0, func(event eval.SimulationEvent) error {
+    fmt.Printf("[%s] %s\n", event.Type, event.Message)
+    return nil
+})
+
+// Run eval (simulation + evaluation combined)
+ref, _ = client.Eval.Run(ctx, "agent-id", eval.RunEvalOptions{
+    TemplateID: "template-uuid",
+    SimulationConfig: map[string]any{"max_sessions": 2},
+}, func(event eval.SimulationEvent) error {
+    fmt.Printf("[%s] %s\n", event.Type, event.Message)
+    return nil
+})
+
+// Re-evaluate an existing run
+ref, _ = client.Eval.ReEval(ctx, "agent-id", eval.ReEvalOptions{
+    TemplateID:  "new-template-uuid",
+    SourceRunID: "existing-run-uuid",
+}, func(event eval.SimulationEvent) error {
+    fmt.Printf("[%s] %s\n", event.Type, event.Message)
+    return nil
+})
+```
+
+## Custom States
+
+```go
+// Create a custom state
+state, _ := client.CustomStates.Create(ctx, "agent-id", sonzai.CustomStateCreateOptions{
+    Key:         "player_level",
+    Value:       map[string]any{"level": 15, "xp": 2400},
+    Scope:       "user",
+    ContentType: "json",
+    UserID:      "user-123",
+})
+
+// Upsert by composite key (create or update)
+state, _ = client.CustomStates.Upsert(ctx, "agent-id", sonzai.CustomStateUpsertOptions{
+    Key:    "player_level",
+    Value:  map[string]any{"level": 16, "xp": 3000},
+    Scope:  "user",
+    UserID: "user-123",
+})
+
+// Get by composite key
+state, _ = client.CustomStates.GetByKey(ctx, "agent-id", sonzai.CustomStateGetByKeyOptions{
+    Key:    "player_level",
+    Scope:  "user",
+    UserID: "user-123",
+})
+
+// Delete by composite key
+client.CustomStates.DeleteByKey(ctx, "agent-id", sonzai.CustomStateDeleteByKeyOptions{
+    Key:    "player_level",
+    Scope:  "user",
+    UserID: "user-123",
+})
+```
+
 ## Requirements
 
 This library requires Go 1.22 or later.
