@@ -70,35 +70,61 @@ func (c *Client) Evaluate(ctx context.Context, agentID string, opts EvaluateOpti
 	return &result, nil
 }
 
-// Simulate runs a multi-turn simulation and calls the callback for each event.
-func (c *Client) Simulate(ctx context.Context, agentID string, opts SimulateOptions, callback func(SimulationEvent) error) error {
-	return c.backend.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/simulate", agentID), opts, func(raw json.RawMessage) error {
-		var event SimulationEvent
-		if err := json.Unmarshal(raw, &event); err != nil {
-			return nil
-		}
-		return callback(event)
-	})
+// Simulate launches a multi-turn simulation, streams events via callback.
+// Returns a RunRef so the caller can reconnect or poll if the stream drops.
+func (c *Client) Simulate(ctx context.Context, agentID string, opts SimulateOptions, callback func(SimulationEvent) error) (*RunRef, error) {
+	var ref RunRef
+	if err := c.backend.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/simulate", agentID), opts, &ref); err != nil {
+		return nil, err
+	}
+	if err := c.Runs.StreamEvents(ctx, ref.RunID, 0, callback); err != nil {
+		return &ref, err
+	}
+	return &ref, nil
 }
 
-// Run executes simulation + evaluation combined and calls the callback for each event.
-func (c *Client) Run(ctx context.Context, agentID string, opts SimulateOptions, callback func(SimulationEvent) error) error {
-	return c.backend.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/run-eval", agentID), opts, func(raw json.RawMessage) error {
-		var event SimulationEvent
-		if err := json.Unmarshal(raw, &event); err != nil {
-			return nil
-		}
-		return callback(event)
-	})
+// SimulateAsync launches a simulation without streaming. Returns a RunRef for polling.
+func (c *Client) SimulateAsync(ctx context.Context, agentID string, opts SimulateOptions) (*RunRef, error) {
+	var ref RunRef
+	err := c.backend.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/simulate", agentID), opts, &ref)
+	return &ref, err
 }
 
-// ReEval re-evaluates an existing run with a different template.
-func (c *Client) ReEval(ctx context.Context, agentID string, opts ReEvalOptions, callback func(SimulationEvent) error) error {
-	return c.backend.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/eval-only", agentID), opts, func(raw json.RawMessage) error {
-		var event SimulationEvent
-		if err := json.Unmarshal(raw, &event); err != nil {
-			return nil
-		}
-		return callback(event)
-	})
+// Run launches simulation + evaluation combined, streams events via callback.
+// Returns a RunRef so the caller can reconnect or poll if the stream drops.
+func (c *Client) Run(ctx context.Context, agentID string, opts SimulateOptions, callback func(SimulationEvent) error) (*RunRef, error) {
+	var ref RunRef
+	if err := c.backend.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/run-eval", agentID), opts, &ref); err != nil {
+		return nil, err
+	}
+	if err := c.Runs.StreamEvents(ctx, ref.RunID, 0, callback); err != nil {
+		return &ref, err
+	}
+	return &ref, nil
+}
+
+// RunAsync launches a run-eval without streaming. Returns a RunRef for polling.
+func (c *Client) RunAsync(ctx context.Context, agentID string, opts SimulateOptions) (*RunRef, error) {
+	var ref RunRef
+	err := c.backend.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/run-eval", agentID), opts, &ref)
+	return &ref, err
+}
+
+// ReEval re-evaluates an existing run with a different template, streams events via callback.
+func (c *Client) ReEval(ctx context.Context, agentID string, opts ReEvalOptions, callback func(SimulationEvent) error) (*RunRef, error) {
+	var ref RunRef
+	if err := c.backend.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/eval-only", agentID), opts, &ref); err != nil {
+		return nil, err
+	}
+	if err := c.Runs.StreamEvents(ctx, ref.RunID, 0, callback); err != nil {
+		return &ref, err
+	}
+	return &ref, nil
+}
+
+// ReEvalAsync launches a re-evaluation without streaming. Returns a RunRef for polling.
+func (c *Client) ReEvalAsync(ctx context.Context, agentID string, opts ReEvalOptions) (*RunRef, error) {
+	var ref RunRef
+	err := c.backend.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/eval-only", agentID), opts, &ref)
+	return &ref, err
 }

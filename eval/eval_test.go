@@ -186,22 +186,34 @@ func TestEvaluate(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestSimulate(t *testing.T) {
+	// Simulate now uses two-step: POST returns RunRef, then StreamEvents
+	callCount := 0
 	backend := newTestBackend(func(w http.ResponseWriter, r *http.Request) {
-		jsonResponse(w, 200, SimulationEvent{
-			Type:    "session_start",
-			Message: "Starting session 1",
-		})
+		callCount++
+		if callCount == 1 {
+			// First call: POST /simulate → returns RunRef
+			jsonResponse(w, 200, RunRef{RunID: "run-sim-1", Status: "running"})
+		} else {
+			// Second call: GET /events → returns SSE event
+			jsonResponse(w, 200, SimulationEvent{
+				Type:    "session_start",
+				Message: "Starting session 1",
+			})
+		}
 	})
 	defer backend.server.Close()
 
 	client := New(backend)
 	var events []SimulationEvent
-	err := client.Simulate(context.Background(), "agent-1", SimulateOptions{}, func(event SimulationEvent) error {
+	ref, err := client.Simulate(context.Background(), "agent-1", SimulateOptions{}, func(event SimulationEvent) error {
 		events = append(events, event)
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if ref.RunID != "run-sim-1" {
+		t.Fatalf("expected run_id 'run-sim-1', got '%s'", ref.RunID)
 	}
 	if len(events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(events))

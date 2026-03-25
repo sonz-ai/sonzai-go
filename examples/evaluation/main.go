@@ -31,7 +31,7 @@ func main() {
 
 	// Run simulation with live progress
 	fmt.Println("Running simulation...")
-	err := client.Eval.Simulate(ctx, *agentID, eval.SimulateOptions{
+	ref, err := client.Eval.Simulate(ctx, *agentID, eval.SimulateOptions{
 		TemplateID: *templateID,
 		UserPersona: map[string]interface{}{
 			"name":               "Alex",
@@ -49,11 +49,6 @@ func main() {
 			fmt.Printf("  [Turn] %s\n", event.Message)
 		case "session_complete":
 			fmt.Printf("  [Session complete]\n")
-		case "evaluation_complete":
-			fmt.Printf("\n  Score: %.1f\n", event.EvalResult.Score)
-			for _, cat := range event.EvalResult.Categories {
-				fmt.Printf("    %s: %.1f - %s\n", cat.Name, cat.Score, cat.Feedback)
-			}
 		default:
 			fmt.Printf("  [%s] %s\n", event.Type, event.Message)
 		}
@@ -65,5 +60,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("\nDone.")
+	fmt.Printf("\nDone. Run ID: %s\n", ref.RunID)
 }

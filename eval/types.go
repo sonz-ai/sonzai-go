@@ -125,6 +125,12 @@ type TemplateUpdateOptions struct {
 // Runs
 // ---------------------------------------------------------------------------
 
+// RunRef is the response from launching a run (fire-and-forget).
+type RunRef struct {
+	RunID  string `json:"run_id"`
+	Status string `json:"status"`
+}
+
 // Run represents a completed evaluation run.
 type Run struct {
 	ID               string                 `json:"id"`
@@ -132,6 +138,7 @@ type Run struct {
 	AgentID          string                 `json:"agent_id"`
 	AgentName        string                 `json:"agent_name"`
 	Status           string                 `json:"status"`
+	ErrorReason      string                 `json:"error_reason,omitempty"`
 	CharacterConfig  map[string]interface{} `json:"character_config"`
 	TemplateID       string                 `json:"template_id"`
 	TemplateSnapshot map[string]interface{} `json:"template_snapshot"`
