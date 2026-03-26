@@ -190,6 +190,8 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
+	// Increase buffer size to handle large SSE responses (default is 64KB, set to 1MB max)
+	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
