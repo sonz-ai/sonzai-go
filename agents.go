@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
+	"sync/atomic"
 )
 
 // AgentsResource provides agent-scoped operations.
@@ -44,11 +46,24 @@ func newAgentsResource(http *httpClient) *AgentsResource {
 func (a *AgentsResource) Chat(ctx context.Context, agentID string, opts ChatOptions) (*ChatResponse, error) {
 	var parts []string
 	var usage *ChatUsage
+	var totalEvents, malformedEvents int64
 
 	err := a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", agentID), opts, func(raw json.RawMessage) error {
+		totalEvents++
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
-			return nil // skip malformed events
+			malformedEvents++
+			slog.Warn("skipping malformed SSE event in Chat",
+				"error", err,
+				"agent_id", agentID,
+				"malformed_count", malformedEvents,
+				"total_count", totalEvents,
+			)
+			// If more than half the events are malformed, the stream is likely corrupt.
+			if totalEvents >= 4 && malformedEvents*2 > totalEvents {
+				return fmt.Errorf("too many malformed SSE events: %d/%d", malformedEvents, totalEvents)
+			}
+			return nil
 		}
 		if c := event.Content(); c != "" {
 			parts = append(parts, c)
@@ -70,9 +85,21 @@ func (a *AgentsResource) Chat(ctx context.Context, agentID string, opts ChatOpti
 
 // ChatStream sends a chat message and calls the callback for each streaming event.
 func (a *AgentsResource) ChatStream(ctx context.Context, agentID string, opts ChatOptions, callback func(ChatStreamEvent) error) error {
+	var totalEvents, malformedEvents atomic.Int64
 	return a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", agentID), opts, func(raw json.RawMessage) error {
+		total := totalEvents.Add(1)
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
+			malformed := malformedEvents.Add(1)
+			slog.Warn("skipping malformed SSE event in ChatStream",
+				"error", err,
+				"agent_id", agentID,
+				"malformed_count", malformed,
+				"total_count", total,
+			)
+			if total >= 4 && malformed*2 > total {
+				return fmt.Errorf("too many malformed SSE events: %d/%d", malformed, total)
+			}
 			return nil
 		}
 		return callback(event)

@@ -25,6 +25,12 @@ func newHTTPClient(baseURL, apiKey string, timeout time.Duration) *httpClient {
 		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: timeout,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				MaxConnsPerHost:     10,
+				MaxIdleConnsPerHost: 10,
+				IdleConnTimeout:     90 * time.Second,
+			},
 		},
 	}
 }
