@@ -3,6 +3,7 @@ package sonzai
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 )
 
@@ -116,7 +117,9 @@ func (m *MemoryResource) ListFacts(ctx context.Context, agentID string, opts *Fa
 func (m *MemoryResource) Reset(ctx context.Context, agentID string, opts *MemoryResetOptions) (*MemoryResetResponse, error) {
 	path := fmt.Sprintf("/api/v1/agents/%s/memory", agentID)
 	if opts != nil && opts.UserID != "" {
-		path += "?user_id=" + opts.UserID
+		query := url.Values{}
+		query.Set("user_id", opts.UserID)
+		path += "?" + query.Encode()
 	}
 
 	var result MemoryResetResponse
