@@ -92,7 +92,7 @@ func (c *Client) SimulateAsync(ctx context.Context, agentID string, opts Simulat
 
 // Run launches simulation + evaluation combined, streams events via callback.
 // Returns a RunRef so the caller can reconnect or poll if the stream drops.
-func (c *Client) Run(ctx context.Context, agentID string, opts SimulateOptions, callback func(SimulationEvent) error) (*RunRef, error) {
+func (c *Client) Run(ctx context.Context, agentID string, opts RunEvalOptions, callback func(SimulationEvent) error) (*RunRef, error) {
 	var ref RunRef
 	if err := c.backend.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/run-eval", agentID), opts, &ref); err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (c *Client) Run(ctx context.Context, agentID string, opts SimulateOptions, 
 }
 
 // RunAsync launches a run-eval without streaming. Returns a RunRef for polling.
-func (c *Client) RunAsync(ctx context.Context, agentID string, opts SimulateOptions) (*RunRef, error) {
+func (c *Client) RunAsync(ctx context.Context, agentID string, opts RunEvalOptions) (*RunRef, error) {
 	var ref RunRef
 	err := c.backend.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/run-eval", agentID), opts, &ref)
 	return &ref, err

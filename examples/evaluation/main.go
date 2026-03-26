@@ -18,7 +18,6 @@ import (
 
 func main() {
 	agentID := flag.String("agent", "", "Agent ID to evaluate")
-	templateID := flag.String("template", "", "Eval template ID (optional)")
 	flag.Parse()
 
 	if *agentID == "" {
@@ -32,7 +31,6 @@ func main() {
 	// Run simulation with live progress
 	fmt.Println("Running simulation...")
 	ref, err := client.Eval.Simulate(ctx, *agentID, eval.SimulateOptions{
-		TemplateID: *templateID,
 		UserPersona: map[string]interface{}{
 			"name":               "Alex",
 			"background":         "College student who loves sci-fi",
