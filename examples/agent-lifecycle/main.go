@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	client := sonzai.NewClient("")
+	client := sonzai.MustNewClient("")
 	ctx := context.Background()
 
 	// Create an agent

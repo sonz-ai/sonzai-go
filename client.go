@@ -20,6 +20,7 @@
 package sonzai
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -72,12 +73,13 @@ type Client struct {
 
 // NewClient creates a new Sonzai client with the given API key.
 // If apiKey is empty, it falls back to the SONZAI_API_KEY environment variable.
-func NewClient(apiKey string, opts ...ClientOption) *Client {
+// Returns an error if no API key is available (instead of panicking).
+func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 	if apiKey == "" {
 		apiKey = os.Getenv("SONZAI_API_KEY")
 	}
 	if apiKey == "" {
-		panic("sonzai: apiKey must be provided or set via SONZAI_API_KEY environment variable")
+		return nil, fmt.Errorf("sonzai: apiKey must be provided or set via SONZAI_API_KEY environment variable")
 	}
 
 	cfg := &clientConfig{
@@ -102,5 +104,15 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 		Voices:    &VoicesResource{http: http},
 		Webhooks:  &WebhooksResource{http: http},
 		http:      http,
+	}, nil
+}
+
+// MustNewClient is like NewClient but panics on error.
+// Use in tests or CLI tools where error handling is unnecessary.
+func MustNewClient(apiKey string, opts ...ClientOption) *Client {
+	c, err := NewClient(apiKey, opts...)
+	if err != nil {
+		panic(err)
 	}
+	return c
 }
