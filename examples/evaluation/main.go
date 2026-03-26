@@ -25,7 +25,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client := sonzai.NewClient("")
+	client := sonzai.MustNewClient("")
 	ctx := context.Background()
 
 	// Run simulation with live progress

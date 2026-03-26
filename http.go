@@ -13,6 +13,15 @@ import (
 	"time"
 )
 
+// SDKVersion is the current version of the sonzai-go SDK.
+const SDKVersion = "1.3.0"
+
+// Retry configuration for transient failures — TD-SDK-004.
+const (
+	maxRetries     = 2
+	retryBaseDelay = 500 * time.Millisecond
+)
+
 type httpClient struct {
 	baseURL    string
 	apiKey     string
@@ -25,6 +34,12 @@ func newHTTPClient(baseURL, apiKey string, timeout time.Duration) *httpClient {
 		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: timeout,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				MaxConnsPerHost:     10,
+				MaxIdleConnsPerHost: 10,
+				IdleConnTimeout:     90 * time.Second,
+			},
 		},
 	}
 }
@@ -45,13 +60,15 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 		u.RawQuery = q.Encode()
 	}
 
+	var bodyBytes []byte
 	var bodyReader io.Reader
 	if body != nil {
-		data, err := json.Marshal(body)
+		var err error
+		bodyBytes, err = json.Marshal(body)
 		if err != nil {
 			return nil, fmt.Errorf("marshal body: %w", err)
 		}
-		bodyReader = bytes.NewReader(data)
+		bodyReader = bytes.NewReader(bodyBytes)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), bodyReader)
@@ -61,31 +78,74 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "sonzai-go/1.2.0")
+	req.Header.Set("User-Agent", "sonzai-go/"+SDKVersion)
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("do request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
+	// Retry idempotent requests on transient failures (5xx, timeouts) — TD-SDK-004.
+	isIdempotent := method == http.MethodGet || method == http.MethodDelete
+	attempts := 1
+	if isIdempotent {
+		attempts = maxRetries + 1
 	}
 
-	if resp.StatusCode >= 400 {
-		msg := string(respBody)
-		var errResp struct {
-			Error string `json:"error"`
+	var lastErr error
+	for attempt := 0; attempt < attempts; attempt++ {
+		if attempt > 0 {
+			delay := retryBaseDelay * time.Duration(1<<(attempt-1)) // exponential backoff
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(delay):
+			}
+
+			// Re-create request for retry (body reader may have been consumed)
+			var retryBody io.Reader
+			if bodyBytes != nil {
+				retryBody = bytes.NewReader(bodyBytes)
+			}
+			req, err = http.NewRequestWithContext(ctx, method, u.String(), retryBody)
+			if err != nil {
+				return nil, fmt.Errorf("create request: %w", err)
+			}
+			req.Header.Set("Authorization", "Bearer "+c.apiKey)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("User-Agent", "sonzai-go/"+SDKVersion)
 		}
-		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
-			msg = errResp.Error
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("do request: %w", err)
+			if isIdempotent && attempt < attempts-1 {
+				continue // retry on network errors
+			}
+			return nil, lastErr
 		}
-		return nil, newErrorForStatus(resp.StatusCode, msg)
+
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("read body: %w", err)
+		}
+
+		if resp.StatusCode >= 500 && isIdempotent && attempt < attempts-1 {
+			lastErr = newErrorForStatus(resp.StatusCode, string(respBody))
+			continue // retry on 5xx
+		}
+
+		if resp.StatusCode >= 400 {
+			msg := string(respBody)
+			var errResp struct {
+				Error string `json:"error"`
+			}
+			if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+				msg = errResp.Error
+			}
+			return nil, newErrorForStatus(resp.StatusCode, msg)
+		}
+
+		return respBody, nil
 	}
 
-	return respBody, nil
+	return nil, lastErr
 }
 
 // Get performs an HTTP GET request and unmarshals the response into result.
@@ -169,7 +229,7 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("User-Agent", "sonzai-go/1.2.0")
+	req.Header.Set("User-Agent", "sonzai-go/"+SDKVersion)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
