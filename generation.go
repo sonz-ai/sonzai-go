@@ -38,18 +38,29 @@ type GenerateCharacterOptions struct {
 	Fields      []string `json:"fields,omitempty"`
 }
 
+// GeneratedGoal represents a goal generated as part of character generation.
+type GeneratedGoal struct {
+	Type        string `json:"type,omitempty"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Priority    int    `json:"priority,omitempty"`
+}
+
 // GenerateCharacterResponse is the response from character generation.
 type GenerateCharacterResponse struct {
-	Bio               string                     `json:"bio"`
-	PersonalityPrompt string                     `json:"personality_prompt"`
-	Big5              *Big5Scores                `json:"big5,omitempty"`
-	SpeechPatterns    []string                   `json:"speech_patterns,omitempty"`
-	TrueInterests     []string                   `json:"true_interests,omitempty"`
-	TrueDislikes      []string                   `json:"true_dislikes,omitempty"`
-	PrimaryTraits     []string                   `json:"primary_traits,omitempty"`
-	Dimensions        *SDKPersonalityDimensions  `json:"dimensions,omitempty"`
-	Preferences       *SDKInteractionPreferences `json:"preferences,omitempty"`
-	Behaviors         *SDKBehavioralTraits       `json:"behaviors,omitempty"`
+	Bio                     string                     `json:"bio"`
+	PersonalityPrompt       string                     `json:"personality_prompt"`
+	Big5                    *Big5Scores                `json:"big5,omitempty"`
+	SpeechPatterns          []string                   `json:"speech_patterns,omitempty"`
+	TrueInterests           []string                   `json:"true_interests,omitempty"`
+	TrueDislikes            []string                   `json:"true_dislikes,omitempty"`
+	PrimaryTraits           []string                   `json:"primary_traits,omitempty"`
+	Dimensions              *SDKPersonalityDimensions  `json:"dimensions,omitempty"`
+	Preferences             *SDKInteractionPreferences `json:"preferences,omitempty"`
+	Behaviors               *SDKBehavioralTraits       `json:"behaviors,omitempty"`
+	InitialGoals            []GeneratedGoal            `json:"initial_goals,omitempty"`
+	WorldDescription        string                     `json:"world_description,omitempty"`
+	OriginPromptInstructions string                    `json:"origin_prompt_instructions,omitempty"`
 }
 
 // SDKInteractionPreferences contains conversation style preferences.

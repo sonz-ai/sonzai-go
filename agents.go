@@ -177,8 +177,49 @@ func (a *AgentsResource) GetHabits(ctx context.Context, agentID string, userID, 
 	return result, err
 }
 
-// GetGoals returns goal data for an agent.
-func (a *AgentsResource) GetGoals(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+// Goal represents an agent goal returned from the API.
+type Goal struct {
+	GoalID        string   `json:"goal_id"`
+	AgentID       string   `json:"agent_id"`
+	UserID        string   `json:"user_id,omitempty"`
+	Type          string   `json:"type"`
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Priority      int      `json:"priority"`
+	Status        string   `json:"status"`
+	RelatedTraits []string `json:"related_traits,omitempty"`
+	CreatedAt     string   `json:"created_at"`
+	AchievedAt    string   `json:"achieved_at,omitempty"`
+	UpdatedAt     string   `json:"updated_at"`
+}
+
+// GoalsResponse wraps a list of goals returned by the API.
+type GoalsResponse struct {
+	Goals []Goal `json:"goals"`
+}
+
+// CreateGoalOptions configures a goal creation request.
+type CreateGoalOptions struct {
+	UserID        string   `json:"user_id,omitempty"`
+	Type          string   `json:"type,omitempty"`
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Priority      int      `json:"priority,omitempty"`
+	RelatedTraits []string `json:"related_traits,omitempty"`
+}
+
+// UpdateGoalOptions configures a goal update request.
+type UpdateGoalOptions struct {
+	UserID        string   `json:"user_id,omitempty"`
+	Title         string   `json:"title,omitempty"`
+	Description   string   `json:"description,omitempty"`
+	Priority      *int     `json:"priority,omitempty"`
+	Status        string   `json:"status,omitempty"`
+	RelatedTraits []string `json:"related_traits,omitempty"`
+}
+
+// GetGoals returns goal data for an agent. Pass userID to get combined agent-global + per-user goals.
+func (a *AgentsResource) GetGoals(ctx context.Context, agentID string, userID, instanceID string) (*GoalsResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -186,9 +227,38 @@ func (a *AgentsResource) GetGoals(ctx context.Context, agentID string, userID, i
 	if instanceID != "" {
 		params["instance_id"] = instanceID
 	}
-	var result map[string]interface{}
+	var result GoalsResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/goals", agentID), params, &result)
-	return result, err
+	return &result, err
+}
+
+// CreateGoal creates a new goal for an agent. Set UserID in opts for a per-user goal.
+func (a *AgentsResource) CreateGoal(ctx context.Context, agentID string, opts CreateGoalOptions) (*Goal, error) {
+	var result Goal
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/goals", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// UpdateGoal updates an existing goal. Set UserID in opts for per-user goals.
+func (a *AgentsResource) UpdateGoal(ctx context.Context, agentID, goalID string, opts UpdateGoalOptions) (*Goal, error) {
+	var result Goal
+	err := a.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/goals/%s", agentID, goalID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteGoal soft-deletes (abandons) a goal. Pass userID for per-user goals.
+func (a *AgentsResource) DeleteGoal(ctx context.Context, agentID, goalID, userID string) error {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	return a.http.DeleteWithParams(ctx, fmt.Sprintf("/api/v1/agents/%s/goals/%s", agentID, goalID), params, nil)
 }
 
 // GetInterests returns interest data for an agent.

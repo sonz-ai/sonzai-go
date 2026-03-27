@@ -368,9 +368,9 @@ func TestImageGenerate(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, ImageGenerateResponse{
-			Success:   true,
-			ImageID:   "img-1",
-			PublicURL: "https://storage.example.com/img-1.png",
+			ImageID:  "img-1",
+			URL:      "https://storage.example.com/img-1.png",
+			MimeType: "image/png",
 		})
 	})
 	defer server.Close()
@@ -380,9 +380,6 @@ func TestImageGenerate(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.Success {
-		t.Fatal("expected success")
 	}
 	if result.ImageID != "img-1" {
 		t.Fatalf("expected 'img-1', got '%s'", result.ImageID)
@@ -468,13 +465,13 @@ func TestVoiceMatch(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, VoiceMatchResponse{
-			AgentID: "agent-1", MatchedVoice: "NATM0", VoiceName: "Sophia", Confidence: 0.92,
+			VoiceID: "NATM0", VoiceName: "Sophia", MatchScore: 0.92,
 		})
 	})
 	defer server.Close()
 
 	result, err := client.Agents.Voice.Match(context.Background(), "agent-1", VoiceMatchOptions{
-		GenderHint: "female", PersonalityTraits: []string{"warm", "calm"},
+		PreferredGender: "female",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -490,13 +487,13 @@ func TestVoiceTTS(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, TTSResponse{
-			AgentID: "agent-1", AudioURL: "https://storage.example.com/tts.wav", DurationMs: 2500,
+			Audio: "base64audio", ContentType: "audio/wav", DurationMs: 2500,
 		})
 	})
 	defer server.Close()
 
 	result, err := client.Agents.Voice.TTS(context.Background(), "agent-1", TTSOptions{
-		Text: "Hello!", VoiceID: "NATM0",
+		Text: "Hello!", VoiceName: "Sophia",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -563,19 +560,19 @@ func TestTriggerEvent(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, TriggerEventResponse{
-			ActivityID: "act-1", AgentID: "agent-1", Status: "triggered", ActivityType: "situation",
+			Accepted: true, EventID: "evt-1",
 		})
 	})
 	defer server.Close()
 
 	result, err := client.Agents.TriggerEvent(context.Background(), "agent-1", TriggerEventOptions{
-		UserID: "user-1", ActivityType: "situation",
+		UserID: "user-1", EventType: "situation",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.ActivityID != "act-1" {
-		t.Fatalf("expected 'act-1', got '%s'", result.ActivityID)
+	if result.EventID != "evt-1" {
+		t.Fatalf("expected 'evt-1', got '%s'", result.EventID)
 	}
 }
 
@@ -585,26 +582,23 @@ func TestTriggerEvent(t *testing.T) {
 
 func TestDialogue(t *testing.T) {
 	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agents/dialogue" {
+		if r.URL.Path != "/api/v1/agents/agent-1/dialogue" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, DialogueResponse{
-			SessionID: "sess-1",
-			Messages: []DialogueMessage{
-				{MessageID: "m1", AgentID: "agent-1", Role: "assistant", Content: "Hello!"},
-			},
+			Response: "Hello! Nice to meet you.",
 		})
 	})
 	defer server.Close()
 
-	result, err := client.Agents.Dialogue(context.Background(), DialogueOptions{
-		AgentIDs: []string{"agent-1", "agent-2"}, Message: "Talk to each other",
+	result, err := client.Agents.Dialogue(context.Background(), "agent-1", DialogueOptions{
+		Messages: []ChatMessage{{Role: "user", Content: "Talk to each other"}},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(result.Messages) != 1 {
-		t.Fatalf("expected 1 message, got %d", len(result.Messages))
+	if result.Response != "Hello! Nice to meet you." {
+		t.Fatalf("expected response, got '%s'", result.Response)
 	}
 }
 

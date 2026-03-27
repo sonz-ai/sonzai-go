@@ -145,6 +145,18 @@ func (c *httpClient) Delete(ctx context.Context, path string, result interface{}
 	return nil
 }
 
+// DeleteWithParams performs an HTTP DELETE request with query parameters.
+func (c *httpClient) DeleteWithParams(ctx context.Context, path string, params map[string]string, result interface{}) error {
+	data, err := c.request(ctx, http.MethodDelete, path, nil, params)
+	if err != nil {
+		return err
+	}
+	if result != nil {
+		return json.Unmarshal(data, result)
+	}
+	return nil
+}
+
 // StreamSSE sends a request and calls the callback for each parsed SSE event.
 func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body interface{}, callback func(json.RawMessage) error) error {
 	u, err := url.Parse(c.baseURL + path)

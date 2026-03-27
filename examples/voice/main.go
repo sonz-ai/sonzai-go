@@ -30,24 +30,23 @@ func main() {
 
 	// Find the best voice match
 	match, err := client.Agents.Voice.Match(ctx, *agentID, sonzai.VoiceMatchOptions{
-		PersonalityTraits: []string{"warm", "calm"},
-		VoiceTier:         2,
+		Big5:            &sonzai.Big5Scores{Openness: 80, Agreeableness: 70, Extraversion: 60},
+		PreferredGender: "female",
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "match error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Matched voice: %s (confidence: %.2f)\n", match.VoiceName, match.Confidence)
+	fmt.Printf("Matched voice: %s (score: %.2f)\n", match.VoiceName, match.MatchScore)
 
 	// Generate speech
 	tts, err := client.Agents.Voice.TTS(ctx, *agentID, sonzai.TTSOptions{
-		Text:    *text,
-		VoiceID: match.VoiceID,
-		Speed:   1.0,
+		Text:      *text,
+		VoiceName: match.VoiceName,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "tts error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Audio: %s (%dms duration)\n", tts.AudioURL, tts.DurationMs)
+	fmt.Printf("Audio: %s (%dms duration)\n", tts.ContentType, tts.DurationMs)
 }

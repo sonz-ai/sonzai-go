@@ -44,6 +44,16 @@ type CreateAgentOptions struct {
 	LoreContext                  map[string]interface{}    `json:"lore_generation_context,omitempty"`
 	GenerateOriginStory          bool                      `json:"generate_origin_story,omitempty"`
 	GeneratePersonalizedMemories bool                      `json:"generate_personalized_memories,omitempty"`
+	InitialGoals                 []InitialGoal             `json:"initial_goals,omitempty"`
+}
+
+// InitialGoal defines a goal to set during agent creation.
+type InitialGoal struct {
+	Type          string   `json:"type,omitempty"`           // personal_growth, skill_mastery, relationship, learning_discovery
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Priority      int      `json:"priority,omitempty"`       // 0=low, 1=medium, 2=high
+	RelatedTraits []string `json:"related_traits,omitempty"`
 }
 
 // SeedMemory represents a memory to seed during agent creation.

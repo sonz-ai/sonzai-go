@@ -19,7 +19,7 @@ func main() {
 	ctx := context.Background()
 
 	// Create an agent
-	agent, err := client.Agents.Create(ctx, sonzai.AgentCreateOptions{
+	agent, err := client.Agents.Create(ctx, sonzai.CreateAgentOptions{
 		Name:   "Aria",
 		Gender: "female",
 		Bio:    "A curious explorer who loves stargazing and telling stories.",
