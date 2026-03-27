@@ -61,7 +61,7 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "sonzai-go/1.2.0")
+	req.Header.Set("User-Agent", "sonzai-go/1.0.0")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -169,7 +169,7 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("User-Agent", "sonzai-go/1.2.0")
+	req.Header.Set("User-Agent", "sonzai-go/1.0.0")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

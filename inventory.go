@@ -18,17 +18,17 @@ type InventoryResource struct {
 
 // KBResolutionInfo contains KB node resolution details from an inventory write.
 type KBResolutionInfo struct {
-	Resolved     bool                   `json:"resolved"`
-	KBNodeID     string                 `json:"kb_node_id,omitempty"`
-	KBLabel      string                 `json:"kb_label,omitempty"`
-	KBProperties map[string]interface{} `json:"kb_properties,omitempty"`
+	Resolved     bool           `json:"resolved"`
+	KBNodeID     string         `json:"kb_node_id,omitempty"`
+	KBLabel      string         `json:"kb_label,omitempty"`
+	KBProperties map[string]any `json:"kb_properties,omitempty"`
 }
 
 // KBCandidate represents a candidate KB node for disambiguation.
 type KBCandidate struct {
-	KBNodeID   string                 `json:"kb_node_id"`
-	Label      string                 `json:"label"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
+	KBNodeID   string         `json:"kb_node_id"`
+	Label      string         `json:"label"`
+	Properties map[string]any `json:"properties,omitempty"`
 }
 
 // InventoryUpdateResponse is the response from an inventory write operation.
@@ -42,25 +42,25 @@ type InventoryUpdateResponse struct {
 
 // InventoryItem represents a single item in an inventory query response.
 type InventoryItem struct {
-	FactID           string                 `json:"fact_id"`
-	ItemLabel        string                 `json:"item_label"`
-	KBNodeID         string                 `json:"kb_node_id,omitempty"`
-	UserProperties   map[string]interface{} `json:"user_properties"`
-	MarketProperties map[string]interface{} `json:"market_properties,omitempty"`
-	GainLoss         *float64               `json:"gain_loss,omitempty"`
+	FactID           string         `json:"fact_id"`
+	ItemLabel        string         `json:"item_label"`
+	KBNodeID         string         `json:"kb_node_id,omitempty"`
+	UserProperties   map[string]any `json:"user_properties"`
+	MarketProperties map[string]any `json:"market_properties,omitempty"`
+	GainLoss         *float64       `json:"gain_loss,omitempty"`
 }
 
 // InventoryGroupResult represents a group in an aggregate query.
 type InventoryGroupResult struct {
-	Group  string                 `json:"group"`
-	Values map[string]interface{} `json:"values"`
+	Group  string         `json:"group"`
+	Values map[string]any `json:"values"`
 }
 
 // InventoryQueryResponse is the response from an inventory query.
 type InventoryQueryResponse struct {
-	Items      []InventoryItem        `json:"items"`
-	TotalItems int                    `json:"total_items"`
-	Totals     map[string]interface{} `json:"totals,omitempty"`
+	Items      []InventoryItem `json:"items"`
+	TotalItems int             `json:"total_items"`
+	Totals     map[string]any  `json:"totals,omitempty"`
 	Groups     []InventoryGroupResult `json:"groups,omitempty"`
 }
 
@@ -82,23 +82,23 @@ type InventoryDirectUpdateResponse struct {
 
 // StoredFact represents a stored fact returned by the full fact recall endpoint.
 type StoredFact struct {
-	FactID       string                 `json:"fact_id"`
-	Content      string                 `json:"content"`
-	FactType     string                 `json:"fact_type"`
-	Importance   float64                `json:"importance"`
-	Confidence   float64                `json:"confidence"`
-	Entity       string                 `json:"entity,omitempty"`
-	SourceType   string                 `json:"source_type,omitempty"`
-	MentionCount int                    `json:"mention_count"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt    string                 `json:"created_at"`
-	UpdatedAt    string                 `json:"updated_at"`
+	FactID       string         `json:"fact_id"`
+	Content      string         `json:"content"`
+	FactType     string         `json:"fact_type"`
+	Importance   float64        `json:"importance"`
+	Confidence   float64        `json:"confidence"`
+	Entity       string         `json:"entity,omitempty"`
+	SourceType   string         `json:"source_type,omitempty"`
+	MentionCount int            `json:"mention_count"`
+	Metadata     map[string]any `json:"metadata,omitempty"`
+	CreatedAt    string         `json:"created_at"`
+	UpdatedAt    string         `json:"updated_at"`
 }
 
 // ListAllFactsResponse is the response from listing all facts for an agent+user.
 type ListAllFactsResponse struct {
-	Facts      []StoredFact `json:"facts"`
-	TotalCount int          `json:"total_count"`
+	Facts []StoredFact `json:"facts"`
+	Total int          `json:"total"`
 }
 
 // ---------------------------------------------------------------------------
@@ -107,12 +107,13 @@ type ListAllFactsResponse struct {
 
 // InventoryUpdateOptions configures an inventory write operation.
 type InventoryUpdateOptions struct {
-	Action      string                 `json:"action"`                // "add", "update", "remove"
-	ItemType    string                 `json:"item_type"`             // e.g. "pokemon_card", "property"
-	Description string                 `json:"description,omitempty"` // Natural language (for KB search)
-	KBNodeID    string                 `json:"kb_node_id,omitempty"`  // If already resolved
-	Properties  map[string]interface{} `json:"properties,omitempty"`
-	ProjectID   string                 `json:"project_id,omitempty"`
+	Action      string         `json:"action"`                // "add", "update", "remove"
+	ItemType    string         `json:"item_type"`             // e.g. "pokemon_card", "property"
+	Description string         `json:"description,omitempty"` // Natural language (for KB search)
+	KBNodeID    string         `json:"kb_node_id,omitempty"`  // If already resolved
+	Properties  map[string]any `json:"properties,omitempty"`
+	ProjectID   string         `json:"project_id,omitempty"`
+	InstanceID  string         `json:"-"` // Query param for multi-instance scoping
 }
 
 // InventoryQueryOptions configures an inventory query.
@@ -129,16 +130,17 @@ type InventoryQueryOptions struct {
 
 // InventoryBatchItem represents a single item in a batch import.
 type InventoryBatchItem struct {
-	ItemType    string                 `json:"item_type"`
-	Description string                 `json:"description,omitempty"`
-	KBNodeID    string                 `json:"kb_node_id,omitempty"`
-	Properties  map[string]interface{} `json:"properties,omitempty"`
+	ItemType    string         `json:"item_type"`
+	Description string         `json:"description,omitempty"`
+	KBNodeID    string         `json:"kb_node_id,omitempty"`
+	Properties  map[string]any `json:"properties,omitempty"`
 }
 
 // InventoryBatchImportOptions configures a batch inventory import.
 type InventoryBatchImportOptions struct {
-	Items     []InventoryBatchItem `json:"items"`
-	ProjectID string               `json:"project_id,omitempty"`
+	Items      []InventoryBatchItem `json:"items"`
+	ProjectID  string               `json:"project_id,omitempty"`
+	InstanceID string               `json:"-"` // Query param for multi-instance scoping
 }
 
 // ListAllFactsOptions configures a full fact recall query.
@@ -155,8 +157,12 @@ type ListAllFactsOptions struct {
 
 // Update adds, updates, or removes an inventory item.
 func (inv *InventoryResource) Update(ctx context.Context, agentID, userID string, opts InventoryUpdateOptions) (*InventoryUpdateResponse, error) {
+	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory", agentID, url.PathEscape(userID))
+	if opts.InstanceID != "" {
+		path += "?instance_id=" + url.QueryEscape(opts.InstanceID)
+	}
 	var result InventoryUpdateResponse
-	err := inv.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory", agentID, url.PathEscape(userID)), opts, &result)
+	err := inv.http.Post(ctx, path, opts, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -201,8 +207,12 @@ func (inv *InventoryResource) Query(ctx context.Context, agentID, userID string,
 
 // BatchImport adds multiple inventory items in a single request (up to 1000).
 func (inv *InventoryResource) BatchImport(ctx context.Context, agentID, userID string, opts InventoryBatchImportOptions) (*InventoryBatchImportResponse, error) {
+	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/batch", agentID, url.PathEscape(userID))
+	if opts.InstanceID != "" {
+		path += "?instance_id=" + url.QueryEscape(opts.InstanceID)
+	}
 	var result InventoryBatchImportResponse
-	err := inv.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/batch", agentID, url.PathEscape(userID)), opts, &result)
+	err := inv.http.Post(ctx, path, opts, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -210,10 +220,15 @@ func (inv *InventoryResource) BatchImport(ctx context.Context, agentID, userID s
 }
 
 // DirectUpdate updates an inventory fact's properties by fact ID.
-func (inv *InventoryResource) DirectUpdate(ctx context.Context, agentID, userID, factID string, properties map[string]interface{}) (*InventoryDirectUpdateResponse, error) {
-	body := map[string]interface{}{"properties": properties}
+// Pass instanceID to scope to a specific game instance (empty string for default).
+func (inv *InventoryResource) DirectUpdate(ctx context.Context, agentID, userID, factID string, properties map[string]any, instanceID string) (*InventoryDirectUpdateResponse, error) {
+	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/%s", agentID, url.PathEscape(userID), url.PathEscape(factID))
+	if instanceID != "" {
+		path += "?instance_id=" + url.QueryEscape(instanceID)
+	}
+	body := map[string]any{"properties": properties}
 	var result InventoryDirectUpdateResponse
-	err := inv.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/%s", agentID, url.PathEscape(userID), factID), body, &result)
+	err := inv.http.Put(ctx, path, body, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -221,9 +236,14 @@ func (inv *InventoryResource) DirectUpdate(ctx context.Context, agentID, userID,
 }
 
 // DirectDelete removes an inventory item by fact ID.
-func (inv *InventoryResource) DirectDelete(ctx context.Context, agentID, userID, factID string) (*InventoryDirectUpdateResponse, error) {
+// Pass instanceID to scope to a specific game instance (empty string for default).
+func (inv *InventoryResource) DirectDelete(ctx context.Context, agentID, userID, factID string, instanceID string) (*InventoryDirectUpdateResponse, error) {
+	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/%s", agentID, url.PathEscape(userID), url.PathEscape(factID))
+	if instanceID != "" {
+		path += "?instance_id=" + url.QueryEscape(instanceID)
+	}
 	var result InventoryDirectUpdateResponse
-	err := inv.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/%s", agentID, url.PathEscape(userID), factID), &result)
+	err := inv.http.Delete(ctx, path, &result)
 	if err != nil {
 		return nil, err
 	}
