@@ -41,11 +41,11 @@ func newAgentsResource(http *httpClient) *AgentsResource {
 }
 
 // Chat sends a chat message and returns the aggregated response.
-func (a *AgentsResource) Chat(ctx context.Context, agentID string, opts ChatOptions) (*ChatResponse, error) {
+func (a *AgentsResource) Chat(ctx context.Context, params AgentChatParams) (*ChatResponse, error) {
 	var parts []string
 	var usage *ChatUsage
 
-	err := a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", agentID), opts, func(raw json.RawMessage) error {
+	err := a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
 			return nil // skip malformed events
@@ -69,8 +69,8 @@ func (a *AgentsResource) Chat(ctx context.Context, agentID string, opts ChatOpti
 }
 
 // ChatStream sends a chat message and calls the callback for each streaming event.
-func (a *AgentsResource) ChatStream(ctx context.Context, agentID string, opts ChatOptions, callback func(ChatStreamEvent) error) error {
-	return a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", agentID), opts, func(raw json.RawMessage) error {
+func (a *AgentsResource) ChatStream(ctx context.Context, params AgentChatParams, callback func(ChatStreamEvent) error) error {
+	return a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
 			return nil
@@ -81,7 +81,7 @@ func (a *AgentsResource) ChatStream(ctx context.Context, agentID string, opts Ch
 
 // ChatStreamChannel sends a chat message and returns a channel of streaming events.
 // The channel is closed when the stream ends or the context is cancelled.
-func (a *AgentsResource) ChatStreamChannel(ctx context.Context, agentID string, opts ChatOptions) (<-chan ChatStreamEvent, <-chan error) {
+func (a *AgentsResource) ChatStreamChannel(ctx context.Context, params AgentChatParams) (<-chan ChatStreamEvent, <-chan error) {
 	ch := make(chan ChatStreamEvent, 64)
 	errCh := make(chan error, 1)
 
@@ -89,7 +89,7 @@ func (a *AgentsResource) ChatStreamChannel(ctx context.Context, agentID string, 
 		defer close(ch)
 		defer close(errCh)
 
-		err := a.ChatStream(ctx, agentID, opts, func(event ChatStreamEvent) error {
+		err := a.ChatStream(ctx, params, func(event ChatStreamEvent) error {
 			select {
 			case ch <- event:
 				return nil

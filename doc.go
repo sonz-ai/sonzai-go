@@ -19,13 +19,21 @@
 // Send messages and receive streaming or aggregated responses:
 //
 //	// Non-streaming
-//	resp, err := client.Agents.Chat(ctx, "agent-id", sonzai.ChatOptions{
-//	    Messages: []sonzai.ChatMessage{{Role: "user", Content: "Hello!"}},
-//	    UserID:   "user-123",
+//	resp, err := client.Agents.Chat(ctx, sonzai.AgentChatParams{
+//	    AgentID: "agent-id",
+//	    ChatOptions: sonzai.ChatOptions{
+//	        Messages: []sonzai.ChatMessage{{Role: "user", Content: "Hello!"}},
+//	        UserID:   "user-123",
+//	    },
 //	})
 //
 //	// Streaming
-//	err := client.Agents.ChatStream(ctx, "agent-id", opts, func(event sonzai.ChatStreamEvent) error {
+//	err := client.Agents.ChatStream(ctx, sonzai.AgentChatParams{
+//	    AgentID: "agent-id",
+//	    ChatOptions: sonzai.ChatOptions{
+//	        Messages: []sonzai.ChatMessage{{Role: "user", Content: "Hello!"}},
+//	    },
+//	}, func(event sonzai.ChatStreamEvent) error {
 //	    fmt.Print(event.Content())
 //	    return nil
 //	})
@@ -52,7 +60,7 @@
 //
 // The SDK returns typed errors for different failure scenarios:
 //
-//	resp, err := client.Agents.Chat(ctx, "agent-id", opts)
+//	resp, err := client.Agents.Chat(ctx, opts)
 //	if err != nil {
 //	    var authErr *sonzai.AuthenticationError
 //	    if errors.As(err, &authErr) {

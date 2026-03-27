@@ -88,6 +88,13 @@ type AgentToolCapabilities struct {
 	ImageGeneration bool `json:"image_generation"`
 }
 
+// AgentChatParams is the single-struct params type for Chat, ChatStream, and ChatStreamChannel.
+// AgentID is used as the URL path parameter; all other fields are sent as the request body.
+type AgentChatParams struct {
+	AgentID string `json:"-"`
+	ChatOptions
+}
+
 // ChatOptions configures a chat request.
 type ChatOptions struct {
 	Messages             []ChatMessage         `json:"messages"`

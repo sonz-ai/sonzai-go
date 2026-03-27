@@ -35,9 +35,12 @@ func main() {
 	fmt.Printf("Created agent: %s (%s)\n\n", agent.Name, agent.AgentID)
 
 	// Chat with the agent
-	resp, err := client.Agents.Chat(ctx, agent.AgentID, sonzai.ChatOptions{
-		Messages: []sonzai.ChatMessage{{Role: "user", Content: "What's your favorite constellation?"}},
-		UserID:   "demo-user",
+	resp, err := client.Agents.Chat(ctx, sonzai.AgentChatParams{
+		AgentID: agent.AgentID,
+		ChatOptions: sonzai.ChatOptions{
+			Messages: []sonzai.ChatMessage{{Role: "user", Content: "What's your favorite constellation?"}},
+			UserID:   "demo-user",
+		},
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "chat error: %v\n", err)

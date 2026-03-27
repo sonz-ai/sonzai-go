@@ -81,8 +81,9 @@ func TestChatAggregated(t *testing.T) {
 	})
 	defer server.Close()
 
-	resp, err := client.Agents.Chat(context.Background(), "agent-1", ChatOptions{
-		Messages: []ChatMessage{{Role: "user", Content: "Hi"}},
+	resp, err := client.Agents.Chat(context.Background(), AgentChatParams{
+		AgentID:     "agent-1",
+		ChatOptions: ChatOptions{Messages: []ChatMessage{{Role: "user", Content: "Hi"}}},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -105,8 +106,9 @@ func TestChatStream(t *testing.T) {
 	defer server.Close()
 
 	var events []ChatStreamEvent
-	err := client.Agents.ChatStream(context.Background(), "agent-1", ChatOptions{
-		Messages: []ChatMessage{{Role: "user", Content: "Hi"}},
+	err := client.Agents.ChatStream(context.Background(), AgentChatParams{
+		AgentID:     "agent-1",
+		ChatOptions: ChatOptions{Messages: []ChatMessage{{Role: "user", Content: "Hi"}}},
 	}, func(event ChatStreamEvent) error {
 		events = append(events, event)
 		return nil

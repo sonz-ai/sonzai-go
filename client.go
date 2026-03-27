@@ -5,12 +5,16 @@
 //	client := sonzai.NewClient("your-api-key")
 //
 //	// Chat with an agent
-//	resp, err := client.Agents.Chat(ctx, "agent-id", sonzai.ChatOptions{
-//	    Messages: []sonzai.ChatMessage{{Role: "user", Content: "Hello!"}},
+//	resp, err := client.Agents.Chat(ctx, sonzai.AgentChatParams{
+//	    AgentID:     "agent-id",
+//	    ChatOptions: sonzai.ChatOptions{Messages: []sonzai.ChatMessage{{Role: "user", Content: "Hello!"}}},
 //	})
 //
 //	// Stream chat
-//	err := client.Agents.ChatStream(ctx, "agent-id", opts, func(event sonzai.ChatStreamEvent) error {
+//	err := client.Agents.ChatStream(ctx, sonzai.AgentChatParams{
+//	    AgentID:     "agent-id",
+//	    ChatOptions: sonzai.ChatOptions{Messages: []sonzai.ChatMessage{{Role: "user", Content: "Hello!"}}},
+//	}, func(event sonzai.ChatStreamEvent) error {
 //	    fmt.Print(event.Content())
 //	    return nil
 //	})
