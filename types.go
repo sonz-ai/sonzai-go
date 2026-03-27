@@ -86,6 +86,7 @@ type AgentToolCapabilities struct {
 	WebSearch       bool `json:"web_search"`
 	RememberName    bool `json:"remember_name"`
 	ImageGeneration bool `json:"image_generation"`
+	Inventory       bool `json:"inventory"`
 }
 
 // AgentChatParams is the single-struct params type for Chat, ChatStream, and ChatStreamChannel.
@@ -135,16 +136,17 @@ type MemoryNode struct {
 
 // AtomicFact represents a single atomic fact stored in memory.
 type AtomicFact struct {
-	FactID       string  `json:"fact_id"`
-	AgentID      string  `json:"agent_id"`
-	UserID       string  `json:"user_id"`
-	NodeID       string  `json:"node_id"`
-	AtomicText   string  `json:"atomic_text"`
-	FactType     string  `json:"fact_type"`
-	Importance   float64 `json:"importance"`
-	SupersedesID string  `json:"supersedes_id"`
-	SessionID    string  `json:"session_id"`
-	CreatedAt    string  `json:"created_at,omitempty"`
+	FactID       string                 `json:"fact_id"`
+	AgentID      string                 `json:"agent_id"`
+	UserID       string                 `json:"user_id"`
+	NodeID       string                 `json:"node_id"`
+	AtomicText   string                 `json:"atomic_text"`
+	FactType     string                 `json:"fact_type"`
+	Importance   float64                `json:"importance"`
+	SupersedesID string                 `json:"supersedes_id"`
+	SessionID    string                 `json:"session_id"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt    string                 `json:"created_at,omitempty"`
 }
 
 // MemoryResponse is the response from the memory list endpoint.
@@ -535,6 +537,7 @@ type AgentCapabilities struct {
 	WebSearch       bool                   `json:"webSearch"`
 	RememberName    bool                   `json:"rememberName"`
 	ImageGeneration bool                   `json:"imageGeneration"`
+	Inventory       bool                   `json:"inventory"`
 	CustomTools     []CustomToolDefinition `json:"customTools,omitempty"`
 }
 
@@ -543,6 +546,7 @@ type UpdateCapabilitiesOptions struct {
 	WebSearch       *bool `json:"webSearch,omitempty"`
 	RememberName    *bool `json:"rememberName,omitempty"`
 	ImageGeneration *bool `json:"imageGeneration,omitempty"`
+	Inventory       *bool `json:"inventory,omitempty"`
 }
 
 // CustomToolListResponse is the response from listing custom tools.

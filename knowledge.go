@@ -650,3 +650,36 @@ func (k *KnowledgeResource) RecordFeedback(ctx context.Context, projectID string
 	var result map[string]any
 	return k.http.Post(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/analytics/feedback", projectID), opts, &result)
 }
+
+// KBBulkUpdateEntry represents a single entry in a bulk update request.
+type KBBulkUpdateEntry struct {
+	EntityType string                 `json:"entity_type"`
+	Label      string                 `json:"label"`
+	Properties map[string]interface{} `json:"properties"`
+}
+
+// KBBulkUpdateOptions configures a bulk update request.
+type KBBulkUpdateOptions struct {
+	Source  string              `json:"source,omitempty"`
+	Updates []KBBulkUpdateEntry `json:"updates"`
+}
+
+// KBBulkUpdateResponse is the response from a bulk update.
+type KBBulkUpdateResponse struct {
+	Processed int    `json:"processed,omitempty"`
+	Updated   int    `json:"updated,omitempty"`
+	NotFound  int    `json:"not_found,omitempty"`
+	Created   int    `json:"created,omitempty"`
+	Status    string `json:"status,omitempty"`
+	Count     int    `json:"count,omitempty"`
+}
+
+// BulkUpdate batch-updates KB node properties. Sync for <=100 items; async for larger.
+func (k *KnowledgeResource) BulkUpdate(ctx context.Context, projectID string, opts KBBulkUpdateOptions) (*KBBulkUpdateResponse, error) {
+	var result KBBulkUpdateResponse
+	err := k.http.Patch(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/bulk-update", projectID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

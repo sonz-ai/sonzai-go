@@ -21,6 +21,7 @@ type AgentsResource struct {
 	Wakeups       *WakeupResource
 	Generation    *GenerationResource
 	Priming       *PrimingResource
+	Inventory     *InventoryResource
 }
 
 func newAgentsResource(http *httpClient) *AgentsResource {
@@ -37,6 +38,7 @@ func newAgentsResource(http *httpClient) *AgentsResource {
 		Wakeups:       &WakeupResource{http: http},
 		Generation:    &GenerationResource{http: http},
 		Priming:       &PrimingResource{http: http},
+		Inventory:     &InventoryResource{http: http},
 	}
 }
 
