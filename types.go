@@ -91,6 +91,7 @@ type AgentToolCapabilities struct {
 
 // AgentChatParams is the single-struct params type for Chat, ChatStream, and ChatStreamChannel.
 // AgentID is used as the URL path parameter; all other fields are sent as the request body.
+// AgentID may be a UUID or an agent name — names are resolved to deterministic UUIDs server-side.
 type AgentChatParams struct {
 	AgentID string `json:"-"`
 	ChatOptions

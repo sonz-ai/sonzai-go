@@ -32,6 +32,8 @@ type GenerateBioResponse struct {
 
 // GenerateCharacterOptions configures a character generation request.
 type GenerateCharacterOptions struct {
+	// AgentID is an optional UUID. If empty, a deterministic ID is derived from Name.
+	AgentID     string   `json:"agent_id,omitempty"`
 	Name        string   `json:"name"`
 	Gender      string   `json:"gender,omitempty"`
 	Description string   `json:"description,omitempty"`
@@ -48,6 +50,10 @@ type GeneratedGoal struct {
 
 // GenerateCharacterResponse is the response from character generation.
 type GenerateCharacterResponse struct {
+	// AgentID is the resolved agent ID (provided or derived from name).
+	AgentID string `json:"agent_id,omitempty"`
+	// Existing is true when the agent already existed and the LLM was not called.
+	Existing                bool                       `json:"existing,omitempty"`
 	Bio                     string                     `json:"bio"`
 	PersonalityPrompt       string                     `json:"personality_prompt"`
 	Big5                    *Big5Scores                `json:"big5,omitempty"`
