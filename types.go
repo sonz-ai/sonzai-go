@@ -729,3 +729,117 @@ type UpdateInstanceOptions struct {
 	Description string `json:"description,omitempty"`
 	Status      string `json:"status,omitempty"`
 }
+
+// ---------------------------------------------------------------------------
+// Mood
+// ---------------------------------------------------------------------------
+
+// MoodState represents agent mood dimensions.
+type MoodState struct {
+	Happiness float64 `json:"happiness"`
+	Energy    float64 `json:"energy"`
+	Calmness  float64 `json:"calmness"`
+	Affection float64 `json:"affection"`
+}
+
+// MoodResponse wraps the mood state from the API.
+type MoodResponse struct {
+	Mood      MoodState `json:"mood"`
+	UpdatedAt string    `json:"updated_at,omitempty"`
+}
+
+// MoodHistoryEntry represents a single mood history data point.
+type MoodHistoryEntry struct {
+	Mood      MoodState `json:"mood"`
+	Timestamp string    `json:"timestamp"`
+}
+
+// MoodHistoryResponse wraps mood history from the API.
+type MoodHistoryResponse struct {
+	History []MoodHistoryEntry `json:"history"`
+}
+
+// MoodAggregateResponse wraps aggregated mood statistics.
+type MoodAggregateResponse struct {
+	Average   MoodState `json:"average"`
+	Min       MoodState `json:"min"`
+	Max       MoodState `json:"max"`
+	DataCount int       `json:"data_count"`
+}
+
+// ---------------------------------------------------------------------------
+// Relationships
+// ---------------------------------------------------------------------------
+
+// RelationshipData represents a relationship with a user.
+type RelationshipData struct {
+	UserID     string  `json:"user_id"`
+	LoveScore  float64 `json:"love_score"`
+	Narrative  string  `json:"narrative,omitempty"`
+	LastUpdate string  `json:"last_update,omitempty"`
+}
+
+// RelationshipsResponse wraps relationship data.
+type RelationshipsResponse struct {
+	Relationships []RelationshipData `json:"relationships"`
+}
+
+// ---------------------------------------------------------------------------
+// Habits
+// ---------------------------------------------------------------------------
+
+// HabitData represents an agent habit.
+type HabitData struct {
+	Name       string  `json:"name"`
+	Strength   float64 `json:"strength"`
+	Category   string  `json:"category,omitempty"`
+	LastUpdate string  `json:"last_update,omitempty"`
+}
+
+// HabitsResponse wraps habit data.
+type HabitsResponse struct {
+	Habits []HabitData `json:"habits"`
+}
+
+// ---------------------------------------------------------------------------
+// Interests
+// ---------------------------------------------------------------------------
+
+// InterestData represents an agent interest.
+type InterestData struct {
+	Topic    string  `json:"topic"`
+	Score    float64 `json:"score"`
+	Category string  `json:"category,omitempty"`
+}
+
+// InterestsResponse wraps interest data.
+type InterestsResponse struct {
+	Interests []InterestData `json:"interests"`
+}
+
+// ---------------------------------------------------------------------------
+// Diary
+// ---------------------------------------------------------------------------
+
+// DiaryEntry represents a single diary entry.
+type DiaryEntry struct {
+	EntryID   string   `json:"entry_id"`
+	Title     string   `json:"title"`
+	Body      string   `json:"body"`
+	Tags      []string `json:"tags,omitempty"`
+	CreatedAt string   `json:"created_at"`
+}
+
+// DiaryResponse wraps diary entries.
+type DiaryResponse struct {
+	Entries []DiaryEntry `json:"entries"`
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+// UsersResponse wraps agent users data.
+type UsersResponse struct {
+	Users []map[string]interface{} `json:"users"`
+}

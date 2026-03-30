@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -50,7 +51,8 @@ func (a *AgentsResource) Chat(ctx context.Context, params AgentChatParams) (*Cha
 	err := a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
-			return nil // skip malformed events
+			log.Printf("sonzai: skipping malformed SSE event: %v", err)
+			return nil
 		}
 		if c := event.Content(); c != "" {
 			parts = append(parts, c)
@@ -75,6 +77,7 @@ func (a *AgentsResource) ChatStream(ctx context.Context, params AgentChatParams,
 	return a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
+			log.Printf("sonzai: skipping malformed SSE event: %v", err)
 			return nil
 		}
 		return callback(event)
@@ -108,7 +111,7 @@ func (a *AgentsResource) ChatStreamChannel(ctx context.Context, params AgentChat
 }
 
 // GetMood returns the current mood for an agent.
-func (a *AgentsResource) GetMood(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+func (a *AgentsResource) GetMood(ctx context.Context, agentID string, userID, instanceID string) (*MoodResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -116,13 +119,13 @@ func (a *AgentsResource) GetMood(ctx context.Context, agentID string, userID, in
 	if instanceID != "" {
 		params["instance_id"] = instanceID
 	}
-	var result map[string]interface{}
+	var result MoodResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood", agentID), params, &result)
-	return result, err
+	return &result, err
 }
 
 // GetMoodHistory returns mood history for an agent.
-func (a *AgentsResource) GetMoodHistory(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+func (a *AgentsResource) GetMoodHistory(ctx context.Context, agentID string, userID, instanceID string) (*MoodHistoryResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -130,13 +133,13 @@ func (a *AgentsResource) GetMoodHistory(ctx context.Context, agentID string, use
 	if instanceID != "" {
 		params["instance_id"] = instanceID
 	}
-	var result map[string]interface{}
+	var result MoodHistoryResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood-history", agentID), params, &result)
-	return result, err
+	return &result, err
 }
 
 // GetMoodAggregate returns aggregated mood statistics for an agent.
-func (a *AgentsResource) GetMoodAggregate(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+func (a *AgentsResource) GetMoodAggregate(ctx context.Context, agentID string, userID, instanceID string) (*MoodAggregateResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -144,13 +147,13 @@ func (a *AgentsResource) GetMoodAggregate(ctx context.Context, agentID string, u
 	if instanceID != "" {
 		params["instance_id"] = instanceID
 	}
-	var result map[string]interface{}
+	var result MoodAggregateResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/mood/aggregate", agentID), params, &result)
-	return result, err
+	return &result, err
 }
 
 // GetRelationships returns relationship data for an agent.
-func (a *AgentsResource) GetRelationships(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+func (a *AgentsResource) GetRelationships(ctx context.Context, agentID string, userID, instanceID string) (*RelationshipsResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -158,13 +161,13 @@ func (a *AgentsResource) GetRelationships(ctx context.Context, agentID string, u
 	if instanceID != "" {
 		params["instance_id"] = instanceID
 	}
-	var result map[string]interface{}
+	var result RelationshipsResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/relationships", agentID), params, &result)
-	return result, err
+	return &result, err
 }
 
 // GetHabits returns habit data for an agent.
-func (a *AgentsResource) GetHabits(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+func (a *AgentsResource) GetHabits(ctx context.Context, agentID string, userID, instanceID string) (*HabitsResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -172,9 +175,9 @@ func (a *AgentsResource) GetHabits(ctx context.Context, agentID string, userID, 
 	if instanceID != "" {
 		params["instance_id"] = instanceID
 	}
-	var result map[string]interface{}
+	var result HabitsResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/habits", agentID), params, &result)
-	return result, err
+	return &result, err
 }
 
 // Goal represents an agent goal returned from the API.
@@ -262,7 +265,7 @@ func (a *AgentsResource) DeleteGoal(ctx context.Context, agentID, goalID, userID
 }
 
 // GetInterests returns interest data for an agent.
-func (a *AgentsResource) GetInterests(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+func (a *AgentsResource) GetInterests(ctx context.Context, agentID string, userID, instanceID string) (*InterestsResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -270,13 +273,13 @@ func (a *AgentsResource) GetInterests(ctx context.Context, agentID string, userI
 	if instanceID != "" {
 		params["instance_id"] = instanceID
 	}
-	var result map[string]interface{}
+	var result InterestsResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/interests", agentID), params, &result)
-	return result, err
+	return &result, err
 }
 
 // GetDiary returns diary entries for an agent.
-func (a *AgentsResource) GetDiary(ctx context.Context, agentID string, userID, instanceID string) (map[string]interface{}, error) {
+func (a *AgentsResource) GetDiary(ctx context.Context, agentID string, userID, instanceID string) (*DiaryResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -284,16 +287,16 @@ func (a *AgentsResource) GetDiary(ctx context.Context, agentID string, userID, i
 	if instanceID != "" {
 		params["instance_id"] = instanceID
 	}
-	var result map[string]interface{}
+	var result DiaryResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/diary", agentID), params, &result)
-	return result, err
+	return &result, err
 }
 
 // GetUsers returns users for an agent.
-func (a *AgentsResource) GetUsers(ctx context.Context, agentID string) (map[string]interface{}, error) {
-	var result map[string]interface{}
+func (a *AgentsResource) GetUsers(ctx context.Context, agentID string) (*UsersResponse, error) {
+	var result UsersResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/users", agentID), nil, &result)
-	return result, err
+	return &result, err
 }
 
 // TriggerEvent triggers a game event / activity for an agent.
