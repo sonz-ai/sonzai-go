@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+// SDKVersion is the current version of the sonzai-go SDK.
+const SDKVersion = "1.0.0"
+
 type httpClient struct {
 	baseURL    string
 	apiKey     string
@@ -109,7 +112,7 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", "sonzai-go/1.0.0")
+		req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
@@ -243,7 +246,7 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("User-Agent", "sonzai-go/1.0.0")
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

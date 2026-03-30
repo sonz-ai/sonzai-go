@@ -3,6 +3,7 @@ package sonzai
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 )
 
@@ -33,7 +34,7 @@ func (m *MemoryResource) List(ctx context.Context, agentID string, opts *MemoryL
 	}
 
 	var result MemoryResponse
-	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory", agentID), params, &result)
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory", url.PathEscape(agentID)), params, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ func (m *MemoryResource) Search(ctx context.Context, agentID string, opts Memory
 	}
 
 	var result MemorySearchResponse
-	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/search", agentID), params, &result)
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/search", url.PathEscape(agentID)), params, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +80,7 @@ func (m *MemoryResource) Timeline(ctx context.Context, agentID string, opts *Mem
 	}
 
 	var result MemoryTimelineResponse
-	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/timeline", agentID), params, &result)
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/timeline", url.PathEscape(agentID)), params, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +106,7 @@ func (m *MemoryResource) ListFacts(ctx context.Context, agentID string, opts *Fa
 	}
 
 	var result FactListResponse
-	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts", agentID), params, &result)
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts", url.PathEscape(agentID)), params, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -114,9 +115,11 @@ func (m *MemoryResource) ListFacts(ctx context.Context, agentID string, opts *Fa
 
 // Reset deletes all memory for an agent, optionally scoped to a single user.
 func (m *MemoryResource) Reset(ctx context.Context, agentID string, opts *MemoryResetOptions) (*MemoryResetResponse, error) {
-	path := fmt.Sprintf("/api/v1/agents/%s/memory", agentID)
+	path := fmt.Sprintf("/api/v1/agents/%s/memory", url.PathEscape(agentID))
 	if opts != nil && opts.UserID != "" {
-		path += "?user_id=" + opts.UserID
+		params := url.Values{}
+		params.Set("user_id", opts.UserID)
+		path += "?" + params.Encode()
 	}
 
 	var result MemoryResetResponse
@@ -130,7 +133,7 @@ func (m *MemoryResource) Reset(ctx context.Context, agentID string, opts *Memory
 // GetFactHistory returns the version history for a specific fact.
 func (m *MemoryResource) GetFactHistory(ctx context.Context, agentID, factID string) (*FactHistoryResponse, error) {
 	var result FactHistoryResponse
-	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/fact/%s/history", agentID, factID), nil, &result)
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/fact/%s/history", url.PathEscape(agentID), url.PathEscape(factID)), nil, &result)
 	if err != nil {
 		return nil, err
 	}
