@@ -76,7 +76,7 @@ type EntityContext struct {
 // The token expires in 60 seconds and is single-use.
 func (v *VoiceResource) GetToken(ctx context.Context, agentID string, opts VoiceTokenOptions) (*VoiceStreamToken, error) {
 	var result VoiceStreamToken
-	err := v.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/voice/ws-token", agentID), opts, &result)
+	err := v.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/voice/live-ws-token", agentID), opts, &result)
 	if err != nil {
 		return nil, err
 	}

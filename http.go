@@ -7,11 +7,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 )
+
+// SDKVersion is the current version of the sonzai-go SDK.
+const SDKVersion = "1.0.0"
 
 type httpClient struct {
 	baseURL    string
@@ -25,8 +30,28 @@ func newHTTPClient(baseURL, apiKey string, timeout time.Duration) *httpClient {
 		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: timeout,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 10,
+				IdleConnTimeout:     90 * time.Second,
+			},
 		},
 	}
+}
+
+const (
+	maxRetries     = 3
+	baseBackoff    = 500 * time.Millisecond
+)
+
+// isRetryable returns true for HTTP status codes that indicate a transient failure.
+func isRetryable(statusCode int) bool {
+	return statusCode == 502 || statusCode == 503 || statusCode == 504 || statusCode == 429
+}
+
+// isIdempotent returns true for HTTP methods that are safe to retry.
+func isIdempotent(method string) bool {
+	return method == http.MethodGet || method == http.MethodDelete
 }
 
 func (c *httpClient) request(ctx context.Context, method, path string, body interface{}, params map[string]string) ([]byte, error) {
@@ -45,47 +70,87 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 		u.RawQuery = q.Encode()
 	}
 
-	var bodyReader io.Reader
+	var bodyData []byte
 	if body != nil {
-		data, err := json.Marshal(body)
+		bodyData, err = json.Marshal(body)
 		if err != nil {
 			return nil, fmt.Errorf("marshal body: %w", err)
 		}
-		bodyReader = bytes.NewReader(data)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), bodyReader)
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
+	attempts := 1
+	if isIdempotent(method) {
+		attempts = maxRetries
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "sonzai-go/1.0.0")
+	var lastErr error
+	for attempt := 0; attempt < attempts; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff with jitter.
+			backoff := baseBackoff * time.Duration(1<<uint(attempt-1))
+			jitter := time.Duration(rand.Int63n(int64(backoff / 2)))
+			delay := backoff + jitter
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("do request: %w", err)
-	}
-	defer resp.Body.Close()
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(delay):
+			}
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		msg := string(respBody)
-		var errResp struct {
-			Error string `json:"error"`
+			log.Printf("sonzai: retrying %s %s (attempt %d/%d)", method, path, attempt+1, attempts)
 		}
-		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
-			msg = errResp.Error
+
+		var bodyReader io.Reader
+		if bodyData != nil {
+			bodyReader = bytes.NewReader(bodyData)
 		}
-		return nil, newErrorForStatus(resp.StatusCode, msg)
+
+		req, err := http.NewRequestWithContext(ctx, method, u.String(), bodyReader)
+		if err != nil {
+			return nil, fmt.Errorf("create request: %w", err)
+		}
+
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("do request: %w", err)
+			// Retry on network errors for idempotent methods.
+			if isIdempotent(method) && attempt < attempts-1 {
+				continue
+			}
+			return nil, lastErr
+		}
+
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("read body: %w", err)
+		}
+
+		if resp.StatusCode >= 400 {
+			msg := string(respBody)
+			var errResp struct {
+				Error string `json:"error"`
+			}
+			if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+				msg = errResp.Error
+			}
+			lastErr = newErrorForStatus(resp.StatusCode, msg)
+
+			// Retry on transient failures for idempotent methods.
+			if isIdempotent(method) && isRetryable(resp.StatusCode) && attempt < attempts-1 {
+				continue
+			}
+			return nil, lastErr
+		}
+
+		return respBody, nil
 	}
 
-	return respBody, nil
+	return nil, lastErr
 }
 
 // Get performs an HTTP GET request and unmarshals the response into result.
@@ -181,7 +246,7 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("User-Agent", "sonzai-go/1.0.0")
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
