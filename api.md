@@ -117,11 +117,8 @@ client := sonzai.NewClient("sk-...",
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `Match(ctx, agentID, opts)` | `*VoiceMatchResult, error` | Find best voice for agent personality |
-| `Chat(ctx, agentID, opts)` | `*VoiceChatResponse, error` | Voice chat (audio in, audio + text out) |
-| `TTS(ctx, agentID, opts)` | `*TTSResult, error` | Text-to-speech |
-| `GetToken(ctx, agentID, opts)` | `*VoiceTokenResponse, error` | Get token for real-time voice stream |
-| `Stream(ctx, agentID, opts)` | `*VoiceStream, error` | Real-time WebSocket voice stream |
+| `GetToken(ctx, agentID, opts)` | `*VoiceStreamToken, error` | Get token for voice live WebSocket |
+| `Stream(ctx, token)` | `*VoiceStream, error` | Real-time duplex voice via Gemini Live |
 
 ## Agents.Wakeups
 

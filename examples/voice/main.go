@@ -1,4 +1,4 @@
-// Example: match a voice to an agent and generate speech.
+// Example: connect to a voice live session with an agent.
 //
 // Usage:
 //
@@ -10,6 +10,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	sonzai "github.com/sonz-ai/sonzai-go"
@@ -17,7 +18,7 @@ import (
 
 func main() {
 	agentID := flag.String("agent", "", "Agent ID")
-	text := flag.String("text", "Hello! It's great to meet you.", "Text to speak")
+	voice := flag.String("voice", "Kore", "Voice name (e.g., Kore, Puck, Aoede)")
 	flag.Parse()
 
 	if *agentID == "" {
@@ -28,25 +29,61 @@ func main() {
 	client := sonzai.NewClient("")
 	ctx := context.Background()
 
-	// Find the best voice match
-	match, err := client.Agents.Voice.Match(ctx, *agentID, sonzai.VoiceMatchOptions{
-		Big5:            &sonzai.Big5Scores{Openness: 80, Agreeableness: 70, Extraversion: 60},
-		PreferredGender: "female",
+	// Get a voice live WebSocket token
+	token, err := client.Agents.Voice.GetToken(ctx, *agentID, sonzai.VoiceTokenOptions{
+		VoiceName: *voice,
+		Language:  "en-US",
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "match error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "token error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Matched voice: %s (score: %.2f)\n", match.VoiceName, match.MatchScore)
+	fmt.Printf("Got voice live token, connecting to %s\n", token.WSURL)
 
-	// Generate speech
-	tts, err := client.Agents.Voice.TTS(ctx, *agentID, sonzai.TTSOptions{
-		Text:      *text,
-		VoiceName: match.VoiceName,
-	})
+	// Open the WebSocket stream
+	stream, err := client.Agents.Voice.Stream(ctx, token)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "tts error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "stream error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Audio: %s (%dms duration)\n", tts.ContentType, tts.DurationMs)
+	defer stream.Close()
+
+	// Send a text message instead of audio
+	if err := stream.SendText("Hello! How are you today?"); err != nil {
+		fmt.Fprintf(os.Stderr, "send error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Receive events
+	for {
+		event, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "recv error: %v\n", err)
+			break
+		}
+
+		switch event.Type {
+		case "ready":
+			fmt.Println("Connected to proxy")
+		case "session_ready":
+			fmt.Printf("Gemini Live session ready (voice: %s)\n", event.VoiceName)
+		case "input_transcript":
+			fmt.Printf("User: %s\n", event.Text)
+		case "output_transcript":
+			fmt.Printf("Agent: %s\n", event.Text)
+		case "audio":
+			fmt.Printf("Received %d bytes of PCM audio\n", len(event.Audio))
+		case "turn_complete":
+			fmt.Println("Turn complete")
+		case "session_ended":
+			fmt.Printf("Session ended: %s\n", event.Reason)
+			return
+		case "error":
+			fmt.Printf("Error: %s (%s)\n", event.Error, event.ErrorCode)
+			return
+		}
+	}
 }

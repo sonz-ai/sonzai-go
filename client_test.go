@@ -459,47 +459,25 @@ func TestPersonalityUpdate(t *testing.T) {
 // Voice
 // ---------------------------------------------------------------------------
 
-func TestVoiceMatch(t *testing.T) {
+func TestVoiceGetToken(t *testing.T) {
 	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agents/agent-1/voice/match" {
+		if r.URL.Path != "/api/v1/agents/agent-1/voice/live-ws-token" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		jsonResponse(w, 200, VoiceMatchResponse{
-			VoiceID: "NATM0", VoiceName: "Sophia", MatchScore: 0.92,
+		jsonResponse(w, 200, VoiceStreamToken{
+			WSURL: "wss://api.sonz.ai/ws/voice/live", AuthToken: "tok-123",
 		})
 	})
 	defer server.Close()
 
-	result, err := client.Agents.Voice.Match(context.Background(), "agent-1", VoiceMatchOptions{
-		PreferredGender: "female",
+	result, err := client.Agents.Voice.GetToken(context.Background(), "agent-1", VoiceTokenOptions{
+		VoiceName: "Kore", Language: "en-US",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.VoiceName != "Sophia" {
-		t.Fatalf("expected 'Sophia', got '%s'", result.VoiceName)
-	}
-}
-
-func TestVoiceTTS(t *testing.T) {
-	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agents/agent-1/voice/tts" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-		jsonResponse(w, 200, TTSResponse{
-			Audio: "base64audio", ContentType: "audio/wav", DurationMs: 2500,
-		})
-	})
-	defer server.Close()
-
-	result, err := client.Agents.Voice.TTS(context.Background(), "agent-1", TTSOptions{
-		Text: "Hello!", VoiceName: "Sophia",
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.DurationMs != 2500 {
-		t.Fatalf("expected 2500ms, got %d", result.DurationMs)
+	if result.AuthToken != "tok-123" {
+		t.Fatalf("expected 'tok-123', got '%s'", result.AuthToken)
 	}
 }
 
@@ -716,28 +694,6 @@ func TestGenerateCharacter(t *testing.T) {
 	}
 	if result.PersonalityPrompt != "You are warm" {
 		t.Fatalf("expected 'You are warm', got '%s'", result.PersonalityPrompt)
-	}
-}
-
-func TestVoiceChat(t *testing.T) {
-	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agents/agent-1/voice/chat" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-		jsonResponse(w, 200, VoiceChatResponse{
-			Transcript: "Hello", Response: "Hi there!", Audio: "base64audio",
-		})
-	})
-	defer server.Close()
-
-	result, err := client.Agents.Voice.Chat(context.Background(), "agent-1", VoiceChatOptions{
-		Audio: "base64audio", AudioFormat: "webm",
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.Response != "Hi there!" {
-		t.Fatalf("expected 'Hi there!', got '%s'", result.Response)
 	}
 }
 
