@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/sonz-ai/sonzai-go)](https://goreportcard.com/report/github.com/sonz-ai/sonzai-go)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The official Go SDK for the [Sonzai Character Engine API](https://sonz.ai). Build AI characters with persistent memory, evolving personality, and real-time voice.
+The official Go SDK for the [Sonzai Mind Layer API](https://sonz.ai). Build AI agents with persistent memory, evolving personality, and real-time voice.
 
 Zero dependencies. Uses only the Go standard library.
 
@@ -23,7 +23,7 @@ import (
 ```
 
 ```bash
-go get github.com/sonz-ai/sonzai-go@v1.0.0
+go get github.com/sonz-ai/sonzai-go@v1.0.1
 ```
 
 ## Getting Started

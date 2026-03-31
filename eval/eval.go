@@ -1,5 +1,5 @@
 // Package eval provides evaluation, simulation, and benchmarking operations
-// for the Sonzai Character Engine API.
+// for the Sonzai Mind Layer API.
 //
 // This package is a distinct domain from the core chat/memory/personality
 // surface. It provides tools for testing and measuring agent quality.

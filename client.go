@@ -1,4 +1,4 @@
-// Package sonzai provides a Go SDK for the Sonzai Character Engine API.
+// Package sonzai provides a Go SDK for the Sonzai Mind Layer API.
 //
 // Usage:
 //
@@ -53,7 +53,7 @@ func WithTimeout(d time.Duration) ClientOption {
 	return func(c *clientConfig) { c.timeout = d }
 }
 
-// Client is the Sonzai Character Engine API client.
+// Client is the Sonzai Mind Layer API client.
 type Client struct {
 	// Agents provides chat, memory, personality, and other agent-scoped operations.
 	Agents *AgentsResource

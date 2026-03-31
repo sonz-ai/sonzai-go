@@ -1,6 +1,6 @@
-// Package sonzai provides the official Go SDK for the Sonzai Character Engine API.
+// Package sonzai provides the official Go SDK for the Sonzai Mind Layer API.
 //
-// The SDK enables you to build AI characters with persistent memory, evolving
+// The SDK enables you to build AI agents with persistent memory, evolving
 // personality, and proactive behaviors. It requires zero external dependencies
 // and uses only the Go standard library.
 //
