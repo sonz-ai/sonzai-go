@@ -2,6 +2,7 @@ package sonzai
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 )
 
@@ -44,6 +45,61 @@ type VoiceListOptions struct {
 	Language string
 	Limit    int
 	Offset   int
+}
+
+// TTSOptions configures a text-to-speech request.
+type TTSOptions struct {
+	Text         string `json:"text"`
+	VoiceName    string `json:"voiceName,omitempty"`
+	Language     string `json:"language,omitempty"`
+	OutputFormat string `json:"outputFormat,omitempty"` // "wav" or "opus"
+}
+
+// TTSResponse is the response from text-to-speech synthesis.
+type TTSResponse struct {
+	Audio       string `json:"audio"`
+	ContentType string `json:"contentType"`
+	DurationMs  int64  `json:"durationMs,omitempty"`
+	Usage       *struct {
+		PromptTokens     int    `json:"promptTokens"`
+		CompletionTokens int    `json:"completionTokens"`
+		TotalTokens      int    `json:"totalTokens"`
+		Model            string `json:"model"`
+	} `json:"usage,omitempty"`
+}
+
+// STTOptions configures a speech-to-text request.
+type STTOptions struct {
+	Audio       string `json:"audio"`
+	AudioFormat string `json:"audioFormat"`
+	Language    string `json:"language,omitempty"`
+}
+
+// STTResponse is the response from speech-to-text transcription.
+type STTResponse struct {
+	Transcript   string  `json:"transcript"`
+	Confidence   float64 `json:"confidence"`
+	LanguageCode string  `json:"languageCode,omitempty"`
+}
+
+// TTS converts text to speech audio using Gemini TTS.
+func (v *VoiceResource) TTS(ctx context.Context, agentID string, opts TTSOptions) (*TTSResponse, error) {
+	var result TTSResponse
+	err := v.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/voice/tts", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// STT transcribes audio to text using Gemini STT.
+func (v *VoiceResource) STT(ctx context.Context, agentID string, opts STTOptions) (*STTResponse, error) {
+	var result STTResponse
+	err := v.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/voice/stt", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // List returns available voices from the catalog.
