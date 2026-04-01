@@ -2,3 +2,5 @@
 *.test
 *.out
 coverage.html
+.npmrc
+.pypirc
