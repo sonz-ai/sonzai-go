@@ -71,6 +71,15 @@ type Client struct {
 	// Webhooks provides webhook registration and management.
 	Webhooks *WebhooksResource
 
+	// ProjectConfig provides project-scoped configuration management.
+	ProjectConfig *ProjectConfigResource
+
+	// CustomLLM provides project-scoped custom LLM configuration.
+	CustomLLM *CustomLLMResource
+
+	// ProjectNotifications provides project-scoped notification polling.
+	ProjectNotifications *ProjectNotificationsResource
+
 	http *httpClient
 }
 
@@ -100,11 +109,14 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 	http := newHTTPClient(cfg.baseURL, apiKey, cfg.timeout)
 
 	return &Client{
-		Agents:    newAgentsResource(http),
-		Knowledge: &KnowledgeResource{http: http},
-		Eval:      eval.New(http),
-		Voices:    &VoicesResource{http: http},
-		Webhooks:  &WebhooksResource{http: http},
-		http:      http,
+		Agents:               newAgentsResource(http),
+		Knowledge:            &KnowledgeResource{http: http},
+		Eval:                 eval.New(http),
+		Voices:               &VoicesResource{http: http},
+		Webhooks:             &WebhooksResource{http: http},
+		ProjectConfig:        &ProjectConfigResource{http: http},
+		CustomLLM:            &CustomLLMResource{http: http},
+		ProjectNotifications: &ProjectNotificationsResource{http: http},
+		http:                 http,
 	}
 }
