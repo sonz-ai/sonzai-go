@@ -386,6 +386,34 @@ func (a *AgentsResource) GetSummaries(ctx context.Context, agentID string, opts 
 	return &result, err
 }
 
+// GetConstellation returns the knowledge graph (nodes, edges, insights) for an agent.
+func (a *AgentsResource) GetConstellation(ctx context.Context, agentID string, userID, instanceID string) (*ConstellationResponse, error) {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	if instanceID != "" {
+		params["instance_id"] = instanceID
+	}
+	var result ConstellationResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/constellation", agentID), params, &result)
+	return &result, err
+}
+
+// GetBreakthroughs returns breakthroughs for an agent.
+func (a *AgentsResource) GetBreakthroughs(ctx context.Context, agentID string, userID, instanceID string) (*BreakthroughsResponse, error) {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	if instanceID != "" {
+		params["instance_id"] = instanceID
+	}
+	var result BreakthroughsResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/breakthroughs", agentID), params, &result)
+	return &result, err
+}
+
 // GetTimeMachine returns a point-in-time snapshot of agent personality and mood.
 func (a *AgentsResource) GetTimeMachine(ctx context.Context, agentID string, opts TimeMachineOptions) (*TimeMachineResponse, error) {
 	params := map[string]string{"at": opts.At}
@@ -422,4 +450,53 @@ func (a *AgentsResource) UpdateCustomTool(ctx context.Context, agentID string, t
 // DeleteCustomTool deletes a custom tool for an agent.
 func (a *AgentsResource) DeleteCustomTool(ctx context.Context, agentID string, toolName string) error {
 	return a.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/%s", agentID, toolName), nil)
+}
+
+// Process runs the full Context Engine pipeline on conversation messages
+// without generating a chat response.
+func (a *AgentsResource) Process(ctx context.Context, agentID string, opts ProcessOptions) (*ProcessResponse, error) {
+	var result ProcessResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/process", agentID), opts, &result)
+	return &result, err
+}
+
+// GetModels returns available LLM providers and models.
+func (a *AgentsResource) GetModels(ctx context.Context, agentID string) (*ModelsResponse, error) {
+	var result ModelsResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/models", agentID), nil, &result)
+	return &result, err
+}
+
+// GetContext returns the full enriched agent context in a single call.
+func (a *AgentsResource) GetContext(ctx context.Context, agentID string, opts GetContextOptions) (*EnrichedContextResponse, error) {
+	params := map[string]string{"userId": opts.UserID}
+	if opts.SessionID != "" {
+		params["sessionId"] = opts.SessionID
+	}
+	if opts.InstanceID != "" {
+		params["instanceId"] = opts.InstanceID
+	}
+	if opts.Query != "" {
+		params["query"] = opts.Query
+	}
+	if opts.Language != "" {
+		params["language"] = opts.Language
+	}
+	if opts.Timezone != "" {
+		params["timezone"] = opts.Timezone
+	}
+	var result EnrichedContextResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/context", agentID), params, &result)
+	return &result, err
+}
+
+// GenerateAvatar triggers avatar generation for an agent.
+func (a *AgentsResource) GenerateAvatar(ctx context.Context, agentID string, opts *GenerateAvatarOptions) (*GenerateAvatarResponse, error) {
+	var body interface{}
+	if opts != nil {
+		body = opts
+	}
+	var result GenerateAvatarResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/avatar/generate", agentID), body, &result)
+	return &result, err
 }

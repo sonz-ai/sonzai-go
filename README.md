@@ -23,7 +23,7 @@ import (
 ```
 
 ```bash
-go get github.com/sonz-ai/sonzai-go@v1.0.1
+go get github.com/sonz-ai/sonzai-go@v1.0.4
 ```
 
 ## Getting Started
@@ -61,6 +61,8 @@ func main() {
 ```
 
 See the [examples](examples/) directory for more.
+
+> **Using the OpenClaw plugin?** Your API key is stored in `openclaw.json` — no environment variables needed. See the [@sonzai-labs/openclaw-context](../sonzai-openclaw/) docs.
 
 ## Evaluation & Simulation
 
