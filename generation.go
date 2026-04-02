@@ -224,3 +224,26 @@ func (g *GenerationResource) SeedMemories(ctx context.Context, agentID string, o
 	}
 	return &result, nil
 }
+
+// RegenerateAvatarOptions configures an avatar regeneration request.
+type RegenerateAvatarOptions struct {
+	Style string `json:"style,omitempty"`
+}
+
+// RegenerateAvatarResponse is the response from avatar regeneration.
+type RegenerateAvatarResponse struct {
+	Success          bool   `json:"success"`
+	AvatarURL        string `json:"avatar_url"`
+	Prompt           string `json:"prompt"`
+	GenerationTimeMs int64  `json:"generation_time_ms"`
+}
+
+// RegenerateAvatar regenerates the avatar image for an agent using AI.
+func (g *GenerationResource) RegenerateAvatar(ctx context.Context, agentID string, opts RegenerateAvatarOptions) (*RegenerateAvatarResponse, error) {
+	var result RegenerateAvatarResponse
+	err := g.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/avatar/generate", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

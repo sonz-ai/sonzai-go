@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -218,6 +219,63 @@ func (c *httpClient) DeleteWithParams(ctx context.Context, path string, params m
 	}
 	if result != nil {
 		return json.Unmarshal(data, result)
+	}
+	return nil
+}
+
+// PostMultipartFile uploads a file as a multipart form POST and unmarshals the response into result.
+func (c *httpClient) PostMultipartFile(ctx context.Context, path, fieldName, fileName string, fileData []byte, result interface{}) error {
+	u, err := url.Parse(c.baseURL + path)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile(fieldName, fileName)
+	if err != nil {
+		return fmt.Errorf("create form file: %w", err)
+	}
+	if _, err := part.Write(fileData); err != nil {
+		return fmt.Errorf("write file data: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &body)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read body: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		msg := string(respBody)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+			msg = errResp.Error
+		}
+		return newErrorForStatus(resp.StatusCode, msg)
+	}
+
+	if result != nil {
+		return json.Unmarshal(respBody, result)
 	}
 	return nil
 }
