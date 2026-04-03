@@ -116,6 +116,34 @@ ref, _ = client.Eval.ReEval(ctx, "agent-id", eval.ReEvalOptions{
 })
 ```
 
+## Dialogue
+
+```go
+// Trigger a dialogue turn with an agent
+result, err := client.Agents.Dialogue(ctx, "agent-id", sonzai.DialogueOptions{
+    Messages: []sonzai.ChatMessage{{Role: "user", Content: "How are you feeling today?"}},
+    UserID:   "user-123",
+})
+fmt.Println(result.Response)
+```
+
+## Error Handling
+
+```go
+_, err := client.Agents.Chat(ctx, sonzai.AgentChatParams{...})
+switch e := err.(type) {
+case *sonzai.AuthenticationError:
+    log.Fatal("invalid API key")
+case *sonzai.RateLimitError:
+    if e.RetryAfter != nil {
+        time.Sleep(time.Duration(*e.RetryAfter) * time.Second)
+    }
+    // retry ...
+case *sonzai.NotFoundError:
+    log.Printf("agent not found: %v", e)
+}
+```
+
 ## Custom States
 
 ```go
@@ -149,6 +177,89 @@ client.CustomStates.DeleteByKey(ctx, "agent-id", sonzai.CustomStateDeleteByKeyOp
     Scope:  "user",
     UserID: "user-123",
 })
+```
+
+## Sessions
+
+```go
+// Start a session
+client.Agents.Sessions.Start(ctx, "agent-id", sonzai.SessionStartOptions{
+    UserID:    "user-123",
+    SessionID: "session-456",
+})
+
+// End a session
+client.Agents.Sessions.End(ctx, "agent-id", sonzai.SessionEndOptions{
+    UserID:          "user-123",
+    SessionID:       "session-456",
+    TotalMessages:   10,
+    DurationSeconds: 300,
+})
+
+// Configure tools for an active session
+client.Agents.Sessions.SetTools(ctx, "agent-id", "session-456", []sonzai.ToolDefinition{
+    {
+        Name:        "get_weather",
+        Description: "Get current weather for a city",
+        Parameters: map[string]any{
+            "type": "object",
+            "properties": map[string]any{
+                "city": map[string]any{"type": "string"},
+            },
+        },
+    },
+})
+```
+
+## Goals
+
+```go
+// List goals
+goals, err := client.Agents.GetGoals(ctx, "agent-id", sonzai.ContextDataOptions{})
+
+// Create a goal (omit UserID for agent-global, include for per-user)
+goal, err := client.Agents.CreateGoal(ctx, "agent-id", sonzai.CreateGoalOptions{
+    Title:       "Learn guitar",
+    Description: "Practice 30 minutes daily",
+    Type:        "skill_mastery",
+    Priority:    1,
+    UserID:      "user-123", // optional
+})
+
+// Update a goal
+err = client.Agents.UpdateGoal(ctx, "agent-id", goal.ID, sonzai.UpdateGoalOptions{
+    Status: "completed",
+})
+
+// Delete (soft-abandon) a goal
+err = client.Agents.DeleteGoal(ctx, "agent-id", goal.ID, sonzai.DeleteGoalOptions{
+    UserID: "user-123",
+})
+```
+
+## Wakeups
+
+```go
+// Schedule a proactive check-in
+wakeup, err := client.Agents.ScheduleWakeup(ctx, "agent-id", sonzai.ScheduleWakeupOptions{
+    UserID:      "user-123",
+    ScheduledAt: "2026-06-01T09:00:00Z",
+    CheckType:   "birthday",
+    Occasion:    "User's birthday",
+})
+fmt.Println(wakeup.WakeupID)
+```
+
+## Image Generation
+
+```go
+// Generate an image using the agent's personality and context
+image, err := client.Agents.Generation.GenerateImage(ctx, "agent-id", sonzai.ImageGenerateOptions{
+    Prompt: "A serene mountain lake at sunset",
+    Style:  "photorealistic", // optional
+    UserID: "user-123",       // optional — personalises the image
+})
+fmt.Println(image.URL)
 ```
 
 ## Requirements

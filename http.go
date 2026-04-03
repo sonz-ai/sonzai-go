@@ -11,30 +11,38 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // SDKVersion is the current version of the sonzai-go SDK.
-const SDKVersion = "1.0.3"
+const SDKVersion = "1.0.4"
 
 type httpClient struct {
-	baseURL    string
-	apiKey     string
-	httpClient *http.Client
+	baseURL          string
+	apiKey           string
+	httpClient       *http.Client
+	streamHTTPClient *http.Client
 }
 
 func newHTTPClient(baseURL, apiKey string, timeout time.Duration) *httpClient {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+	}
 	return &httpClient{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		apiKey:  apiKey,
 		httpClient: &http.Client{
-			Timeout: timeout,
-			Transport: &http.Transport{
-				MaxIdleConns:        100,
-				MaxIdleConnsPerHost: 10,
-				IdleConnTimeout:     90 * time.Second,
-			},
+			Timeout:   timeout,
+			Transport: transport,
+		},
+		// Streaming responses (SSE) need a much longer timeout.
+		streamHTTPClient: &http.Client{
+			Timeout:   timeout * 10,
+			Transport: transport,
 		},
 	}
 }
@@ -139,6 +147,13 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 				msg = errResp.Error
 			}
 			lastErr = newErrorForStatus(resp.StatusCode, msg)
+			if rl, ok := lastErr.(*RateLimitError); ok {
+				if retryAfterStr := resp.Header.Get("Retry-After"); retryAfterStr != "" {
+					if seconds, err := strconv.ParseFloat(retryAfterStr, 64); err == nil {
+						rl.RetryAfter = &seconds
+					}
+				}
+			}
 
 			// Retry on transient failures for idempotent methods.
 			if isIdempotent(method) && isRetryable(resp.StatusCode) && attempt < attempts-1 {
@@ -248,7 +263,7 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.streamHTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("do request: %w", err)
 	}
@@ -263,7 +278,15 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
 			msg = errResp.Error
 		}
-		return newErrorForStatus(resp.StatusCode, msg)
+		streamErr := newErrorForStatus(resp.StatusCode, msg)
+		if rl, ok := streamErr.(*RateLimitError); ok {
+			if retryAfterStr := resp.Header.Get("Retry-After"); retryAfterStr != "" {
+				if seconds, err := strconv.ParseFloat(retryAfterStr, 64); err == nil {
+					rl.RetryAfter = &seconds
+				}
+			}
+		}
+		return streamErr
 	}
 
 	scanner := bufio.NewScanner(resp.Body)

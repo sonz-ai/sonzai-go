@@ -31,8 +31,9 @@ client := sonzai.NewClient("sk-...",
 |--------|---------|-------------|
 | `Create(ctx, opts)` | `*Agent, error` | Create a new agent |
 | `Get(ctx, agentID)` | `*Agent, error` | Get agent by ID |
-| `Update(ctx, agentID, opts)` | `*Agent, error` | Update agent profile |
+| `Update(ctx, agentID, opts)` | `*Agent, error` | Update agent profile (PATCH /profile) |
 | `Delete(ctx, agentID)` | `error` | Delete an agent |
+| `RegenerateAvatar(ctx, agentID)` | `*AvatarResponse, error` | Regenerate agent avatar |
 
 ### Context Engine Data
 
@@ -53,7 +54,7 @@ client := sonzai.NewClient("sk-...",
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `TriggerEvent(ctx, agentID, opts)` | `*TriggerEventResponse, error` | Trigger a game event or activity |
-| `Dialogue(ctx, opts)` | `*DialogueResponse, error` | Multi-agent dialogue |
+| `Dialogue(ctx, agentID, opts)` | `*DialogueResponse, error` | Multi-agent dialogue |
 
 ## Agents.Memory
 
@@ -108,6 +109,10 @@ client := sonzai.NewClient("sk-...",
 | `Delete(ctx, agentID, stateID)` | `error` | Delete custom state |
 
 ## Agents.Image
+
+> **Note:** In the Python and TypeScript SDKs image generation is exposed as
+> `client.agents.generation.generate_image()` / `generateImage()`. In the Go SDK
+> it is a separate sub-resource: `client.Agents.Image.Generate()`.
 
 | Method | Returns | Description |
 |--------|---------|-------------|
@@ -177,12 +182,14 @@ import "github.com/sonz-ai/sonzai-go/eval"
 All API errors are returned as typed errors for precise handling:
 
 ```go
-switch err.(type) {
-case *sonzai.AuthenticationError:  // 401
+switch e := err.(type) {
+case *sonzai.AuthenticationError:   // 401
 case *sonzai.PermissionDeniedError: // 403
 case *sonzai.NotFoundError:         // 404
 case *sonzai.BadRequestError:       // 400
-case *sonzai.RateLimitError:        // 429
+case *sonzai.RateLimitError:        // 429 — e.RetryAfter holds seconds to wait (if server provided)
 case *sonzai.InternalServerError:   // 500+
 }
 ```
+
+`RateLimitError.RetryAfter` is a `*float64` (nil if the server did not send a `Retry-After` header).
