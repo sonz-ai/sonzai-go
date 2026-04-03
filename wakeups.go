@@ -13,6 +13,8 @@ type WakeupResource struct {
 // ScheduleWakeupOptions configures a wakeup scheduling request.
 type ScheduleWakeupOptions struct {
 	UserID           string `json:"user_id"`
+	// ScheduledAt is an ISO 8601 timestamp for when to trigger the wakeup. Takes precedence over DelayHours if both are set.
+	ScheduledAt      string `json:"scheduled_at,omitempty"`
 	// DelayHours is the number of hours from now to schedule the wakeup. Defaults to 0 (immediate).
 	DelayHours       int    `json:"delay_hours,omitempty"`
 	CheckType        string `json:"check_type"`   // "birthday", "occasion", "recurring_event", "interest_check", "general"
