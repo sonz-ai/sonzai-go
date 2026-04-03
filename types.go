@@ -629,6 +629,225 @@ type TimeMachineResponse struct {
 }
 
 // ---------------------------------------------------------------------------
+// Constellation (knowledge graph)
+// ---------------------------------------------------------------------------
+
+// ConstellationNode represents a node in the knowledge graph.
+type ConstellationNode struct {
+	NodeID    string                 `json:"node_id"`
+	AgentID   string                 `json:"agent_id"`
+	UserID    string                 `json:"user_id,omitempty"`
+	Label     string                 `json:"label"`
+	Type      string                 `json:"type"`
+	Weight    float64                `json:"weight"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt string                 `json:"created_at,omitempty"`
+	UpdatedAt string                 `json:"updated_at,omitempty"`
+}
+
+// ConstellationEdge represents an edge in the knowledge graph.
+type ConstellationEdge struct {
+	EdgeID   string                 `json:"edge_id"`
+	AgentID  string                 `json:"agent_id"`
+	SourceID string                 `json:"source_id"`
+	TargetID string                 `json:"target_id"`
+	Relation string                 `json:"relation"`
+	Weight   float64                `json:"weight"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ConstellationInsight represents an insight derived from the knowledge graph.
+type ConstellationInsight struct {
+	InsightID string                 `json:"insight_id"`
+	AgentID   string                 `json:"agent_id"`
+	UserID    string                 `json:"user_id,omitempty"`
+	Content   string                 `json:"content"`
+	Type      string                 `json:"type"`
+	Surfaced  bool                   `json:"surfaced"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt string                 `json:"created_at,omitempty"`
+}
+
+// ConstellationResponse is the response from the constellation endpoint.
+type ConstellationResponse struct {
+	Nodes    []ConstellationNode    `json:"nodes"`
+	Edges    []ConstellationEdge    `json:"edges"`
+	Insights []ConstellationInsight `json:"insights"`
+}
+
+// ---------------------------------------------------------------------------
+// Breakthroughs
+// ---------------------------------------------------------------------------
+
+// Breakthrough represents a relationship breakthrough event.
+type Breakthrough struct {
+	BreakthroughID      string   `json:"breakthrough_id"`
+	AgentID             string   `json:"agent_id"`
+	UserID              string   `json:"user_id"`
+	BreakthroughNumber  int      `json:"breakthrough_number"`
+	LevelAtBreakthrough int      `json:"level_at_breakthrough"`
+	Narrative           string   `json:"narrative"`
+	PersonalityShifts   []string `json:"personality_shifts"`
+	TraitEvolved        string   `json:"trait_evolved,omitempty"`
+	NewGoals            []string `json:"new_goals"`
+	AchievedGoals       []string `json:"achieved_goals"`
+	SkillPointsAwarded  int      `json:"skill_points_awarded"`
+	Acknowledged        bool     `json:"acknowledged"`
+	CreatedAt           string   `json:"created_at"`
+}
+
+// BreakthroughsResponse is the response from the breakthroughs endpoint.
+type BreakthroughsResponse struct {
+	Breakthroughs []Breakthrough `json:"breakthroughs"`
+}
+
+// ---------------------------------------------------------------------------
+// Wakeups (list)
+// ---------------------------------------------------------------------------
+
+// WakeupListOptions configures a list wakeups request.
+type WakeupListOptions struct {
+	Limit  int    // Maximum number of wakeups to return (default 50, max 500).
+	Status string // Filter by status (e.g. "pending", "executed").
+}
+
+// WakeupsResponse is the response from the list wakeups endpoint.
+type WakeupsResponse struct {
+	Wakeups []ScheduledWakeup `json:"wakeups"`
+}
+
+// ---------------------------------------------------------------------------
+// Process (full pipeline)
+// ---------------------------------------------------------------------------
+
+// ProcessOptions configures a process request.
+type ProcessOptions struct {
+	UserID     string        `json:"userId"`
+	SessionID  string        `json:"sessionId,omitempty"`
+	InstanceID string        `json:"instanceId,omitempty"`
+	Messages   []ChatMessage `json:"messages"`
+	Provider   string        `json:"provider,omitempty"`
+	Model      string        `json:"model,omitempty"`
+}
+
+// ProcessSideEffectsSummary summarises behavioral side effects.
+type ProcessSideEffectsSummary struct {
+	MoodUpdated        bool `json:"mood_updated"`
+	PersonalityUpdated bool `json:"personality_updated"`
+	HabitsObserved     int  `json:"habits_observed"`
+	InterestsDetected  int  `json:"interests_detected"`
+}
+
+// ProcessResponse is the response from the process endpoint.
+type ProcessResponse struct {
+	Success         bool                      `json:"success"`
+	MemoriesCreated int                       `json:"memories_created"`
+	FactsExtracted  int                       `json:"facts_extracted"`
+	SideEffects     ProcessSideEffectsSummary `json:"side_effects"`
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+// ModelsProviderEntry represents a single LLM provider.
+type ModelsProviderEntry struct {
+	Provider     string `json:"provider"`
+	ProviderName string `json:"provider_name"`
+	DefaultModel string `json:"default_model"`
+}
+
+// ModelsResponse is the response from the models endpoint.
+type ModelsResponse struct {
+	DefaultProvider string                `json:"default_provider"`
+	DefaultModel    string                `json:"default_model"`
+	Providers       []ModelsProviderEntry `json:"providers"`
+}
+
+// ---------------------------------------------------------------------------
+// Context (single-call enriched context)
+// ---------------------------------------------------------------------------
+
+// GetContextOptions configures a get context request.
+type GetContextOptions struct {
+	UserID     string `json:"user_id"`
+	SessionID  string `json:"session_id,omitempty"`
+	InstanceID string `json:"instance_id,omitempty"`
+	Query      string `json:"query,omitempty"`
+	Language   string `json:"language,omitempty"`
+	Timezone   string `json:"timezone,omitempty"`
+}
+
+// EnrichedContextResponse is the response from the context endpoint.
+// Fields are intentionally loosely typed for forward compatibility.
+type EnrichedContextResponse struct {
+	// Layer 1: Core Identity
+	Bio               string                 `json:"bio,omitempty"`
+	PersonalityPrompt string                 `json:"personality_prompt,omitempty"`
+	SpeechPatterns    []string               `json:"speech_patterns,omitempty"`
+	TrueInterests     []string               `json:"true_interests,omitempty"`
+	TrueDislikes      []string               `json:"true_dislikes,omitempty"`
+	PrimaryTraits     []string               `json:"primary_traits,omitempty"`
+
+	// Layer 2: Personality
+	Big5        map[string]interface{} `json:"big5,omitempty"`
+	Dimensions  map[string]interface{} `json:"dimensions,omitempty"`
+	Preferences map[string]interface{} `json:"preferences,omitempty"`
+	Behaviors   map[string]interface{} `json:"behaviors,omitempty"`
+
+	// Layer 3: Evolution
+	RecentPersonalityShifts []interface{} `json:"recent_personality_shifts,omitempty"`
+	SignificantMoments      []interface{} `json:"significant_moments,omitempty"`
+	ActiveGoals             []interface{} `json:"active_goals,omitempty"`
+	Habits                  []interface{} `json:"habits,omitempty"`
+	BreakthroughCount       int           `json:"breakthrough_count,omitempty"`
+
+	// Layer 4: Relationship
+	RelationshipNarrative string  `json:"relationship_narrative,omitempty"`
+	SharedMemorySummary   string  `json:"shared_memory_summary,omitempty"`
+	ChemistryScore        float64 `json:"chemistry_score,omitempty"`
+	LoveFromAgent         float64 `json:"love_from_agent,omitempty"`
+	LoveFromUser          float64 `json:"love_from_user,omitempty"`
+	RelationshipStatus    string  `json:"relationship_status,omitempty"`
+	DaysSinceLastChat     int     `json:"days_since_last_chat,omitempty"`
+
+	// Layer 5: Current State
+	CurrentMood    map[string]interface{} `json:"current_mood,omitempty"`
+	EmotionalState string                 `json:"emotional_state,omitempty"`
+	Capabilities   map[string]interface{} `json:"capabilities,omitempty"`
+
+	// Layer 6: Memory
+	LoadedFacts       []map[string]interface{} `json:"loaded_facts,omitempty"`
+	LongTermSummaries []interface{}            `json:"long_term_summaries,omitempty"`
+
+	// Layer 6b: Proactive
+	ProactiveMemories []interface{} `json:"proactive_memories,omitempty"`
+
+	// Layer 6c: Constellation
+	ConstellationPatterns []interface{} `json:"constellation_patterns,omitempty"`
+
+	// Layer 7: Game Context
+	GameContext map[string]interface{} `json:"game_context,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Avatar Generation
+// ---------------------------------------------------------------------------
+
+// GenerateAvatarOptions configures an avatar generation request.
+type GenerateAvatarOptions struct {
+	Style string `json:"style,omitempty"`
+}
+
+// GenerateAvatarResponse is the response from the avatar generation endpoint.
+type GenerateAvatarResponse struct {
+	Success          bool   `json:"success"`
+	AvatarURL        string `json:"avatar_url"`
+	Prompt           string `json:"prompt"`
+	GenerationTimeMs int    `json:"generation_time_ms"`
+}
+
+// ---------------------------------------------------------------------------
 // Batch Personality
 // ---------------------------------------------------------------------------
 

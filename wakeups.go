@@ -38,6 +38,25 @@ type ScheduledWakeup struct {
 	CreatedAt        string `json:"created_at,omitempty"`
 }
 
+// List returns scheduled wakeups for the agent.
+func (w *WakeupResource) List(ctx context.Context, agentID string, opts *WakeupListOptions) (*WakeupsResponse, error) {
+	params := map[string]string{}
+	if opts != nil {
+		if opts.Limit > 0 {
+			params["limit"] = fmt.Sprintf("%d", opts.Limit)
+		}
+		if opts.Status != "" {
+			params["status"] = opts.Status
+		}
+	}
+	var result WakeupsResponse
+	err := w.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/wakeups", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // Schedule creates a new scheduled wakeup for the agent.
 func (w *WakeupResource) Schedule(ctx context.Context, agentID string, opts ScheduleWakeupOptions) (*ScheduledWakeup, error) {
 	var result ScheduledWakeup
