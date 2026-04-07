@@ -1159,3 +1159,28 @@ type DiaryResponse struct {
 type UsersResponse struct {
 	Users []map[string]interface{} `json:"users"`
 }
+
+// ---------------------------------------------------------------------------
+// Agent Knowledge Search (tool endpoint)
+// ---------------------------------------------------------------------------
+
+// AgentKBSearchOptions configures an agent-scoped knowledge search request.
+type AgentKBSearchOptions struct {
+	Query string `json:"query"`
+	Limit int    `json:"limit,omitempty"`
+}
+
+// AgentKBSearchResult represents a single result from agent knowledge search.
+type AgentKBSearchResult struct {
+	Content  string  `json:"content"`
+	Label    string  `json:"label"`
+	NodeType string  `json:"type"`
+	Source   string  `json:"source"`
+	Score    float64 `json:"score"`
+}
+
+// AgentKBSearchResponse is the response from the agent knowledge search endpoint.
+type AgentKBSearchResponse struct {
+	Query   string                `json:"query"`
+	Results []AgentKBSearchResult `json:"results"`
+}

@@ -490,6 +490,16 @@ func (a *AgentsResource) GetContext(ctx context.Context, agentID string, opts Ge
 	return &result, err
 }
 
+// KnowledgeSearch searches the knowledge base for an agent using the tool endpoint.
+func (a *AgentsResource) KnowledgeSearch(ctx context.Context, agentID string, opts AgentKBSearchOptions) (*AgentKBSearchResponse, error) {
+	var result AgentKBSearchResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/knowledge-search", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // GenerateAvatar triggers avatar generation for an agent.
 func (a *AgentsResource) GenerateAvatar(ctx context.Context, agentID string, opts *GenerateAvatarOptions) (*GenerateAvatarResponse, error) {
 	var body interface{}
