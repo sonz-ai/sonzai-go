@@ -493,7 +493,7 @@ func (a *AgentsResource) GetContext(ctx context.Context, agentID string, opts Ge
 // KnowledgeSearch searches the knowledge base for an agent using the tool endpoint.
 func (a *AgentsResource) KnowledgeSearch(ctx context.Context, agentID string, opts AgentKBSearchOptions) (*AgentKBSearchResponse, error) {
 	var result AgentKBSearchResponse
-	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/knowledge-search", agentID), opts, &result)
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/kb-search", agentID), opts, &result)
 	if err != nil {
 		return nil, err
 	}
