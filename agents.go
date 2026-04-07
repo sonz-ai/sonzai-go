@@ -500,6 +500,13 @@ func (a *AgentsResource) KnowledgeSearch(ctx context.Context, agentID string, op
 	return &result, nil
 }
 
+// GetTools returns the tool schemas available for an agent (for BYO-LLM integrations).
+func (a *AgentsResource) GetTools(ctx context.Context, agentID string) (*ToolSchemasResponse, error) {
+	var result ToolSchemasResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/tools", agentID), nil, &result)
+	return &result, err
+}
+
 // GenerateAvatar triggers avatar generation for an agent.
 func (a *AgentsResource) GenerateAvatar(ctx context.Context, agentID string, opts *GenerateAvatarOptions) (*GenerateAvatarResponse, error) {
 	var body interface{}

@@ -1184,3 +1184,20 @@ type AgentKBSearchResponse struct {
 	Query   string                `json:"query"`
 	Results []AgentKBSearchResult `json:"results"`
 }
+
+// ---------------------------------------------------------------------------
+// Tool Schemas (BYO-LLM)
+// ---------------------------------------------------------------------------
+
+// ToolSchema describes a single tool available for an agent (BYO-LLM integrations).
+type ToolSchema struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Endpoint    string         `json:"endpoint"`
+	Parameters  map[string]any `json:"parameters,omitempty"`
+}
+
+// ToolSchemasResponse is the response from the GetTools endpoint.
+type ToolSchemasResponse struct {
+	Tools []ToolSchema `json:"tools"`
+}
