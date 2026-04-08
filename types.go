@@ -852,11 +852,18 @@ type ExtractionInnerThoughts struct {
 // Models
 // ---------------------------------------------------------------------------
 
+// ModelVariant represents a single model variant offered by a provider.
+type ModelVariant struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"display_name"`
+}
+
 // ModelsProviderEntry represents a single LLM provider.
 type ModelsProviderEntry struct {
-	Provider     string `json:"provider"`
-	ProviderName string `json:"provider_name"`
-	DefaultModel string `json:"default_model"`
+	Provider     string         `json:"provider"`
+	ProviderName string         `json:"provider_name"`
+	DefaultModel string         `json:"default_model"`
+	Models       []ModelVariant `json:"models"`
 }
 
 // ModelsResponse is the response from the models endpoint.
@@ -864,6 +871,13 @@ type ModelsResponse struct {
 	DefaultProvider string                `json:"default_provider"`
 	DefaultModel    string                `json:"default_model"`
 	Providers       []ModelsProviderEntry `json:"providers"`
+}
+
+// PlatformModelsResponse is the response from GET /api/v1/models.
+// It lists all LLM providers and model variants enabled on this deployment.
+type PlatformModelsResponse struct {
+	DefaultModel string                `json:"default_model"`
+	Providers    []ModelsProviderEntry `json:"providers"`
 }
 
 // ---------------------------------------------------------------------------

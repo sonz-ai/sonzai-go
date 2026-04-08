@@ -24,6 +24,7 @@
 package sonzai
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -81,6 +82,23 @@ type Client struct {
 	ProjectNotifications *ProjectNotificationsResource
 
 	http *httpClient
+}
+
+// ListModels returns all LLM providers and model variants enabled on this
+// deployment. This is a platform-level call — it does not require an agent ID.
+// Use it to populate model picker UIs or validate model IDs before a chat
+// request.
+//
+//	result, err := client.ListModels(ctx)
+//	for _, p := range result.Providers {
+//	    fmt.Println(p.ProviderName, p.Models)
+//	}
+func (c *Client) ListModels(ctx context.Context) (*PlatformModelsResponse, error) {
+	var result PlatformModelsResponse
+	if err := c.http.Get(ctx, "/api/v1/models", nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // NewClient creates a new Sonzai client with the given API key.
