@@ -634,15 +634,20 @@ type TimeMachineResponse struct {
 
 // ConstellationNode represents a node in the knowledge graph.
 type ConstellationNode struct {
-	NodeID    string                 `json:"node_id"`
-	AgentID   string                 `json:"agent_id"`
-	UserID    string                 `json:"user_id,omitempty"`
-	Label     string                 `json:"label"`
-	Type      string                 `json:"type"`
-	Weight    float64                `json:"weight"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt string                 `json:"created_at,omitempty"`
-	UpdatedAt string                 `json:"updated_at,omitempty"`
+	NodeID       string                 `json:"node_id"`
+	AgentID      string                 `json:"agent_id"`
+	UserID       string                 `json:"user_id,omitempty"`
+	Label        string                 `json:"label"`
+	Type         string                 `json:"type"`
+	NodeType     string                 `json:"node_type,omitempty"`
+	Description  string                 `json:"description,omitempty"`
+	Significance float64                `json:"significance,omitempty"`
+	Weight       float64                `json:"weight"`
+	MentionCount int                    `json:"mention_count,omitempty"`
+	Brightness   float64                `json:"brightness,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt    string                 `json:"created_at,omitempty"`
+	UpdatedAt    string                 `json:"updated_at,omitempty"`
 }
 
 // ConstellationEdge represents an edge in the knowledge graph.
