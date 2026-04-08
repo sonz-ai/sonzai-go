@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 )
 
@@ -178,6 +179,72 @@ func (a *AgentsResource) GetHabits(ctx context.Context, agentID string, userID, 
 	var result HabitsResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/habits", agentID), params, &result)
 	return &result, err
+}
+
+// Habit represents a full agent habit returned from the API.
+type Habit struct {
+	ID               string  `json:"id,omitempty"`
+	AgentID          string  `json:"agent_id"`
+	UserID           string  `json:"user_id,omitempty"`
+	Name             string  `json:"name"`
+	Category         string  `json:"category"`
+	Description      string  `json:"description"`
+	DisplayName      string  `json:"display_name,omitempty"`
+	Strength         float64 `json:"strength"`
+	Formed           bool    `json:"formed"`
+	ObservationCount int     `json:"observation_count"`
+	LastReinforcedAt string  `json:"last_reinforced_at,omitempty"`
+	FormedAt         string  `json:"formed_at,omitempty"`
+	CreatedAt        string  `json:"created_at,omitempty"`
+	UpdatedAt        string  `json:"updated_at,omitempty"`
+}
+
+// CreateHabitOptions configures a habit creation request.
+type CreateHabitOptions struct {
+	UserID      string  `json:"user_id,omitempty"`
+	Name        string  `json:"name"`
+	Category    string  `json:"category,omitempty"`
+	Description string  `json:"description,omitempty"`
+	DisplayName string  `json:"display_name,omitempty"`
+	Strength    float64 `json:"strength,omitempty"`
+}
+
+// UpdateHabitOptions configures a habit update request.
+type UpdateHabitOptions struct {
+	UserID      string   `json:"user_id,omitempty"`
+	Category    string   `json:"category,omitempty"`
+	Description string   `json:"description,omitempty"`
+	DisplayName string   `json:"display_name,omitempty"`
+	Strength    *float64 `json:"strength,omitempty"`
+}
+
+// CreateHabit creates a new habit for an agent. Set UserID in opts for a per-user habit.
+func (a *AgentsResource) CreateHabit(ctx context.Context, agentID string, opts CreateHabitOptions) (*Habit, error) {
+	var result Habit
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/habits", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// UpdateHabit updates an existing habit by name.
+func (a *AgentsResource) UpdateHabit(ctx context.Context, agentID, habitName string, opts UpdateHabitOptions) (*Habit, error) {
+	var result Habit
+	err := a.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/habits/%s", agentID, url.PathEscape(habitName)), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteHabit removes a habit. Pass userID for per-user habits.
+func (a *AgentsResource) DeleteHabit(ctx context.Context, agentID, habitName, userID string) error {
+	params := map[string]string{}
+	if userID != "" {
+		params["user_id"] = userID
+	}
+	return a.http.DeleteWithParams(ctx, fmt.Sprintf("/api/v1/agents/%s/habits/%s", agentID, url.PathEscape(habitName)), params, nil)
 }
 
 // Goal represents an agent goal returned from the API.
@@ -400,6 +467,48 @@ func (a *AgentsResource) GetConstellation(ctx context.Context, agentID string, u
 	return &result, err
 }
 
+// CreateConstellationNodeOptions configures a constellation node creation request.
+type CreateConstellationNodeOptions struct {
+	UserID       string  `json:"user_id,omitempty"`
+	NodeType     string  `json:"node_type,omitempty"`
+	Label        string  `json:"label"`
+	Description  string  `json:"description,omitempty"`
+	Significance float64 `json:"significance,omitempty"`
+}
+
+// UpdateConstellationNodeOptions configures a constellation node update request.
+type UpdateConstellationNodeOptions struct {
+	Label        string   `json:"label,omitempty"`
+	Description  string   `json:"description,omitempty"`
+	Significance *float64 `json:"significance,omitempty"`
+	NodeType     string   `json:"node_type,omitempty"`
+}
+
+// CreateConstellationNode creates a new constellation node (lore) for an agent.
+func (a *AgentsResource) CreateConstellationNode(ctx context.Context, agentID string, opts CreateConstellationNodeOptions) (*ConstellationNode, error) {
+	var result ConstellationNode
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/constellation/nodes", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// UpdateConstellationNode updates an existing constellation node.
+func (a *AgentsResource) UpdateConstellationNode(ctx context.Context, agentID, nodeID string, opts UpdateConstellationNodeOptions) (*ConstellationNode, error) {
+	var result ConstellationNode
+	err := a.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/constellation/nodes/%s", agentID, nodeID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteConstellationNode removes a constellation node.
+func (a *AgentsResource) DeleteConstellationNode(ctx context.Context, agentID, nodeID string) error {
+	return a.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/constellation/nodes/%s", agentID, nodeID), nil)
+}
+
 // GetBreakthroughs returns breakthroughs for an agent.
 func (a *AgentsResource) GetBreakthroughs(ctx context.Context, agentID string, userID, instanceID string) (*BreakthroughsResponse, error) {
 	params := map[string]string{}
@@ -487,6 +596,23 @@ func (a *AgentsResource) GetContext(ctx context.Context, agentID string, opts Ge
 	}
 	var result EnrichedContextResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/context", agentID), params, &result)
+	return &result, err
+}
+
+// KnowledgeSearch searches the knowledge base for an agent using the tool endpoint.
+func (a *AgentsResource) KnowledgeSearch(ctx context.Context, agentID string, opts AgentKBSearchOptions) (*AgentKBSearchResponse, error) {
+	var result AgentKBSearchResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/kb-search", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetTools returns the tool schemas available for an agent (for BYO-LLM integrations).
+func (a *AgentsResource) GetTools(ctx context.Context, agentID string) (*ToolSchemasResponse, error) {
+	var result ToolSchemasResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/tools", agentID), nil, &result)
 	return &result, err
 }
 

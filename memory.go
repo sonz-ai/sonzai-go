@@ -130,6 +130,54 @@ func (m *MemoryResource) Reset(ctx context.Context, agentID string, opts *Memory
 	return &result, nil
 }
 
+// CreateFactOptions configures a fact creation request.
+type CreateFactOptions struct {
+	UserID     string                 `json:"user_id,omitempty"`
+	Content    string                 `json:"content"`
+	FactType   string                 `json:"fact_type,omitempty"`
+	Importance *float64               `json:"importance,omitempty"`
+	Confidence *float64               `json:"confidence,omitempty"`
+	Entities   []string               `json:"entities,omitempty"`
+	NodeID     string                 `json:"node_id,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// UpdateFactOptions configures a fact update request.
+type UpdateFactOptions struct {
+	Content    string                 `json:"content,omitempty"`
+	FactType   string                 `json:"fact_type,omitempty"`
+	Importance *float64               `json:"importance,omitempty"`
+	Confidence *float64               `json:"confidence,omitempty"`
+	Entities   []string               `json:"entities,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// CreateFact creates a new fact for an agent. Facts created via this method
+// are tagged with source_type="manual".
+func (m *MemoryResource) CreateFact(ctx context.Context, agentID string, opts CreateFactOptions) (*AtomicFact, error) {
+	var result AtomicFact
+	err := m.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts", url.PathEscape(agentID)), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// UpdateFact updates an existing fact by ID.
+func (m *MemoryResource) UpdateFact(ctx context.Context, agentID, factID string, opts UpdateFactOptions) (*AtomicFact, error) {
+	var result AtomicFact
+	err := m.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts/%s", url.PathEscape(agentID), url.PathEscape(factID)), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteFact removes a fact by ID.
+func (m *MemoryResource) DeleteFact(ctx context.Context, agentID, factID string) error {
+	return m.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts/%s", url.PathEscape(agentID), url.PathEscape(factID)), nil)
+}
+
 // GetFactHistory returns the version history for a specific fact.
 func (m *MemoryResource) GetFactHistory(ctx context.Context, agentID, factID string) (*FactHistoryResponse, error) {
 	var result FactHistoryResponse

@@ -634,15 +634,20 @@ type TimeMachineResponse struct {
 
 // ConstellationNode represents a node in the knowledge graph.
 type ConstellationNode struct {
-	NodeID    string                 `json:"node_id"`
-	AgentID   string                 `json:"agent_id"`
-	UserID    string                 `json:"user_id,omitempty"`
-	Label     string                 `json:"label"`
-	Type      string                 `json:"type"`
-	Weight    float64                `json:"weight"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt string                 `json:"created_at,omitempty"`
-	UpdatedAt string                 `json:"updated_at,omitempty"`
+	NodeID       string                 `json:"node_id"`
+	AgentID      string                 `json:"agent_id"`
+	UserID       string                 `json:"user_id,omitempty"`
+	Label        string                 `json:"label"`
+	Type         string                 `json:"type"`
+	NodeType     string                 `json:"node_type,omitempty"`
+	Description  string                 `json:"description,omitempty"`
+	Significance float64                `json:"significance,omitempty"`
+	Weight       float64                `json:"weight"`
+	MentionCount int                    `json:"mention_count,omitempty"`
+	Brightness   float64                `json:"brightness,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt    string                 `json:"created_at,omitempty"`
+	UpdatedAt    string                 `json:"updated_at,omitempty"`
 }
 
 // ConstellationEdge represents an edge in the knowledge graph.
@@ -722,12 +727,13 @@ type WakeupsResponse struct {
 
 // ProcessOptions configures a process request.
 type ProcessOptions struct {
-	UserID     string        `json:"userId"`
-	SessionID  string        `json:"sessionId,omitempty"`
-	InstanceID string        `json:"instanceId,omitempty"`
-	Messages   []ChatMessage `json:"messages"`
-	Provider   string        `json:"provider,omitempty"`
-	Model      string        `json:"model,omitempty"`
+	UserID             string        `json:"userId"`
+	SessionID          string        `json:"sessionId,omitempty"`
+	InstanceID         string        `json:"instanceId,omitempty"`
+	Messages           []ChatMessage `json:"messages"`
+	Provider           string        `json:"provider,omitempty"`
+	Model              string        `json:"model,omitempty"`
+	IncludeExtractions bool          `json:"include_extractions,omitempty"`
 }
 
 // ProcessSideEffectsSummary summarises behavioral side effects.
@@ -744,6 +750,102 @@ type ProcessResponse struct {
 	MemoriesCreated int                       `json:"memories_created"`
 	FactsExtracted  int                       `json:"facts_extracted"`
 	SideEffects     ProcessSideEffectsSummary `json:"side_effects"`
+	Extractions     *SideEffectExtraction     `json:"extractions,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Side-Effect Extraction Types
+// ---------------------------------------------------------------------------
+
+// SideEffectExtraction contains the full extracted side effects from conversation processing.
+type SideEffectExtraction struct {
+	MemoryFacts          []ExtractionFact         `json:"memory_facts"`
+	PersonalityDeltas    []ExtractionPDelta       `json:"personality_deltas"`
+	DimensionDeltas      []ExtractionDDelta       `json:"dimension_deltas"`
+	MoodDelta            *ExtractionMoodDelta     `json:"mood_delta"`
+	HabitObservations    []ExtractionHabit        `json:"habit_observations"`
+	InterestsDetected    []ExtractionInterest     `json:"interests_detected"`
+	RelationshipDelta    *ExtractionRelDelta      `json:"relationship_delta"`
+	ProactiveSuggestions []ExtractionProactive    `json:"proactive_suggestions"`
+	RecurringEvents      []ExtractionRecurring    `json:"recurring_events"`
+	InnerThoughts        *ExtractionInnerThoughts `json:"inner_thoughts"`
+	EmotionalThemes      []string                 `json:"emotional_themes"`
+}
+
+// ExtractionFact represents a single extracted memory fact.
+type ExtractionFact struct {
+	Text       string   `json:"text"`
+	FactType   string   `json:"fact_type"`
+	Importance float64  `json:"importance"`
+	Entities   []string `json:"entities"`
+	Sentiment  string   `json:"sentiment"`
+	TopicTags  []string `json:"topic_tags"`
+}
+
+// ExtractionPDelta represents a personality trait delta.
+type ExtractionPDelta struct {
+	Trait  string  `json:"trait"`
+	Delta  float64 `json:"delta"`
+	Reason string  `json:"reason"`
+}
+
+// ExtractionDDelta represents a personality dimension delta.
+type ExtractionDDelta struct {
+	Dimension string  `json:"dimension"`
+	Delta     float64 `json:"delta"`
+	Reason    string  `json:"reason"`
+}
+
+// ExtractionMoodDelta represents a mood state delta.
+type ExtractionMoodDelta struct {
+	Happiness float64 `json:"happiness"`
+	Energy    float64 `json:"energy"`
+	Calmness  float64 `json:"calmness"`
+	Affection float64 `json:"affection"`
+	Reason    string  `json:"reason"`
+}
+
+// ExtractionHabit represents an observed habit.
+type ExtractionHabit struct {
+	Name            string `json:"name"`
+	Category        string `json:"category"`
+	Description     string `json:"description"`
+	IsReinforcement bool   `json:"is_reinforcement"`
+}
+
+// ExtractionInterest represents a detected interest.
+type ExtractionInterest struct {
+	Topic           string  `json:"topic"`
+	Category        string  `json:"category"`
+	Confidence      float64 `json:"confidence"`
+	EngagementLevel float64 `json:"engagement_level"`
+}
+
+// ExtractionRelDelta represents a relationship score delta.
+type ExtractionRelDelta struct {
+	ScoreChange int    `json:"score_change"`
+	Reason      string `json:"reason"`
+}
+
+// ExtractionProactive represents a proactive suggestion.
+type ExtractionProactive struct {
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	DelayHours  int    `json:"delay_hours"`
+	Intent      string `json:"intent"`
+}
+
+// ExtractionRecurring represents a detected recurring event.
+type ExtractionRecurring struct {
+	Description string  `json:"description"`
+	Pattern     string  `json:"pattern"`
+	Confidence  float64 `json:"confidence"`
+}
+
+// ExtractionInnerThoughts represents the agent's inner thoughts.
+type ExtractionInnerThoughts struct {
+	Diary      string `json:"diary"`
+	Reflection string `json:"reflection"`
 }
 
 // ---------------------------------------------------------------------------
@@ -1061,4 +1163,46 @@ type DiaryResponse struct {
 // UsersResponse wraps agent users data.
 type UsersResponse struct {
 	Users []map[string]interface{} `json:"users"`
+}
+
+// ---------------------------------------------------------------------------
+// Agent Knowledge Search (tool endpoint)
+// ---------------------------------------------------------------------------
+
+// AgentKBSearchOptions configures an agent-scoped knowledge search request.
+type AgentKBSearchOptions struct {
+	Query string `json:"query"`
+	Limit int    `json:"limit,omitempty"`
+}
+
+// AgentKBSearchResult represents a single result from agent knowledge search.
+type AgentKBSearchResult struct {
+	Content  string  `json:"content"`
+	Label    string  `json:"label"`
+	NodeType string  `json:"type"`
+	Source   string  `json:"source"`
+	Score    float64 `json:"score"`
+}
+
+// AgentKBSearchResponse is the response from the agent knowledge search endpoint.
+type AgentKBSearchResponse struct {
+	Query   string                `json:"query"`
+	Results []AgentKBSearchResult `json:"results"`
+}
+
+// ---------------------------------------------------------------------------
+// Tool Schemas (BYO-LLM)
+// ---------------------------------------------------------------------------
+
+// ToolSchema describes a single tool available for an agent (BYO-LLM integrations).
+type ToolSchema struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Endpoint    string         `json:"endpoint"`
+	Parameters  map[string]any `json:"parameters,omitempty"`
+}
+
+// ToolSchemasResponse is the response from the GetTools endpoint.
+type ToolSchemasResponse struct {
+	Tools []ToolSchema `json:"tools"`
 }
