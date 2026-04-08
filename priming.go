@@ -25,6 +25,7 @@ type UserPrimingMetadata struct {
 	Title        string            `json:"title,omitempty"`
 	Email        string            `json:"email,omitempty"`
 	Phone        string            `json:"phone,omitempty"`
+	Timezone     string            `json:"timezone,omitempty"` // IANA timezone (e.g., "Asia/Singapore")
 	SourceType   string            `json:"source_type,omitempty"`
 	CustomFields map[string]string `json:"custom_fields,omitempty"`
 	PrimedAt     string            `json:"primed_at,omitempty"`
@@ -32,11 +33,12 @@ type UserPrimingMetadata struct {
 
 // PrimeUserMetadata represents metadata to include when priming a user.
 type PrimeUserMetadata struct {
-	Company string            `json:"company,omitempty"`
-	Title   string            `json:"title,omitempty"`
-	Email   string            `json:"email,omitempty"`
-	Phone   string            `json:"phone,omitempty"`
-	Custom  map[string]string `json:"custom,omitempty"`
+	Company  string            `json:"company,omitempty"`
+	Title    string            `json:"title,omitempty"`
+	Email    string            `json:"email,omitempty"`
+	Phone    string            `json:"phone,omitempty"`
+	Timezone string            `json:"timezone,omitempty"` // IANA timezone (e.g., "Asia/Singapore")
+	Custom   map[string]string `json:"custom,omitempty"`
 }
 
 // PrimeContentBlock represents a content block for priming.
@@ -125,6 +127,7 @@ type UpdateMetadataOptions struct {
 	Title       *string           `json:"title,omitempty"`
 	Email       *string           `json:"email,omitempty"`
 	Phone       *string           `json:"phone,omitempty"`
+	Timezone    *string           `json:"timezone,omitempty"` // IANA timezone (e.g., "Asia/Singapore")
 	Custom      map[string]string `json:"custom,omitempty"`
 }
 
