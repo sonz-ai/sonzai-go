@@ -599,6 +599,16 @@ func (a *AgentsResource) GetContext(ctx context.Context, agentID string, opts Ge
 	return &result, err
 }
 
+// RespondToToolCall sends a tool call result back to the agent mid-conversation.
+func (a *AgentsResource) RespondToToolCall(ctx context.Context, agentID string, opts ToolCallResponseOptions) (*ChatResponse, error) {
+	var result ChatResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/respond", agentID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // KnowledgeSearch searches the knowledge base for an agent using the tool endpoint.
 func (a *AgentsResource) KnowledgeSearch(ctx context.Context, agentID string, opts AgentKBSearchOptions) (*AgentKBSearchResponse, error) {
 	var result AgentKBSearchResponse

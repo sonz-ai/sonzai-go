@@ -35,21 +35,22 @@ type ChatStreamEvent struct {
 	Error   *struct{ Message string } `json:"error,omitempty"`
 
 	// Rich event fields (populated based on Type)
-	MessageIndex      int             `json:"message_index,omitempty"`
-	IsFollowUp        bool            `json:"is_follow_up,omitempty"`
-	Replacement       bool            `json:"replacement,omitempty"`
-	FullContent       string          `json:"full_content,omitempty"`
-	FinishReason      string          `json:"finish_reason,omitempty"`
-	ContinuationToken string          `json:"continuation_token,omitempty"`
-	ResponseCookie    string          `json:"response_cookie,omitempty"`
-	MessageCount      int             `json:"message_count,omitempty"`
-	SideEffectsJSON   json.RawMessage `json:"side_effects,omitempty"`
-	EnrichedContext   json.RawMessage `json:"enriched_context,omitempty"`
-	BuildDurationMs   int64           `json:"build_duration_ms,omitempty"`
-	UsedFastPath      bool            `json:"used_fast_path,omitempty"`
-	ErrorMessage      string          `json:"error_message,omitempty"`
-	ErrorCode         string          `json:"error_code,omitempty"`
-	IsTokenError      bool            `json:"is_token_error,omitempty"`
+	MessageIndex      int                `json:"message_index,omitempty"`
+	IsFollowUp        bool               `json:"is_follow_up,omitempty"`
+	Replacement       bool               `json:"replacement,omitempty"`
+	FullContent       string             `json:"full_content,omitempty"`
+	FinishReason      string             `json:"finish_reason,omitempty"`
+	ContinuationToken string             `json:"continuation_token,omitempty"`
+	ResponseCookie    string             `json:"response_cookie,omitempty"`
+	MessageCount      int                `json:"message_count,omitempty"`
+	SideEffectsJSON   json.RawMessage    `json:"side_effects,omitempty"`
+	ExternalToolCalls []ExternalToolCall `json:"external_tool_calls,omitempty"`
+	EnrichedContext   json.RawMessage    `json:"enriched_context,omitempty"`
+	BuildDurationMs   int64              `json:"build_duration_ms,omitempty"`
+	UsedFastPath      bool               `json:"used_fast_path,omitempty"`
+	ErrorMessage      string             `json:"error_message,omitempty"`
+	ErrorCode         string             `json:"error_code,omitempty"`
+	IsTokenError      bool               `json:"is_token_error,omitempty"`
 }
 
 // Content returns the text content from the first choice delta,
@@ -81,6 +82,19 @@ type ChatResponse struct {
 	Usage     *ChatUsage `json:"usage,omitempty"`
 }
 
+type ExternalToolCall struct {
+	ID         string         `json:"id"`
+	Name       string         `json:"name"`
+	Parameters map[string]any `json:"parameters,omitempty"`
+}
+
+type ToolCallResponseOptions struct {
+	SessionID  string `json:"session_id"`
+	UserID     string `json:"user_id,omitempty"`
+	ToolCallID string `json:"tool_call_id"`
+	Result     any    `json:"result"`
+}
+
 // AgentToolCapabilities specifies which built-in tools to enable for an agent.
 type AgentToolCapabilities struct {
 	WebSearch       bool `json:"web_search"`
@@ -99,20 +113,20 @@ type AgentChatParams struct {
 
 // ChatOptions configures a chat request.
 type ChatOptions struct {
-	Messages             []ChatMessage         `json:"messages"`
-	UserID               string                `json:"user_id,omitempty"`
-	UserDisplayName      string                `json:"user_display_name,omitempty"`
-	SessionID            string                `json:"session_id,omitempty"`
-	InstanceID           string                `json:"instance_id,omitempty"`
-	Provider             string                `json:"provider,omitempty"`
-	Model                string                `json:"model,omitempty"`
-	ContinuationToken    string                `json:"continuation_token,omitempty"`
-	AiServiceCookie      string                `json:"ai_service_cookie,omitempty"`
-	RequestType          string                `json:"request_type,omitempty"`
-	Language             string                `json:"language,omitempty"`
-	CompiledSystemPrompt string                `json:"compiled_system_prompt,omitempty"`
-	InteractionRole      string                `json:"interaction_role,omitempty"`
-	Timezone             string                `json:"timezone,omitempty"`
+	Messages             []ChatMessage          `json:"messages"`
+	UserID               string                 `json:"user_id,omitempty"`
+	UserDisplayName      string                 `json:"user_display_name,omitempty"`
+	SessionID            string                 `json:"session_id,omitempty"`
+	InstanceID           string                 `json:"instance_id,omitempty"`
+	Provider             string                 `json:"provider,omitempty"`
+	Model                string                 `json:"model,omitempty"`
+	ContinuationToken    string                 `json:"continuation_token,omitempty"`
+	AiServiceCookie      string                 `json:"ai_service_cookie,omitempty"`
+	RequestType          string                 `json:"request_type,omitempty"`
+	Language             string                 `json:"language,omitempty"`
+	CompiledSystemPrompt string                 `json:"compiled_system_prompt,omitempty"`
+	InteractionRole      string                 `json:"interaction_role,omitempty"`
+	Timezone             string                 `json:"timezone,omitempty"`
 	ToolCapabilities     *AgentToolCapabilities `json:"tool_capabilities,omitempty"`
 	ToolDefinitions      []ToolDefinition       `json:"tool_definitions,omitempty"`
 	MaxTurns             int                    `json:"max_turns,omitempty"`
@@ -898,12 +912,12 @@ type GetContextOptions struct {
 // Fields are intentionally loosely typed for forward compatibility.
 type EnrichedContextResponse struct {
 	// Layer 1: Core Identity
-	Bio               string                 `json:"bio,omitempty"`
-	PersonalityPrompt string                 `json:"personality_prompt,omitempty"`
-	SpeechPatterns    []string               `json:"speech_patterns,omitempty"`
-	TrueInterests     []string               `json:"true_interests,omitempty"`
-	TrueDislikes      []string               `json:"true_dislikes,omitempty"`
-	PrimaryTraits     []string               `json:"primary_traits,omitempty"`
+	Bio               string   `json:"bio,omitempty"`
+	PersonalityPrompt string   `json:"personality_prompt,omitempty"`
+	SpeechPatterns    []string `json:"speech_patterns,omitempty"`
+	TrueInterests     []string `json:"true_interests,omitempty"`
+	TrueDislikes      []string `json:"true_dislikes,omitempty"`
+	PrimaryTraits     []string `json:"primary_traits,omitempty"`
 
 	// Layer 2: Personality
 	Big5        map[string]interface{} `json:"big5,omitempty"`

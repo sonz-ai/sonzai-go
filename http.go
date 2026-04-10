@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,7 +17,7 @@ import (
 )
 
 // SDKVersion is the current version of the sonzai-go SDK.
-const SDKVersion = "1.0.11"
+const SDKVersion = "1.0.12"
 
 type httpClient struct {
 	baseURL    string
@@ -40,8 +41,8 @@ func newHTTPClient(baseURL, apiKey string, timeout time.Duration) *httpClient {
 }
 
 const (
-	maxRetries     = 3
-	baseBackoff    = 500 * time.Millisecond
+	maxRetries  = 3
+	baseBackoff = 500 * time.Millisecond
 )
 
 // isRetryable returns true for HTTP status codes that indicate a transient failure.
@@ -218,6 +219,66 @@ func (c *httpClient) DeleteWithParams(ctx context.Context, path string, params m
 	}
 	if result != nil {
 		return json.Unmarshal(data, result)
+	}
+	return nil
+}
+
+// PostMultipart sends a multipart/form-data POST request.
+func (c *httpClient) PostMultipart(ctx context.Context, path string, fields map[string]string, fileName string, fileContent io.Reader, contentType string, result interface{}) error {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for key, val := range fields {
+		if err := writer.WriteField(key, val); err != nil {
+			return fmt.Errorf("write field %s: %w", key, err)
+		}
+	}
+
+	part, err := writer.CreateFormFile("file", fileName)
+	if err != nil {
+		return fmt.Errorf("create form file: %w", err)
+	}
+	if _, err := io.Copy(part, fileContent); err != nil {
+		return fmt.Errorf("copy file content: %w", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, body)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read body: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		msg := string(respBody)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+			msg = errResp.Error
+		}
+		return newErrorForStatus(resp.StatusCode, msg)
+	}
+
+	if result != nil {
+		return json.Unmarshal(respBody, result)
 	}
 	return nil
 }
