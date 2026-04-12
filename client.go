@@ -25,7 +25,9 @@ package sonzai
 
 import (
 	"context"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/sonz-ai/sonzai-go/eval"
@@ -40,8 +42,9 @@ const (
 type ClientOption func(*clientConfig)
 
 type clientConfig struct {
-	baseURL string
-	timeout time.Duration
+	baseURL    string
+	timeout    time.Duration
+	httpClient *http.Client
 }
 
 // WithBaseURL sets the API base URL.
@@ -52,6 +55,13 @@ func WithBaseURL(url string) ClientOption {
 // WithTimeout sets the HTTP request timeout.
 func WithTimeout(d time.Duration) ClientOption {
 	return func(c *clientConfig) { c.timeout = d }
+}
+
+// WithHTTPClient sets a custom HTTP client. When provided, the SDK uses this
+// client instead of creating a new one. The caller is responsible for setting
+// timeouts and transport configuration.
+func WithHTTPClient(client *http.Client) ClientOption {
+	return func(c *clientConfig) { c.httpClient = client }
 }
 
 // Client is the Sonzai Mind Layer API client.
@@ -124,17 +134,26 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 		opt(cfg)
 	}
 
-	http := newHTTPClient(cfg.baseURL, apiKey, cfg.timeout)
+	var hc *httpClient
+	if cfg.httpClient != nil {
+		hc = &httpClient{
+			baseURL:    strings.TrimRight(cfg.baseURL, "/"),
+			apiKey:     apiKey,
+			httpClient: cfg.httpClient,
+		}
+	} else {
+		hc = newHTTPClient(cfg.baseURL, apiKey, cfg.timeout)
+	}
 
 	return &Client{
-		Agents:               newAgentsResource(http),
-		Knowledge:            &KnowledgeResource{http: http},
-		Eval:                 eval.New(http),
-		Voices:               &VoicesResource{http: http},
-		Webhooks:             &WebhooksResource{http: http},
-		ProjectConfig:        &ProjectConfigResource{http: http},
-		CustomLLM:            &CustomLLMResource{http: http},
-		ProjectNotifications: &ProjectNotificationsResource{http: http},
-		http:                 http,
+		Agents:               newAgentsResource(hc),
+		Knowledge:            &KnowledgeResource{http: hc},
+		Eval:                 eval.New(hc),
+		Voices:               &VoicesResource{http: hc},
+		Webhooks:             &WebhooksResource{http: hc},
+		ProjectConfig:        &ProjectConfigResource{http: hc},
+		CustomLLM:            &CustomLLMResource{http: hc},
+		ProjectNotifications: &ProjectNotificationsResource{http: hc},
+		http:                 hc,
 	}
 }
