@@ -446,6 +446,12 @@ type TriggerEventOptions struct {
 	Metadata         map[string]string `json:"metadata,omitempty"`
 	Language         string            `json:"language,omitempty"`
 	InstanceID       string            `json:"instance_id,omitempty"`
+	// Messages carries the raw conversation that triggered this event (e.g. the
+	// chat session that just ended). When present, the server uses these as the
+	// LLM's conversation context instead of reconstructing from lossy
+	// consolidation summaries — so diaries / post-session effects reference the
+	// actual dialogue instead of hallucinating generic content.
+	Messages []ChatMessage `json:"messages,omitempty"`
 }
 
 // TriggerEventResponse is the response from triggering an event.
