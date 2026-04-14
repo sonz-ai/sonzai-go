@@ -446,6 +446,13 @@ type TriggerEventOptions struct {
 	Metadata         map[string]string `json:"metadata,omitempty"`
 	Language         string            `json:"language,omitempty"`
 	InstanceID       string            `json:"instance_id,omitempty"`
+	// Messages carries the raw conversation messages that triggered this event.
+	// When present, Platform API uses these directly for context-sensitive
+	// generation (diary, summaries) instead of reconstructing from consolidation
+	// summaries. Typically set by the orchestrator after a chat session ends.
+	// Omit when triggering from cron jobs or other non-conversation sources.
+	// Older Platform API servers that don't know this field will ignore it.
+	Messages []ChatMessage `json:"messages,omitempty"`
 }
 
 // TriggerEventResponse is the response from triggering an event.

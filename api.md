@@ -55,6 +55,18 @@ client := sonzai.NewClient("sk-...",
 | `TriggerEvent(ctx, agentID, opts)` | `*TriggerEventResponse, error` | Trigger a game event or activity |
 | `Dialogue(ctx, opts)` | `*DialogueResponse, error` | Multi-agent dialogue |
 
+`TriggerEventOptions` fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `UserID` | `string` | Required. The user the event belongs to. |
+| `EventType` | `string` | Required. e.g. `"achievement"`, `"daily_summary"`, `"level_up"`. |
+| `EventDescription` | `string` | Optional human-readable context for the AI. |
+| `Metadata` | `map[string]string` | Optional structured metadata. |
+| `Language` | `string` | Optional locale override. |
+| `InstanceID` | `string` | Optional instance scope. |
+| `Messages` | `[]ChatMessage` | Optional raw conversation messages that triggered this event. When present, Platform API uses these directly for context-sensitive generation (e.g. diary, summaries) instead of reconstructing from lossy consolidation summaries. Older servers ignore this field. |
+
 ## Agents.Memory
 
 | Method | Returns | Description |
