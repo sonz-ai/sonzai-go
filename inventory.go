@@ -244,7 +244,7 @@ func (inv *InventoryResource) BatchImport(ctx context.Context, agentID, userID s
 }
 
 // DirectUpdate updates an inventory fact's properties by fact ID.
-// Pass instanceID to scope to a specific game instance (empty string for default).
+// Pass instanceID to scope to a specific backend instance (empty string for default).
 func (inv *InventoryResource) DirectUpdate(ctx context.Context, agentID, userID, factID string, properties map[string]any, instanceID string) (*InventoryDirectUpdateResponse, error) {
 	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/%s", agentID, url.PathEscape(userID), url.PathEscape(factID))
 	if instanceID != "" {
@@ -260,7 +260,7 @@ func (inv *InventoryResource) DirectUpdate(ctx context.Context, agentID, userID,
 }
 
 // DirectDelete removes an inventory item by fact ID.
-// Pass instanceID to scope to a specific game instance (empty string for default).
+// Pass instanceID to scope to a specific backend instance (empty string for default).
 func (inv *InventoryResource) DirectDelete(ctx context.Context, agentID, userID, factID string, instanceID string) (*InventoryDirectUpdateResponse, error) {
 	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/%s", agentID, url.PathEscape(userID), url.PathEscape(factID))
 	if instanceID != "" {

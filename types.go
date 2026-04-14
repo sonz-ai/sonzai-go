@@ -962,8 +962,8 @@ type EnrichedContextResponse struct {
 	// Layer 6c: Constellation
 	ConstellationPatterns []interface{} `json:"constellation_patterns,omitempty"`
 
-	// Layer 7: Game Context
-	GameContext map[string]interface{} `json:"game_context,omitempty"`
+	// Layer 7: Backend Context
+	BackendContext map[string]interface{} `json:"game_context,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
