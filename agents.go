@@ -366,7 +366,7 @@ func (a *AgentsResource) GetUsers(ctx context.Context, agentID string) (*UsersRe
 	return &result, err
 }
 
-// TriggerEvent triggers a game event / activity for an agent.
+// TriggerEvent triggers a backend event / activity for an agent.
 func (a *AgentsResource) TriggerEvent(ctx context.Context, agentID string, opts TriggerEventOptions) (*TriggerEventResponse, error) {
 	var result TriggerEventResponse
 	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/events", agentID), opts, &result)
