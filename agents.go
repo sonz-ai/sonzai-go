@@ -104,7 +104,10 @@ func (a *AgentsResource) ChatStreamChannel(ctx context.Context, params AgentChat
 			}
 		})
 		if err != nil {
-			errCh <- err
+			select {
+			case errCh <- err:
+			case <-ctx.Done():
+			}
 		}
 	}()
 

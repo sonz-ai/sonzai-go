@@ -17,8 +17,13 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 )
+
+// DefaultMaxMessageSize caps the size of a single (possibly fragmented) message
+// to prevent unbounded memory growth from a misbehaving or hostile server.
+const DefaultMaxMessageSize = 10 * 1024 * 1024 // 10 MiB
 
 // Frame opcodes per RFC 6455.
 const (
@@ -34,10 +39,20 @@ const wsGUID = "258EAFA5-E914-47DA-95CA-5AB5DC525E41"
 
 // Conn is a minimal WebSocket client connection.
 type Conn struct {
-	conn    net.Conn
-	br      *bufio.Reader
-	writeMu sync.Mutex
-	closed  bool
+	conn           net.Conn
+	br             *bufio.Reader
+	writeMu        sync.Mutex
+	closed         atomic.Bool
+	maxMessageSize int64
+}
+
+// SetMaxMessageSize overrides the default 10 MiB cap on assembled message size.
+// A non-positive value restores the default.
+func (c *Conn) SetMaxMessageSize(n int64) {
+	if n <= 0 {
+		n = DefaultMaxMessageSize
+	}
+	c.maxMessageSize = n
 }
 
 // Dial opens a WebSocket connection to the given URL (ws:// or wss://).
@@ -127,7 +142,7 @@ func Dial(ctx context.Context, rawURL string) (*Conn, error) {
 	// Clear deadline after handshake.
 	conn.SetDeadline(time.Time{})
 
-	return &Conn{conn: conn, br: br}, nil
+	return &Conn{conn: conn, br: br, maxMessageSize: DefaultMaxMessageSize}, nil
 }
 
 // ReadMessage reads the next WebSocket message, automatically handling
@@ -154,13 +169,24 @@ func (c *Conn) ReadMessage() (opcode int, payload []byte, err error) {
 			return op, data, nil
 		}
 
-		// Fragmented message: collect continuation frames.
-		var buf []byte
+		// Fragmented message: collect continuation frames, capping total size
+		// so a misbehaving peer cannot exhaust memory.
+		max := c.maxMessageSize
+		if max <= 0 {
+			max = DefaultMaxMessageSize
+		}
+		if int64(len(data)) > max {
+			return 0, nil, fmt.Errorf("ws: message exceeds max size %d", max)
+		}
+		buf := make([]byte, 0, len(data)*2)
 		buf = append(buf, data...)
 		for {
 			fin2, _, data2, err := c.readFrame()
 			if err != nil {
 				return 0, nil, err
+			}
+			if int64(len(buf))+int64(len(data2)) > max {
+				return 0, nil, fmt.Errorf("ws: message exceeds max size %d", max)
 			}
 			buf = append(buf, data2...)
 			if fin2 {
@@ -187,13 +213,12 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 
 // Close sends a close frame and closes the underlying connection.
 func (c *Conn) Close() error {
-	c.writeMu.Lock()
-	defer c.writeMu.Unlock()
-	if c.closed {
+	if !c.closed.CompareAndSwap(false, true) {
 		return nil
 	}
-	c.closed = true
-	c.writeFrameLocked(OpClose, nil)
+	c.writeMu.Lock()
+	_ = c.writeCloseFrameLocked()
+	c.writeMu.Unlock()
 	return c.conn.Close()
 }
 
@@ -255,14 +280,25 @@ func (c *Conn) writeFrame(opcode int, payload []byte) error {
 
 // writeFrameLocked writes a masked frame (caller must hold writeMu).
 func (c *Conn) writeFrameLocked(opcode int, payload []byte) error {
-	if c.closed {
+	if c.closed.Load() {
 		return fmt.Errorf("ws: connection closed")
 	}
+	return c.writeFrameLockedUnchecked(opcode, payload)
+}
 
+// writeCloseFrameLocked sends a close frame even if closed was already set.
+// Used from Close() so the close handshake still reaches the server.
+func (c *Conn) writeCloseFrameLocked() error {
+	return c.writeFrameLockedUnchecked(OpClose, nil)
+}
+
+// writeFrameLockedUnchecked writes a masked frame without checking c.closed.
+// Caller must hold writeMu.
+func (c *Conn) writeFrameLockedUnchecked(opcode int, payload []byte) error {
 	length := len(payload)
 
-	// Build header: FIN + opcode, MASK + length, mask key.
-	var header []byte
+	// Max header size: 1 (FIN+opcode) + 1 (MASK+len) + 8 (ext len) + 4 (mask).
+	header := make([]byte, 0, 14)
 	header = append(header, byte(0x80|opcode)) // FIN=1, opcode
 
 	switch {
@@ -282,7 +318,9 @@ func (c *Conn) writeFrameLocked(opcode int, payload []byte) error {
 
 	// Generate 4-byte mask key.
 	var maskKey [4]byte
-	io.ReadFull(rand.Reader, maskKey[:])
+	if _, err := io.ReadFull(rand.Reader, maskKey[:]); err != nil {
+		return fmt.Errorf("ws: mask key: %w", err)
+	}
 	header = append(header, maskKey[:]...)
 
 	// Mask the payload.
