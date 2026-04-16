@@ -178,6 +178,18 @@ func (m *MemoryResource) DeleteFact(ctx context.Context, agentID, factID string)
 	return m.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts/%s", url.PathEscape(agentID), url.PathEscape(factID)), nil)
 }
 
+// Seed bulk imports initial memories for an agent during setup.
+// Unlike GenerationResource.GenerateSeedMemories, this method stores the
+// memories you provide directly without any AI generation step.
+func (m *MemoryResource) Seed(ctx context.Context, agentID string, opts SeedMemoriesOptions) (*SeedMemoriesResponse, error) {
+	var result SeedMemoriesResponse
+	err := m.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/seed", url.PathEscape(agentID)), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // GetFactHistory returns the version history for a specific fact.
 func (m *MemoryResource) GetFactHistory(ctx context.Context, agentID, factID string) (*FactHistoryResponse, error) {
 	var result FactHistoryResponse

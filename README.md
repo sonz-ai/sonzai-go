@@ -23,7 +23,7 @@ import (
 ```
 
 ```bash
-go get github.com/sonz-ai/sonzai-go@v1.0.4
+go get github.com/sonz-ai/sonzai-go@v1.1.0
 ```
 
 ## Getting Started

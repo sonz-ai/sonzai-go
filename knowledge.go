@@ -328,7 +328,7 @@ type KBSearchOptions struct {
 	IncludeHistory bool
 	EntityTypes    string // comma-separated
 	Filters        string // JSON string
-	Hops           int    // graph traversal depth (default 1)
+	Hops           int    // number of graph traversal hops (default 1)
 }
 
 // CreateSchemaOptions configures a schema creation request.
@@ -430,13 +430,27 @@ func (k *KnowledgeResource) InsertFacts(ctx context.Context, projectID string, o
 }
 
 // ListNodes returns knowledge graph nodes for a project.
-func (k *KnowledgeResource) ListNodes(ctx context.Context, projectID string, nodeType string, limit int) (*KBNodeListResponse, error) {
+func (k *KnowledgeResource) ListNodes(ctx context.Context, projectID string, opts *ListNodesOptions) (*KBNodeListResponse, error) {
 	params := map[string]string{}
-	if nodeType != "" {
-		params["type"] = nodeType
-	}
-	if limit > 0 {
-		params["limit"] = strconv.Itoa(limit)
+	if opts != nil {
+		if opts.NodeType != "" {
+			params["type"] = opts.NodeType
+		}
+		if opts.Limit > 0 {
+			params["limit"] = strconv.Itoa(opts.Limit)
+		}
+		if opts.Offset > 0 {
+			params["offset"] = strconv.Itoa(opts.Offset)
+		}
+		if opts.SortBy != "" {
+			params["sort_by"] = opts.SortBy
+		}
+		if opts.SortOrder != "" {
+			params["sort_order"] = opts.SortOrder
+		}
+		for k, v := range opts.Properties {
+			params["properties."+k] = v
+		}
 	}
 	var result KBNodeListResponse
 	err := k.http.Get(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes", projectID), params, &result)

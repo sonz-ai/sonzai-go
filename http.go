@@ -12,6 +12,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -25,18 +26,24 @@ type httpClient struct {
 	httpClient *http.Client
 }
 
-func newHTTPClient(baseURL, apiKey string, timeout time.Duration) *httpClient {
-	return &httpClient{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		apiKey:  apiKey,
-		httpClient: &http.Client{
+func newHTTPClient(baseURL, apiKey string, timeout time.Duration, customClient *http.Client) *httpClient {
+	var hc *http.Client
+	if customClient != nil {
+		hc = customClient
+	} else {
+		hc = &http.Client{
 			Timeout: timeout,
 			Transport: &http.Transport{
 				MaxIdleConns:        100,
 				MaxIdleConnsPerHost: 10,
 				IdleConnTimeout:     90 * time.Second,
 			},
-		},
+		}
+	}
+	return &httpClient{
+		baseURL:    strings.TrimRight(baseURL, "/"),
+		apiKey:     apiKey,
+		httpClient: hc,
 	}
 }
 
@@ -139,7 +146,16 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 			if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
 				msg = errResp.Error
 			}
-			lastErr = newErrorForStatus(resp.StatusCode, msg)
+
+			var retryAfter *int
+			if resp.StatusCode == 429 {
+				if raHeader := resp.Header.Get("Retry-After"); raHeader != "" {
+					if ra, parseErr := strconv.Atoi(raHeader); parseErr == nil {
+						retryAfter = &ra
+					}
+				}
+			}
+			lastErr = newErrorForStatus(resp.StatusCode, msg, retryAfter)
 
 			// Retry on transient failures for idempotent methods.
 			if isIdempotent(method) && isRetryable(resp.StatusCode) && attempt < attempts-1 {
@@ -274,7 +290,7 @@ func (c *httpClient) PostMultipart(ctx context.Context, path string, fields map[
 		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
 			msg = errResp.Error
 		}
-		return newErrorForStatus(resp.StatusCode, msg)
+		return newErrorForStatus(resp.StatusCode, msg, nil)
 	}
 
 	if result != nil {
@@ -324,7 +340,7 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
 			msg = errResp.Error
 		}
-		return newErrorForStatus(resp.StatusCode, msg)
+		return newErrorForStatus(resp.StatusCode, msg, nil)
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
@@ -347,4 +363,61 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	}
 
 	return scanner.Err()
+}
+
+// UploadFile sends a multipart/form-data POST request and unmarshals the
+// JSON response into result. Pass nil for result to discard the response body.
+func (c *httpClient) UploadFile(ctx context.Context, path string, fileName string, fileData []byte, contentType string, result interface{}) error {
+	u, err := url.Parse(c.baseURL + path)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	part, err := writer.CreateFormFile("file", fileName)
+	if err != nil {
+		return fmt.Errorf("create form file: %w", err)
+	}
+	if _, err := part.Write(fileData); err != nil {
+		return fmt.Errorf("write file data: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &buf)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read body: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		msg := string(respBody)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+			msg = errResp.Error
+		}
+		return newErrorForStatus(resp.StatusCode, msg, nil)
+	}
+
+	if result != nil {
+		return json.Unmarshal(respBody, result)
+	}
+	return nil
 }
