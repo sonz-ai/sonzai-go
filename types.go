@@ -504,6 +504,7 @@ type AgentListOptions struct {
 // AgentIndex represents a summary of an agent in a list.
 type AgentIndex struct {
 	ID        string `json:"id"`
+	TenantID  string `json:"tenant_id,omitempty"`
 	Name      string `json:"name"`
 	Bio       string `json:"bio,omitempty"`
 	Gender    string `json:"gender,omitempty"`
