@@ -161,17 +161,41 @@ type MemoryNode struct {
 
 // AtomicFact represents a single atomic fact stored in memory.
 type AtomicFact struct {
-	FactID       string                 `json:"fact_id"`
-	AgentID      string                 `json:"agent_id"`
-	UserID       string                 `json:"user_id"`
-	NodeID       string                 `json:"node_id"`
-	AtomicText   string                 `json:"atomic_text"`
-	FactType     string                 `json:"fact_type"`
-	Importance   float64                `json:"importance"`
-	SupersedesID string                 `json:"supersedes_id"`
-	SessionID    string                 `json:"session_id"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt    string                 `json:"created_at,omitempty"`
+	FactID               string                 `json:"fact_id"`
+	AgentID              string                 `json:"agent_id"`
+	UserID               string                 `json:"user_id"`
+	NodeID               string                 `json:"node_id"`
+	AtomicText           string                 `json:"atomic_text"`
+	FactType             string                 `json:"fact_type"`
+	Importance           float64                `json:"importance"`
+	Confidence           float64                `json:"confidence,omitempty"`
+	SupersedesID         string                 `json:"supersedes_id"`
+	SessionID            string                 `json:"session_id"`
+	SourceID             string                 `json:"source_id,omitempty"`
+	SourceType           string                 `json:"source_type,omitempty"`
+	Sentiment            string                 `json:"sentiment,omitempty"`
+	Entities             []string               `json:"entities,omitempty"`
+	InferredEntities     []string               `json:"inferred_entities,omitempty"`
+	TopicTags            []string               `json:"topic_tags,omitempty"`
+	AgentFraming         string                 `json:"agent_framing,omitempty"`
+	CharacterSalience    float64                `json:"character_salience,omitempty"`
+	EmotionalIntensity   float64                `json:"emotional_intensity,omitempty"`
+	RelationshipRelevance float64               `json:"relationship_relevance,omitempty"`
+	RetentionStrength    float64                `json:"retention_strength,omitempty"`
+	TemporalRelevance    string                 `json:"temporal_relevance,omitempty"`
+	TimeSensitiveAt      string                 `json:"time_sensitive_at,omitempty"`
+	EpisodeID            string                 `json:"episode_id,omitempty"`
+	EventTime            string                 `json:"event_time,omitempty"`
+	EvidenceMessageIDs   []string               `json:"evidence_message_ids,omitempty"`
+	PolarityGroupID      string                 `json:"polarity_group_id,omitempty"`
+	HitCount             int                    `json:"hit_count,omitempty"`
+	MissCount            int                    `json:"miss_count,omitempty"`
+	MentionCount         int                    `json:"mention_count,omitempty"`
+	LastConfirmed        string                 `json:"last_confirmed,omitempty"`
+	LastRetrievedAt      string                 `json:"last_retrieved_at,omitempty"`
+	Metadata             map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt            string                 `json:"created_at,omitempty"`
+	UpdatedAt            string                 `json:"updated_at,omitempty"`
 }
 
 // MemoryResponse is the response from the memory list endpoint.
@@ -282,25 +306,33 @@ type PersonalityBehaviors struct {
 	ConflictApproach  string `json:"conflict_approach"`
 }
 
+// TraitPrecision represents the precision and observation count for a personality trait.
+type TraitPrecision struct {
+	Precision        float64 `json:"precision"`
+	ObservationCount int     `json:"observation_count"`
+	LastUpdatedAt    string  `json:"last_updated_at,omitempty"`
+}
+
 // PersonalityProfile represents the full personality profile.
 type PersonalityProfile struct {
-	AgentID             string                 `json:"agent_id"`
-	Name                string                 `json:"name"`
-	Gender              string                 `json:"gender"`
-	Bio                 string                 `json:"bio"`
-	AvatarURL           string                 `json:"avatar_url"`
-	PersonalityPrompt   string                 `json:"personality_prompt"`
-	SpeechPatterns      []string               `json:"speech_patterns"`
-	TrueInterests       []string               `json:"true_interests"`
-	TrueDislikes        []string               `json:"true_dislikes"`
-	PrimaryTraits       []string               `json:"primary_traits"`
-	Temperature         float64                `json:"temperature"`
-	Big5                Big5                   `json:"big5"`
-	Dimensions          PersonalityDimensions  `json:"dimensions"`
-	Preferences         PersonalityPreferences `json:"preferences"`
-	Behaviors           PersonalityBehaviors   `json:"behaviors"`
-	EmotionalTendencies map[string]float64     `json:"emotional_tendencies"`
-	CreatedAt           string                 `json:"created_at,omitempty"`
+	AgentID             string                    `json:"agent_id"`
+	Name                string                    `json:"name"`
+	Gender              string                    `json:"gender"`
+	Bio                 string                    `json:"bio"`
+	AvatarURL           string                    `json:"avatar_url"`
+	PersonalityPrompt   string                    `json:"personality_prompt"`
+	SpeechPatterns      []string                  `json:"speech_patterns"`
+	TrueInterests       []string                  `json:"true_interests"`
+	TrueDislikes        []string                  `json:"true_dislikes"`
+	PrimaryTraits       []string                  `json:"primary_traits"`
+	Temperature         float64                   `json:"temperature"`
+	Big5                Big5                      `json:"big5"`
+	Dimensions          PersonalityDimensions     `json:"dimensions"`
+	Preferences         PersonalityPreferences    `json:"preferences"`
+	Behaviors           PersonalityBehaviors      `json:"behaviors"`
+	EmotionalTendencies map[string]float64        `json:"emotional_tendencies"`
+	TraitPrecisions     map[string]TraitPrecision `json:"trait_precisions,omitempty"`
+	CreatedAt           string                    `json:"created_at,omitempty"`
 }
 
 // PersonalityDelta represents a personality evolution event.
@@ -516,15 +548,22 @@ type AgentListOptions struct {
 
 // AgentIndex represents a summary of an agent in a list.
 type AgentIndex struct {
-	ID        string `json:"id"`
-	TenantID  string `json:"tenant_id,omitempty"`
-	Name      string `json:"name"`
-	Bio       string `json:"bio,omitempty"`
-	Gender    string `json:"gender,omitempty"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-	Status    string `json:"status,omitempty"`
-	ProjectID string `json:"project_id,omitempty"`
-	CreatedAt string `json:"created_at,omitempty"`
+	ID               string `json:"id"`
+	AgentID          string `json:"agent_id,omitempty"`
+	TenantID         string `json:"tenant_id,omitempty"`
+	Name             string `json:"name"`
+	Bio              string `json:"bio,omitempty"`
+	Gender           string `json:"gender,omitempty"`
+	AvatarURL        string `json:"avatar_url,omitempty"`
+	Status           string `json:"status,omitempty"`
+	IsActive         bool   `json:"is_active,omitempty"`
+	ProjectID        string `json:"project_id,omitempty"`
+	InstanceCount    int    `json:"instance_count,omitempty"`
+	LastSeenAt       string `json:"last_seen_at,omitempty"`
+	OwnerUserID      string `json:"owner_user_id,omitempty"`
+	OwnerDisplayName string `json:"owner_display_name,omitempty"`
+	OwnerEmail       string `json:"owner_email,omitempty"`
+	CreatedAt        string `json:"created_at,omitempty"`
 }
 
 // AgentListResponse is the response from listing agents.
@@ -532,6 +571,7 @@ type AgentListResponse struct {
 	Items      []AgentIndex `json:"items"`
 	NextCursor string       `json:"next_cursor,omitempty"`
 	HasMore    bool         `json:"has_more"`
+	TotalCount int          `json:"total_count,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -567,13 +607,31 @@ type CustomToolDefinition struct {
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 }
 
+// PendingCapability represents a capability the agent knows is coming.
+type PendingCapability struct {
+	Capability string `json:"capability"`
+	Context    string `json:"context,omitempty"`
+}
+
 // AgentCapabilities represents the capabilities enabled for an agent.
 type AgentCapabilities struct {
-	WebSearch       bool                   `json:"webSearch"`
-	RememberName    bool                   `json:"rememberName"`
-	ImageGeneration bool                   `json:"imageGeneration"`
-	Inventory       bool                   `json:"inventory"`
-	CustomTools     []CustomToolDefinition `json:"customTools,omitempty"`
+	WebSearch           bool                   `json:"webSearch"`
+	RememberName        bool                   `json:"rememberName"`
+	ImageGeneration     bool                   `json:"imageGeneration"`
+	Inventory           bool                   `json:"inventory"`
+	KnowledgeBase       bool                   `json:"knowledgeBase,omitempty"`
+	KnowledgeBaseProjectID string              `json:"knowledgeBaseProjectId,omitempty"`
+	VoiceGeneration     bool                   `json:"voiceGeneration"`
+	VoiceID             string                 `json:"voiceId,omitempty"`
+	VoiceTier           int                    `json:"voiceTier,omitempty"`
+	VoiceUnlockedAt     string                 `json:"voiceUnlockedAt,omitempty"`
+	ImageUnlockedAt     string                 `json:"imageUnlockedAt,omitempty"`
+	MusicGeneration     bool                   `json:"musicGeneration"`
+	MusicUnlockedAt     string                 `json:"musicUnlockedAt,omitempty"`
+	VideoGeneration     bool                   `json:"videoGeneration"`
+	VideoUnlockedAt     string                 `json:"videoUnlockedAt,omitempty"`
+	PendingCapabilities []PendingCapability    `json:"pendingCapabilities,omitempty"`
+	CustomTools         []CustomToolDefinition `json:"customTools,omitempty"`
 }
 
 // UpdateCapabilitiesOptions configures a capabilities update request.
@@ -582,6 +640,7 @@ type UpdateCapabilitiesOptions struct {
 	RememberName    *bool `json:"rememberName,omitempty"`
 	ImageGeneration *bool `json:"imageGeneration,omitempty"`
 	Inventory       *bool `json:"inventory,omitempty"`
+	KnowledgeBase   *bool `json:"knowledgeBase,omitempty"`
 }
 
 // CustomToolListResponse is the response from listing custom tools.
@@ -1103,37 +1162,50 @@ type UpdateInstanceOptions struct {
 // Mood
 // ---------------------------------------------------------------------------
 
-// MoodState represents agent mood dimensions.
+// MoodState represents agent mood dimensions (valence-arousal-tension-affiliation model).
 type MoodState struct {
-	Happiness float64 `json:"happiness"`
-	Energy    float64 `json:"energy"`
-	Calmness  float64 `json:"calmness"`
-	Affection float64 `json:"affection"`
+	Valence     float64 `json:"valence"`
+	Arousal     float64 `json:"arousal"`
+	Tension     float64 `json:"tension"`
+	Affiliation float64 `json:"affiliation"`
+	Label       string  `json:"label,omitempty"`
 }
 
 // MoodResponse wraps the mood state from the API.
 type MoodResponse struct {
-	Mood      MoodState `json:"mood"`
-	UpdatedAt string    `json:"updated_at,omitempty"`
+	Mood MoodState `json:"mood"`
 }
 
 // MoodHistoryEntry represents a single mood history data point.
 type MoodHistoryEntry struct {
-	Mood      MoodState `json:"mood"`
-	Timestamp string    `json:"timestamp"`
+	Valence          float64 `json:"valence"`
+	Arousal          float64 `json:"arousal"`
+	Tension          float64 `json:"tension"`
+	Affiliation      float64 `json:"affiliation"`
+	Label            string  `json:"label,omitempty"`
+	TriggerType      string  `json:"trigger_type,omitempty"`
+	TriggerReason    string  `json:"trigger_reason,omitempty"`
+	DeltaValence     float64 `json:"delta_valence,omitempty"`
+	DeltaArousal     float64 `json:"delta_arousal,omitempty"`
+	DeltaTension     float64 `json:"delta_tension,omitempty"`
+	DeltaAffiliation float64 `json:"delta_affiliation,omitempty"`
+	Timestamp        string  `json:"timestamp"`
 }
 
 // MoodHistoryResponse wraps mood history from the API.
 type MoodHistoryResponse struct {
-	History []MoodHistoryEntry `json:"history"`
+	Entries []MoodHistoryEntry `json:"entries"`
 }
 
 // MoodAggregateResponse wraps aggregated mood statistics.
 type MoodAggregateResponse struct {
-	Average   MoodState `json:"average"`
-	Min       MoodState `json:"min"`
-	Max       MoodState `json:"max"`
-	DataCount int       `json:"data_count"`
+	Valence     float64 `json:"valence"`
+	Arousal     float64 `json:"arousal"`
+	Tension     float64 `json:"tension"`
+	Affiliation float64 `json:"affiliation"`
+	Label       string  `json:"label"`
+	UserCount   int     `json:"user_count"`
+	DaysWindow  int     `json:"days_window"`
 }
 
 // ---------------------------------------------------------------------------
@@ -1142,10 +1214,12 @@ type MoodAggregateResponse struct {
 
 // RelationshipData represents a relationship with a user.
 type RelationshipData struct {
-	UserID     string  `json:"user_id"`
-	LoveScore  float64 `json:"love_score"`
-	Narrative  string  `json:"narrative,omitempty"`
-	LastUpdate string  `json:"last_update,omitempty"`
+	UserID         string  `json:"user_id"`
+	LoveScore      float64 `json:"love_score"`
+	ChemistryScore float64 `json:"chemistry_score,omitempty"`
+	Narrative      string  `json:"narrative,omitempty"`
+	LastUpdate     string  `json:"last_update,omitempty"`
+	UpdatedAt      string  `json:"updated_at,omitempty"`
 }
 
 // RelationshipsResponse wraps relationship data.
@@ -1180,9 +1254,19 @@ type HabitsResponse struct {
 
 // InterestData represents an agent interest.
 type InterestData struct {
-	Topic    string  `json:"topic"`
-	Score    float64 `json:"score"`
-	Category string  `json:"category,omitempty"`
+	Topic            string  `json:"topic"`
+	Score            float64 `json:"score,omitempty"` // Deprecated: use Confidence instead.
+	Category         string  `json:"category,omitempty"`
+	AgentID          string  `json:"agent_id,omitempty"`
+	UserID           string  `json:"user_id,omitempty"`
+	Confidence       float64 `json:"confidence,omitempty"`
+	EngagementLevel  float64 `json:"engagement_level,omitempty"`
+	MentionCount     int     `json:"mention_count,omitempty"`
+	ResearchStatus   string  `json:"research_status,omitempty"`
+	ResearchFindings string  `json:"research_findings,omitempty"`
+	LastMentionedAt  string  `json:"last_mentioned_at,omitempty"`
+	CreatedAt        string  `json:"created_at,omitempty"`
+	UpdatedAt        string  `json:"updated_at,omitempty"`
 }
 
 // InterestsResponse wraps interest data.
@@ -1196,11 +1280,19 @@ type InterestsResponse struct {
 
 // DiaryEntry represents a single diary entry.
 type DiaryEntry struct {
-	EntryID   string   `json:"entry_id"`
-	Title     string   `json:"title"`
-	Body      string   `json:"body"`
-	Tags      []string `json:"tags,omitempty"`
-	CreatedAt string   `json:"created_at"`
+	EntryID     string   `json:"entry_id"`
+	AgentID     string   `json:"agent_id"`
+	UserID      string   `json:"user_id,omitempty"`
+	Date        string   `json:"date"`
+	Content     string   `json:"content"`
+	Title       string   `json:"title,omitempty"`
+	BodyLines   []string `json:"body_lines,omitempty"`
+	Body        string   `json:"body,omitempty"` // Deprecated: use Content instead.
+	Mood        string   `json:"mood,omitempty"`
+	Topics      []string `json:"topics,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	TriggerType string   `json:"trigger_type,omitempty"`
+	CreatedAt   string   `json:"created_at"`
 }
 
 // DiaryResponse wraps diary entries.
