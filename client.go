@@ -84,6 +84,11 @@ type Client struct {
 	// ProjectConfig provides project-scoped configuration management.
 	ProjectConfig *ProjectConfigResource
 
+	// AccountConfig provides tenant-scoped ("account-level") configuration
+	// management. Use it to set defaults that apply across every project
+	// inside a tenant — for example, the post-processing model map.
+	AccountConfig *AccountConfigResource
+
 	// CustomLLM provides project-scoped custom LLM configuration.
 	CustomLLM *CustomLLMResource
 
@@ -142,6 +147,7 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 		Voices:               &VoicesResource{http: hc},
 		Webhooks:             &WebhooksResource{http: hc},
 		ProjectConfig:        &ProjectConfigResource{http: hc},
+		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		http:                 hc,
