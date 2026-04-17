@@ -1,6 +1,14 @@
 package sonzai
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
+
+// GameContext provides game-specific context for chat requests.
+type GameContext struct {
+	CustomFields  map[string]string `json:"custom_fields,omitempty"`
+	GameStateJSON json.RawMessage   `json:"game_state_json,omitempty"`
+}
 
 // ---------------------------------------------------------------------------
 // Chat
@@ -130,6 +138,8 @@ type ChatOptions struct {
 	ToolCapabilities     *AgentToolCapabilities `json:"tool_capabilities,omitempty"`
 	ToolDefinitions      []ToolDefinition       `json:"tool_definitions,omitempty"`
 	MaxTurns             int                    `json:"max_turns,omitempty"`
+	SkipContextBuild     bool                   `json:"skip_context_build,omitempty"`
+	GameContext          *GameContext            `json:"game_context,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -1149,10 +1159,14 @@ type RelationshipsResponse struct {
 
 // HabitData represents an agent habit.
 type HabitData struct {
-	Name       string  `json:"name"`
-	Strength   float64 `json:"strength"`
-	Category   string  `json:"category,omitempty"`
-	LastUpdate string  `json:"last_update,omitempty"`
+	Name            string  `json:"name"`
+	Strength        float64 `json:"strength"`
+	Category        string  `json:"category,omitempty"`
+	Description     string  `json:"description,omitempty"`
+	DisplayName     string  `json:"display_name,omitempty"`
+	Formed          bool    `json:"formed,omitempty"`
+	DailyReinforced float64 `json:"daily_reinforced,omitempty"`
+	LastUpdate      string  `json:"last_update,omitempty"`
 }
 
 // HabitsResponse wraps habit data.
