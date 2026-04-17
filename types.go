@@ -242,21 +242,23 @@ type Big5 struct {
 	Neuroticism       Big5Trait `json:"neuroticism"`
 }
 
-// PersonalityDimensions represents personality dimension scores (1-10).
+// PersonalityDimensions contains BFAS personality aspect scores (0-100 scale).
 type PersonalityDimensions struct {
-	Warmth         int `json:"warmth"`
-	Energy         int `json:"energy"`
-	Openness       int `json:"openness"`
-	EmotionalDepth int `json:"emotional_depth"`
-	Playfulness    int `json:"playfulness"`
-	Supportiveness int `json:"supportiveness"`
-	Curiosity      int `json:"curiosity"`
-	Wisdom         int `json:"wisdom"`
+	Intellect       float64 `json:"intellect"`
+	Aesthetic       float64 `json:"aesthetic"`
+	Industriousness float64 `json:"industriousness"`
+	Orderliness     float64 `json:"orderliness"`
+	Enthusiasm      float64 `json:"enthusiasm"`
+	Assertiveness   float64 `json:"assertiveness"`
+	Compassion      float64 `json:"compassion"`
+	Politeness      float64 `json:"politeness"`
+	Withdrawal      float64 `json:"withdrawal"`
+	Volatility      float64 `json:"volatility"`
 }
 
 // PersonalityPreferences represents interaction preferences.
 type PersonalityPreferences struct {
-	Pace                string `json:"pace"`
+	ConversationPace    string `json:"conversation_pace"`
 	Formality           string `json:"formality"`
 	HumorStyle          string `json:"humor_style"`
 	EmotionalExpression string `json:"emotional_expression"`
@@ -264,9 +266,10 @@ type PersonalityPreferences struct {
 
 // PersonalityBehaviors represents behavioral traits.
 type PersonalityBehaviors struct {
-	Proactivity string `json:"proactivity"`
-	Reliability string `json:"reliability"`
-	Humor       string `json:"humor"`
+	ResponseLength    string `json:"response_length"`
+	QuestionFrequency string `json:"question_frequency"`
+	EmpathyStyle      string `json:"empathy_style"`
+	ConflictApproach  string `json:"conflict_approach"`
 }
 
 // PersonalityProfile represents the full personality profile.
