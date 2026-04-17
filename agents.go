@@ -167,8 +167,17 @@ func (a *AgentsResource) GetRelationships(ctx context.Context, agentID string, u
 	return &result, err
 }
 
-// GetHabits returns habit data for an agent.
+// ListHabits returns habit data for an agent.
+func (a *AgentsResource) ListHabits(ctx context.Context, agentID string, userID, instanceID string) (*HabitsResponse, error) {
+	return a.getHabitsImpl(ctx, agentID, userID, instanceID)
+}
+
+// Deprecated: Use ListHabits instead.
 func (a *AgentsResource) GetHabits(ctx context.Context, agentID string, userID, instanceID string) (*HabitsResponse, error) {
+	return a.getHabitsImpl(ctx, agentID, userID, instanceID)
+}
+
+func (a *AgentsResource) getHabitsImpl(ctx context.Context, agentID string, userID, instanceID string) (*HabitsResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -288,8 +297,17 @@ type UpdateGoalOptions struct {
 	RelatedTraits []string `json:"related_traits,omitempty"`
 }
 
-// GetGoals returns goal data for an agent. Pass userID to get combined agent-global + per-user goals.
+// ListGoals returns goal data for an agent. Pass userID to get combined agent-global + per-user goals.
+func (a *AgentsResource) ListGoals(ctx context.Context, agentID string, userID, instanceID string) (*GoalsResponse, error) {
+	return a.getGoalsImpl(ctx, agentID, userID, instanceID)
+}
+
+// Deprecated: Use ListGoals instead.
 func (a *AgentsResource) GetGoals(ctx context.Context, agentID string, userID, instanceID string) (*GoalsResponse, error) {
+	return a.getGoalsImpl(ctx, agentID, userID, instanceID)
+}
+
+func (a *AgentsResource) getGoalsImpl(ctx context.Context, agentID string, userID, instanceID string) (*GoalsResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID
@@ -509,8 +527,17 @@ func (a *AgentsResource) DeleteConstellationNode(ctx context.Context, agentID, n
 	return a.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/constellation/nodes/%s", agentID, nodeID), nil)
 }
 
-// GetBreakthroughs returns breakthroughs for an agent.
+// ListBreakthroughs returns breakthroughs for an agent.
+func (a *AgentsResource) ListBreakthroughs(ctx context.Context, agentID string, userID, instanceID string) (*BreakthroughsResponse, error) {
+	return a.getBreakthroughsImpl(ctx, agentID, userID, instanceID)
+}
+
+// Deprecated: Use ListBreakthroughs instead.
 func (a *AgentsResource) GetBreakthroughs(ctx context.Context, agentID string, userID, instanceID string) (*BreakthroughsResponse, error) {
+	return a.getBreakthroughsImpl(ctx, agentID, userID, instanceID)
+}
+
+func (a *AgentsResource) getBreakthroughsImpl(ctx context.Context, agentID string, userID, instanceID string) (*BreakthroughsResponse, error) {
 	params := map[string]string{}
 	if userID != "" {
 		params["user_id"] = userID

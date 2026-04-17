@@ -87,15 +87,15 @@ func (m *MemoryResource) Timeline(ctx context.Context, agentID string, opts *Mem
 	return &result, nil
 }
 
-// ListFacts returns atomic facts for an agent, optionally filtered by category.
+// ListFacts returns atomic facts for an agent, optionally filtered by fact type.
 func (m *MemoryResource) ListFacts(ctx context.Context, agentID string, opts *FactListOptions) (*FactListResponse, error) {
 	params := map[string]string{}
 	if opts != nil {
 		if opts.UserID != "" {
 			params["user_id"] = opts.UserID
 		}
-		if opts.Category != "" {
-			params["category"] = opts.Category
+		if opts.FactType != "" {
+			params["fact_type"] = opts.FactType
 		}
 		if opts.Limit > 0 {
 			params["limit"] = strconv.Itoa(opts.Limit)

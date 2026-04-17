@@ -427,7 +427,7 @@ type FactListResponse struct {
 // FactListOptions configures a fact listing request.
 type FactListOptions struct {
 	UserID   string
-	Category string // "relationship", "preference", "event", "interest"
+	FactType string // "relationship", "preference", "event", "interest"
 	Limit    int
 	Offset   int
 }
