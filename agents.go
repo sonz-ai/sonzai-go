@@ -626,6 +626,88 @@ func (a *AgentsResource) GetTools(ctx context.Context, agentID string) (*ToolSch
 	return &result, err
 }
 
+// Fork creates a copy of an agent with a new ID.
+func (a *AgentsResource) Fork(ctx context.Context, agentID string, opts *ForkAgentOptions) (*ForkResponse, error) {
+	var body interface{}
+	if opts != nil {
+		body = opts
+	}
+	var result ForkResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/fork", agentID), body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetForkStatus checks the status of a fork operation.
+func (a *AgentsResource) GetForkStatus(ctx context.Context, agentID string) (*ForkStatusResponse, error) {
+	var result ForkStatusResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/fork/status", agentID), nil, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// PlaygroundChat sends a chat message via the playground endpoint (SSE streaming).
+// This is the same as Chat but uses the playground path for dashboard testing.
+func (a *AgentsResource) PlaygroundChat(ctx context.Context, params AgentChatParams) (*ChatResponse, error) {
+	var parts []string
+	var usage *ChatUsage
+
+	err := a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/playground/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
+		var event ChatStreamEvent
+		if err := json.Unmarshal(raw, &event); err != nil {
+			log.Printf("sonzai: skipping malformed SSE event: %v", err)
+			return nil
+		}
+		if c := event.Content(); c != "" {
+			parts = append(parts, c)
+		}
+		if event.Usage != nil {
+			usage = event.Usage
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ChatResponse{
+		Content: strings.Join(parts, ""),
+		Usage:   usage,
+	}, nil
+}
+
+// PlaygroundChatStream sends a chat message via the playground endpoint and calls the callback for each streaming event.
+func (a *AgentsResource) PlaygroundChatStream(ctx context.Context, params AgentChatParams, callback func(ChatStreamEvent) error) error {
+	return a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/playground/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
+		var event ChatStreamEvent
+		if err := json.Unmarshal(raw, &event); err != nil {
+			log.Printf("sonzai: skipping malformed SSE event: %v", err)
+			return nil
+		}
+		return callback(event)
+	})
+}
+
+// KnowledgeSearchGet searches the knowledge base for an agent using a GET request with query parameters.
+func (a *AgentsResource) KnowledgeSearchGet(ctx context.Context, agentID string, query string, limit int) (*AgentKBSearchResponse, error) {
+	params := map[string]string{
+		"q": query,
+	}
+	if limit > 0 {
+		params["limit"] = fmt.Sprintf("%d", limit)
+	}
+	var result AgentKBSearchResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/kb-search", agentID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // GenerateAvatar triggers avatar generation for an agent.
 func (a *AgentsResource) GenerateAvatar(ctx context.Context, agentID string, opts *GenerateAvatarOptions) (*GenerateAvatarResponse, error) {
 	var body interface{}

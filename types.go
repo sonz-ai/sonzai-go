@@ -1207,6 +1207,47 @@ type UsersResponse struct {
 // Agent Knowledge Search (tool endpoint)
 // ---------------------------------------------------------------------------
 
+// ForkAgentOptions configures a fork agent request.
+type ForkAgentOptions struct {
+	Name *string `json:"name,omitempty"`
+}
+
+// ForkResponse is the response from forking an agent.
+type ForkResponse struct {
+	AgentID       string `json:"agent_id"`
+	SourceAgentID string `json:"source_agent_id"`
+	Status        string `json:"status"`
+	Name          string `json:"name"`
+}
+
+// ForkStatusResponse is the response from checking fork status.
+type ForkStatusResponse struct {
+	Status        string  `json:"status"`
+	SourceAgentID string  `json:"source_agent_id"`
+	StartedAt     *string `json:"started_at,omitempty"`
+	CompletedAt   *string `json:"completed_at,omitempty"`
+	TablesCopied  int     `json:"tables_copied"`
+	TablesTotal   int     `json:"tables_total"`
+	ErrorMessage  string  `json:"error_message,omitempty"`
+}
+
+// DeleteWisdomResponse is the response from deleting a wisdom fact.
+type DeleteWisdomResponse struct {
+	Success bool   `json:"success"`
+	FactID  string `json:"fact_id"`
+}
+
+// WisdomAuditResponse is the response from the wisdom audit endpoint.
+type WisdomAuditResponse struct {
+	FactID              string   `json:"fact_id"`
+	Content             string   `json:"content"`
+	TargetPath          string   `json:"target_path,omitempty"`
+	DerivedFromHashes   []string `json:"derived_from_hashes,omitempty"`
+	SourceUserCount     int      `json:"source_user_count"`
+	PromotionConfidence float64  `json:"promotion_confidence"`
+	PromotedAt          string   `json:"promoted_at,omitempty"`
+}
+
 // AgentKBSearchOptions configures an agent-scoped knowledge search request.
 type AgentKBSearchOptions struct {
 	Query string `json:"query"`

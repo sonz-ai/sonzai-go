@@ -190,6 +190,26 @@ func (m *MemoryResource) Seed(ctx context.Context, agentID string, opts SeedMemo
 	return &result, nil
 }
 
+// DeleteWisdomFact deletes a wisdom fact by ID.
+func (m *MemoryResource) DeleteWisdomFact(ctx context.Context, agentID, factID string) (*DeleteWisdomResponse, error) {
+	var result DeleteWisdomResponse
+	err := m.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/wisdom/%s", url.PathEscape(agentID), url.PathEscape(factID)), &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetWisdomAudit returns the audit trail for a wisdom fact.
+func (m *MemoryResource) GetWisdomAudit(ctx context.Context, agentID, factID string) (*WisdomAuditResponse, error) {
+	var result WisdomAuditResponse
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/wisdom/audit/%s", url.PathEscape(agentID), url.PathEscape(factID)), nil, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // GetFactHistory returns the version history for a specific fact.
 func (m *MemoryResource) GetFactHistory(ctx context.Context, agentID, factID string) (*FactHistoryResponse, error) {
 	var result FactHistoryResponse
