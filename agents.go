@@ -454,7 +454,7 @@ func (a *AgentsResource) UpdateCapabilities(ctx context.Context, agentID string,
 
 // Consolidate triggers memory consolidation for an agent.
 func (a *AgentsResource) Consolidate(ctx context.Context, agentID string, opts ConsolidateOptions) error {
-	return a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/consolidate", agentID), opts, nil)
+	return a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/consolidate", agentID), opts, nil)
 }
 
 // GetSummaries returns memory summaries for an agent.
@@ -467,7 +467,7 @@ func (a *AgentsResource) GetSummaries(ctx context.Context, agentID string, opts 
 		params["limit"] = fmt.Sprintf("%d", opts.Limit)
 	}
 	var result SummariesResponse
-	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/summaries", agentID), params, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/summaries", agentID), params, &result)
 	return &result, err
 }
 

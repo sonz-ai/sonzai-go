@@ -140,6 +140,8 @@ type ChatOptions struct {
 	MaxTurns             int                    `json:"max_turns,omitempty"`
 	SkipContextBuild     bool                   `json:"skip_context_build,omitempty"`
 	GameContext          *GameContext            `json:"game_context,omitempty"`
+	Capabilities         []string               `json:"capabilities,omitempty"`
+	SkillLevels          map[string]int32        `json:"skill_levels,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
