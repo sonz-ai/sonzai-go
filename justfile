@@ -4,6 +4,19 @@ set shell := ["bash", "-cu"]
 default:
     @just --list
 
+# Fetch the live OpenAPI spec and overwrite the committed snapshot.
+# Review the diff and commit if changes are intentional.
+sync-spec:
+    @echo "Fetching OpenAPI spec from https://api.sonz.ai/docs/openapi.json ..."
+    @curl -sfL https://api.sonz.ai/docs/openapi.json -o openapi.json
+    @echo "✓ Spec updated. Review diff:"
+    @git diff --stat openapi.json || true
+
+# Point git at the .githooks/ directory for this repo. Run once per clone.
+install-hooks:
+    git config core.hooksPath .githooks
+    @echo "✓ Hooks enabled: .githooks/pre-push will run on git push."
+
 # Bump patch (x.y.Z+1) from latest tag and deploy.
 patch:
     just deploy $(just _next patch)
