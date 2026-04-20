@@ -280,9 +280,13 @@ func (c *Conn) writeFrameLocked(opcode int, payload []byte) error {
 		header = append(header, ext[:]...)
 	}
 
-	// Generate 4-byte mask key.
+	// Generate 4-byte mask key. Per RFC 6455 §5.3 this MUST be
+	// cryptographically random; a predictable (e.g. all-zero) key lets an
+	// on-path attacker trivially unmask payloads, so surface RNG failure.
 	var maskKey [4]byte
-	io.ReadFull(rand.Reader, maskKey[:])
+	if _, err := io.ReadFull(rand.Reader, maskKey[:]); err != nil {
+		return err
+	}
 	header = append(header, maskKey[:]...)
 
 	// Mask the payload.
