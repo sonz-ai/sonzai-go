@@ -8,6 +8,12 @@ The official Go SDK for the [Sonzai Mind Layer API](https://sonz.ai). Build AI a
 
 Zero dependencies. Uses only the Go standard library.
 
+## Staying in sync with the production API
+
+This SDK tracks `https://api.sonz.ai/docs/openapi.json`. A git pre-push hook
+checks for drift; run `just install-hooks` once after cloning. To refresh the
+committed spec snapshot, run `just sync-spec` and commit the diff.
+
 ## Documentation
 
 Full API documentation is available at [sonz.ai/docs](https://sonz.ai/docs).
@@ -23,7 +29,7 @@ import (
 ```
 
 ```bash
-go get github.com/sonz-ai/sonzai-go@v1.0.1
+go get github.com/sonz-ai/sonzai-go@v1.2.2
 ```
 
 ## Getting Started
@@ -61,6 +67,8 @@ func main() {
 ```
 
 See the [examples](examples/) directory for more.
+
+> **Using the OpenClaw plugin?** Your API key is stored in `openclaw.json` — no environment variables needed. See the [@sonzai-labs/openclaw-context](../sonzai-openclaw/) docs.
 
 ## Evaluation & Simulation
 

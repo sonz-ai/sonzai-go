@@ -87,15 +87,15 @@ func (m *MemoryResource) Timeline(ctx context.Context, agentID string, opts *Mem
 	return &result, nil
 }
 
-// ListFacts returns atomic facts for an agent, optionally filtered by category.
+// ListFacts returns atomic facts for an agent, optionally filtered by fact type.
 func (m *MemoryResource) ListFacts(ctx context.Context, agentID string, opts *FactListOptions) (*FactListResponse, error) {
 	params := map[string]string{}
 	if opts != nil {
 		if opts.UserID != "" {
 			params["user_id"] = opts.UserID
 		}
-		if opts.Category != "" {
-			params["category"] = opts.Category
+		if opts.FactType != "" {
+			params["fact_type"] = opts.FactType
 		}
 		if opts.Limit > 0 {
 			params["limit"] = strconv.Itoa(opts.Limit)
@@ -124,6 +124,86 @@ func (m *MemoryResource) Reset(ctx context.Context, agentID string, opts *Memory
 
 	var result MemoryResetResponse
 	err := m.http.Delete(ctx, path, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// CreateFactOptions configures a fact creation request.
+type CreateFactOptions struct {
+	UserID     string                 `json:"user_id,omitempty"`
+	Content    string                 `json:"content"`
+	FactType   string                 `json:"fact_type,omitempty"`
+	Importance *float64               `json:"importance,omitempty"`
+	Confidence *float64               `json:"confidence,omitempty"`
+	Entities   []string               `json:"entities,omitempty"`
+	NodeID     string                 `json:"node_id,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// UpdateFactOptions configures a fact update request.
+type UpdateFactOptions struct {
+	Content    string                 `json:"content,omitempty"`
+	FactType   string                 `json:"fact_type,omitempty"`
+	Importance *float64               `json:"importance,omitempty"`
+	Confidence *float64               `json:"confidence,omitempty"`
+	Entities   []string               `json:"entities,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// CreateFact creates a new fact for an agent. Facts created via this method
+// are tagged with source_type="manual".
+func (m *MemoryResource) CreateFact(ctx context.Context, agentID string, opts CreateFactOptions) (*AtomicFact, error) {
+	var result AtomicFact
+	err := m.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts", url.PathEscape(agentID)), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// UpdateFact updates an existing fact by ID.
+func (m *MemoryResource) UpdateFact(ctx context.Context, agentID, factID string, opts UpdateFactOptions) (*AtomicFact, error) {
+	var result AtomicFact
+	err := m.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts/%s", url.PathEscape(agentID), url.PathEscape(factID)), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteFact removes a fact by ID.
+func (m *MemoryResource) DeleteFact(ctx context.Context, agentID, factID string) error {
+	return m.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/facts/%s", url.PathEscape(agentID), url.PathEscape(factID)), nil)
+}
+
+// Seed bulk imports initial memories for an agent during setup.
+// Unlike GenerationResource.GenerateSeedMemories, this method stores the
+// memories you provide directly without any AI generation step.
+func (m *MemoryResource) Seed(ctx context.Context, agentID string, opts SeedMemoriesOptions) (*SeedMemoriesResponse, error) {
+	var result SeedMemoriesResponse
+	err := m.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/seed", url.PathEscape(agentID)), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteWisdomFact deletes a wisdom fact by ID.
+func (m *MemoryResource) DeleteWisdomFact(ctx context.Context, agentID, factID string) (*DeleteWisdomResponse, error) {
+	var result DeleteWisdomResponse
+	err := m.http.Delete(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/wisdom/%s", url.PathEscape(agentID), url.PathEscape(factID)), &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetWisdomAudit returns the audit trail for a wisdom fact.
+func (m *MemoryResource) GetWisdomAudit(ctx context.Context, agentID, factID string) (*WisdomAuditResponse, error) {
+	var result WisdomAuditResponse
+	err := m.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/memory/wisdom/audit/%s", url.PathEscape(agentID), url.PathEscape(factID)), nil, &result)
 	if err != nil {
 		return nil, err
 	}

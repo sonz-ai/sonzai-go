@@ -58,9 +58,10 @@ type InventoryGroupResult struct {
 
 // InventoryQueryResponse is the response from an inventory query.
 type InventoryQueryResponse struct {
-	Items      []InventoryItem `json:"items"`
-	TotalItems int             `json:"total_items"`
-	Totals     map[string]any  `json:"totals,omitempty"`
+	Items      []InventoryItem        `json:"items"`
+	TotalItems int                    `json:"total_items"`
+	NextCursor string                 `json:"next_cursor,omitempty"`
+	Totals     map[string]any         `json:"totals,omitempty"`
 	Groups     []InventoryGroupResult `json:"groups,omitempty"`
 }
 
@@ -117,14 +118,22 @@ type InventoryUpdateOptions struct {
 }
 
 // InventoryQueryOptions configures an inventory query.
+// Filters format: "field:op:value,field:op:value" where op is one of
+// eq, neq, gt, gte, lt, lte, in (pipe-separated values), contains.
+// Example: "grade:eq:mint,market_price:gte:100"
 type InventoryQueryOptions struct {
 	Mode         string // "list", "value", "aggregate"
 	ItemType     string
 	Query        string
 	ProjectID    string
+	Filters      string // Structured metadata filtering, e.g. "grade:eq:mint,market_price:gte:100"
+	SortBy       string // Metadata field to sort by
+	SortOrder    string // "asc" or "desc"
 	Aggregations string // e.g. "market_price:sum,*:count"
 	GroupBy      string
 	Limit        int
+	Offset       int
+	Cursor       string // Base64-encoded pagination cursor (takes precedence over Offset)
 	InstanceID   string
 }
 
@@ -184,6 +193,15 @@ func (inv *InventoryResource) Query(ctx context.Context, agentID, userID string,
 	if opts.ProjectID != "" {
 		params["project_id"] = opts.ProjectID
 	}
+	if opts.Filters != "" {
+		params["filters"] = opts.Filters
+	}
+	if opts.SortBy != "" {
+		params["sort_by"] = opts.SortBy
+	}
+	if opts.SortOrder != "" {
+		params["sort_order"] = opts.SortOrder
+	}
 	if opts.Aggregations != "" {
 		params["aggregations"] = opts.Aggregations
 	}
@@ -192,6 +210,12 @@ func (inv *InventoryResource) Query(ctx context.Context, agentID, userID string,
 	}
 	if opts.Limit > 0 {
 		params["limit"] = strconv.Itoa(opts.Limit)
+	}
+	if opts.Offset > 0 {
+		params["offset"] = strconv.Itoa(opts.Offset)
+	}
+	if opts.Cursor != "" {
+		params["cursor"] = opts.Cursor
 	}
 	if opts.InstanceID != "" {
 		params["instance_id"] = opts.InstanceID
@@ -220,7 +244,7 @@ func (inv *InventoryResource) BatchImport(ctx context.Context, agentID, userID s
 }
 
 // DirectUpdate updates an inventory fact's properties by fact ID.
-// Pass instanceID to scope to a specific game instance (empty string for default).
+// Pass instanceID to scope to a specific backend instance (empty string for default).
 func (inv *InventoryResource) DirectUpdate(ctx context.Context, agentID, userID, factID string, properties map[string]any, instanceID string) (*InventoryDirectUpdateResponse, error) {
 	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/%s", agentID, url.PathEscape(userID), url.PathEscape(factID))
 	if instanceID != "" {
@@ -236,7 +260,7 @@ func (inv *InventoryResource) DirectUpdate(ctx context.Context, agentID, userID,
 }
 
 // DirectDelete removes an inventory item by fact ID.
-// Pass instanceID to scope to a specific game instance (empty string for default).
+// Pass instanceID to scope to a specific backend instance (empty string for default).
 func (inv *InventoryResource) DirectDelete(ctx context.Context, agentID, userID, factID string, instanceID string) (*InventoryDirectUpdateResponse, error) {
 	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/%s", agentID, url.PathEscape(userID), url.PathEscape(factID))
 	if instanceID != "" {

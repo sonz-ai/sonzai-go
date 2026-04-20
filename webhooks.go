@@ -1,6 +1,9 @@
 package sonzai
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // WebhooksResource provides webhook management operations.
 type WebhooksResource struct {
@@ -12,6 +15,8 @@ type WebhookEndpoint struct {
 	EventType  string `json:"event_type"`
 	WebhookURL string `json:"webhook_url"`
 	AuthHeader string `json:"auth_header,omitempty"`
+	IsActive   bool   `json:"is_active,omitempty"`
+	CreatedAt  string `json:"created_at,omitempty"`
 }
 
 // WebhookRegisterOptions configures a webhook registration request.
@@ -93,6 +98,49 @@ func (w *WebhooksResource) ListDeliveryAttempts(ctx context.Context, eventType s
 func (w *WebhooksResource) RotateSecret(ctx context.Context, eventType string) (*WebhookRegisterResponse, error) {
 	var result WebhookRegisterResponse
 	if err := w.http.Post(ctx, "/api/v1/webhooks/"+eventType+"/rotate-secret", nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// -- Project-scoped webhooks --
+
+// RegisterForProject registers (or updates) a webhook for a project and event type.
+func (w *WebhooksResource) RegisterForProject(ctx context.Context, projectID, eventType string, opts WebhookRegisterOptions) (*WebhookRegisterResponse, error) {
+	var result WebhookRegisterResponse
+	if err := w.http.Put(ctx, fmt.Sprintf("/api/v1/projects/%s/webhooks/%s", projectID, eventType), opts, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ListForProject returns all registered webhooks for a project.
+func (w *WebhooksResource) ListForProject(ctx context.Context, projectID string) (*WebhookListResponse, error) {
+	var result WebhookListResponse
+	if err := w.http.Get(ctx, fmt.Sprintf("/api/v1/projects/%s/webhooks", projectID), nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteForProject removes a webhook for a project event type.
+func (w *WebhooksResource) DeleteForProject(ctx context.Context, projectID, eventType string) error {
+	return w.http.Delete(ctx, fmt.Sprintf("/api/v1/projects/%s/webhooks/%s", projectID, eventType), nil)
+}
+
+// ListDeliveryAttemptsForProject returns delivery attempts for a project webhook event type.
+func (w *WebhooksResource) ListDeliveryAttemptsForProject(ctx context.Context, projectID, eventType string) (*DeliveryAttemptsResponse, error) {
+	var result DeliveryAttemptsResponse
+	if err := w.http.Get(ctx, fmt.Sprintf("/api/v1/projects/%s/webhooks/%s/attempts", projectID, eventType), nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// RotateSecretForProject generates a new signing secret for a project webhook event type.
+func (w *WebhooksResource) RotateSecretForProject(ctx context.Context, projectID, eventType string) (*WebhookRegisterResponse, error) {
+	var result WebhookRegisterResponse
+	if err := w.http.Post(ctx, fmt.Sprintf("/api/v1/projects/%s/webhooks/%s/rotate-secret", projectID, eventType), nil, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
