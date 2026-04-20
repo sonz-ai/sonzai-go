@@ -3,6 +3,7 @@ package sonzai
 import (
 	"context"
 	"fmt"
+	"io"
 	"strconv"
 )
 
@@ -56,8 +57,9 @@ type KBNode struct {
 
 // KBNodeListResponse is the response from listing nodes.
 type KBNodeListResponse struct {
-	Nodes []*KBNode `json:"nodes"`
-	Total int       `json:"total"`
+	Nodes      []*KBNode `json:"nodes"`
+	Total      int       `json:"total"`
+	NextCursor string    `json:"next_cursor,omitempty"`
 }
 
 // KBEdge represents an edge in the knowledge graph.
@@ -108,15 +110,15 @@ type KBRelatedNode struct {
 
 // KBSearchResult represents a single search result.
 type KBSearchResult struct {
-	NodeID     string           `json:"node_id"`
-	NodeType   string           `json:"node_type"`
-	Label      string           `json:"label"`
-	Properties map[string]any   `json:"properties"`
-	Source     string           `json:"source"`
-	UpdatedAt  string           `json:"updated_at"`
-	Score      float64          `json:"score"`
-	Related    []KBRelatedNode  `json:"related,omitempty"`
-	History    []KBNodeHistory  `json:"history,omitempty"`
+	NodeID     string          `json:"node_id"`
+	NodeType   string          `json:"node_type"`
+	Label      string          `json:"label"`
+	Properties map[string]any  `json:"properties"`
+	Source     string          `json:"source"`
+	UpdatedAt  string          `json:"updated_at"`
+	Score      float64         `json:"score"`
+	Related    []KBRelatedNode `json:"related,omitempty"`
+	History    []KBNodeHistory `json:"history,omitempty"`
 }
 
 // KBSearchResponse is the response from the knowledge search endpoint.
@@ -243,13 +245,13 @@ type KBTrendRankingsResponse struct {
 
 // KBConversionStats represents conversion statistics.
 type KBConversionStats struct {
-	ProjectID      string  `json:"project_id"`
-	RuleID         string  `json:"rule_id"`
-	SegmentKey     string  `json:"segment_key"`
-	TargetType     string  `json:"target_type"`
-	ShownCount     int     `json:"shown_count"`
-	ConversionCount int    `json:"conversion_count"`
-	ConversionRate float64 `json:"conversion_rate"`
+	ProjectID       string  `json:"project_id"`
+	RuleID          string  `json:"rule_id"`
+	SegmentKey      string  `json:"segment_key"`
+	TargetType      string  `json:"target_type"`
+	ShownCount      int     `json:"shown_count"`
+	ConversionCount int     `json:"conversion_count"`
+	ConversionRate  float64 `json:"conversion_rate"`
 }
 
 // KBConversionsResponse is the response from getting conversion stats.
@@ -264,9 +266,9 @@ type KBConversionsResponse struct {
 
 // InsertFactsOptions configures a fact insertion request.
 type InsertFactsOptions struct {
-	Source        string              `json:"source,omitempty"`
-	Facts         []InsertFactEntry   `json:"facts"`
-	Relationships []InsertRelEntry    `json:"relationships,omitempty"`
+	Source        string            `json:"source,omitempty"`
+	Facts         []InsertFactEntry `json:"facts"`
+	Relationships []InsertRelEntry  `json:"relationships,omitempty"`
 }
 
 // InsertFactEntry represents a single entity to insert.
@@ -283,12 +285,21 @@ type InsertRelEntry struct {
 	EdgeType  string `json:"edge_type"`
 }
 
+// InsertFactEdgeDetail describes a created relationship edge.
+type InsertFactEdgeDetail struct {
+	EdgeID   string `json:"edge_id"`
+	FromNode string `json:"from_node"`
+	ToNode   string `json:"to_node"`
+	Relation string `json:"relation"`
+}
+
 // InsertFactsResponse is the response from inserting facts.
 type InsertFactsResponse struct {
-	Processed int                  `json:"processed"`
-	Created   int                  `json:"created"`
-	Updated   int                  `json:"updated"`
-	Details   []InsertFactDetail   `json:"details"`
+	Processed int                    `json:"processed"`
+	Created   int                    `json:"created"`
+	Updated   int                    `json:"updated"`
+	Details   []InsertFactDetail     `json:"details"`
+	Edges     []InsertFactEdgeDetail `json:"edges,omitempty"`
 }
 
 // InsertFactDetail describes an individual inserted/updated fact.
@@ -300,6 +311,16 @@ type InsertFactDetail struct {
 	Version int    `json:"version"`
 }
 
+// ListNodesOptions configures a list nodes request with filtering, pagination, and sorting.
+type ListNodesOptions struct {
+	NodeType   string            `json:"node_type,omitempty"`
+	Properties map[string]string `json:"properties,omitempty"`
+	Limit      int               `json:"limit,omitempty"`
+	Offset     int               `json:"offset,omitempty"`
+	SortBy     string            `json:"sort_by,omitempty"`
+	SortOrder  string            `json:"sort_order,omitempty"`
+}
+
 // KBSearchOptions configures a knowledge search request.
 type KBSearchOptions struct {
 	Query          string
@@ -307,6 +328,7 @@ type KBSearchOptions struct {
 	IncludeHistory bool
 	EntityTypes    string // comma-separated
 	Filters        string // JSON string
+	Hops           int    // number of graph traversal hops (default 1)
 }
 
 // CreateSchemaOptions configures a schema creation request.
@@ -376,6 +398,23 @@ func (k *KnowledgeResource) DeleteDocument(ctx context.Context, projectID, docID
 	return k.http.Delete(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/documents/%s", projectID, docID), nil)
 }
 
+// UploadDocument uploads a file to the knowledge base, triggering the AI extraction pipeline.
+func (k *KnowledgeResource) UploadDocument(ctx context.Context, projectID string, fileName string, fileContent io.Reader, contentType string) (*KBDocument, error) {
+	var result KBDocument
+	err := k.http.PostMultipart(ctx,
+		fmt.Sprintf("/api/v1/projects/%s/knowledge/documents", projectID),
+		nil,
+		fileName,
+		fileContent,
+		contentType,
+		&result,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ---------------------------------------------------------------------------
 // Facts / Graph Methods
 // ---------------------------------------------------------------------------
@@ -391,13 +430,56 @@ func (k *KnowledgeResource) InsertFacts(ctx context.Context, projectID string, o
 }
 
 // ListNodes returns knowledge graph nodes for a project.
-func (k *KnowledgeResource) ListNodes(ctx context.Context, projectID string, nodeType string, limit int) (*KBNodeListResponse, error) {
+func (k *KnowledgeResource) ListNodes(ctx context.Context, projectID string, opts *ListNodesOptions) (*KBNodeListResponse, error) {
 	params := map[string]string{}
-	if nodeType != "" {
-		params["type"] = nodeType
+	if opts != nil {
+		if opts.NodeType != "" {
+			params["type"] = opts.NodeType
+		}
+		if opts.Limit > 0 {
+			params["limit"] = strconv.Itoa(opts.Limit)
+		}
+		if opts.Offset > 0 {
+			params["offset"] = strconv.Itoa(opts.Offset)
+		}
+		if opts.SortBy != "" {
+			params["sort_by"] = opts.SortBy
+		}
+		if opts.SortOrder != "" {
+			params["sort_order"] = opts.SortOrder
+		}
+		for k, v := range opts.Properties {
+			params["properties."+k] = v
+		}
 	}
-	if limit > 0 {
-		params["limit"] = strconv.Itoa(limit)
+	var result KBNodeListResponse
+	err := k.http.Get(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes", projectID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ListNodesWithOptions returns knowledge graph nodes with filtering, pagination, and sorting.
+func (k *KnowledgeResource) ListNodesWithOptions(ctx context.Context, projectID string, opts ListNodesOptions) (*KBNodeListResponse, error) {
+	params := map[string]string{}
+	if opts.NodeType != "" {
+		params["type"] = opts.NodeType
+	}
+	if opts.Limit > 0 {
+		params["limit"] = strconv.Itoa(opts.Limit)
+	}
+	if opts.Offset > 0 {
+		params["offset"] = strconv.Itoa(opts.Offset)
+	}
+	if opts.SortBy != "" {
+		params["sort_by"] = opts.SortBy
+	}
+	if opts.SortOrder != "" {
+		params["sort_order"] = opts.SortOrder
+	}
+	for k, v := range opts.Properties {
+		params["properties."+k] = v
 	}
 	var result KBNodeListResponse
 	err := k.http.Get(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes", projectID), params, &result)
@@ -460,6 +542,9 @@ func (k *KnowledgeResource) Search(ctx context.Context, projectID string, opts K
 	}
 	if opts.Filters != "" {
 		params["filters"] = opts.Filters
+	}
+	if opts.Hops > 0 {
+		params["hops"] = strconv.Itoa(opts.Hops)
 	}
 	var result KBSearchResponse
 	err := k.http.Get(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/search", projectID), params, &result)

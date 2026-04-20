@@ -28,17 +28,17 @@ type BadRequestError struct{ SonzaiError }
 type PermissionDeniedError struct{ SonzaiError }
 
 // RateLimitError is returned when rate limit is exceeded.
-// RetryAfter holds the number of seconds to wait before retrying, if the
-// server returned a Retry-After header.
+// RetryAfter holds the value of the Retry-After response header in seconds,
+// or nil if the header was not present.
 type RateLimitError struct {
 	SonzaiError
-	RetryAfter *float64
+	RetryAfter *int
 }
 
 // InternalServerError is returned when the server returns a 5xx error.
 type InternalServerError struct{ SonzaiError }
 
-func newErrorForStatus(statusCode int, message string) error {
+func newErrorForStatus(statusCode int, message string, retryAfter *int) error {
 	base := SonzaiError{StatusCode: statusCode, Message: message}
 	switch statusCode {
 	case 401:
@@ -50,7 +50,7 @@ func newErrorForStatus(statusCode int, message string) error {
 	case 400:
 		return &BadRequestError{base}
 	case 429:
-		return &RateLimitError{SonzaiError: base}
+		return &RateLimitError{SonzaiError: base, RetryAfter: retryAfter}
 	default:
 		if statusCode >= 500 {
 			return &InternalServerError{base}

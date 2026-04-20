@@ -37,6 +37,7 @@ type ScheduledWakeup struct {
 	EventDescription string `json:"event_description,omitempty"`
 	Occasion         string `json:"occasion,omitempty"`
 	InterestTopic    string `json:"interest_topic,omitempty"`
+	ResearchSummary  string `json:"research_summary,omitempty"`
 	ExecutedAt       string `json:"executed_at,omitempty"`
 	CreatedAt        string `json:"created_at,omitempty"`
 }

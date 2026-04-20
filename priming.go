@@ -91,10 +91,10 @@ type StructuredImportSpec struct {
 
 // PrimeUserOptions configures a user priming request.
 type PrimeUserOptions struct {
-	DisplayName      string               `json:"display_name,omitempty"`
-	Metadata         *PrimeUserMetadata   `json:"metadata,omitempty"`
-	Content          []PrimeContentBlock  `json:"content,omitempty"`
-	Source           string               `json:"source,omitempty"`
+	DisplayName      string                `json:"display_name,omitempty"`
+	Metadata         *PrimeUserMetadata    `json:"metadata,omitempty"`
+	Content          []PrimeContentBlock   `json:"content,omitempty"`
+	Source           string                `json:"source,omitempty"`
 	StructuredImport *StructuredImportSpec `json:"structured_import,omitempty"`
 }
 
@@ -121,13 +121,15 @@ type AddContentResponse struct {
 }
 
 // UpdateMetadataOptions configures a metadata update request.
+// Custom fields are merged with existing values on the server: keys provided
+// here overwrite existing keys, but keys not included are preserved.
 type UpdateMetadataOptions struct {
 	DisplayName *string           `json:"display_name,omitempty"`
 	Company     *string           `json:"company,omitempty"`
 	Title       *string           `json:"title,omitempty"`
 	Email       *string           `json:"email,omitempty"`
 	Phone       *string           `json:"phone,omitempty"`
-	Timezone    *string           `json:"timezone,omitempty"` // IANA timezone (e.g., "Asia/Singapore")
+	Timezone    *string           `json:"timezone,omitempty"`
 	Custom      map[string]string `json:"custom,omitempty"`
 }
 

@@ -15,6 +15,8 @@ type WebhookEndpoint struct {
 	EventType  string `json:"event_type"`
 	WebhookURL string `json:"webhook_url"`
 	AuthHeader string `json:"auth_header,omitempty"`
+	IsActive   bool   `json:"is_active,omitempty"`
+	CreatedAt  string `json:"created_at,omitempty"`
 }
 
 // WebhookRegisterOptions configures a webhook registration request.
