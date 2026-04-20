@@ -32,24 +32,41 @@ type GenerateBioResponse struct {
 
 // GenerateCharacterOptions configures a character generation request.
 type GenerateCharacterOptions struct {
+	// AgentID is an optional UUID. If empty, a deterministic ID is derived from Name.
+	AgentID     string   `json:"agent_id,omitempty"`
 	Name        string   `json:"name"`
 	Gender      string   `json:"gender,omitempty"`
 	Description string   `json:"description,omitempty"`
 	Fields      []string `json:"fields,omitempty"`
 }
 
+// GeneratedGoal represents a goal generated as part of character generation.
+type GeneratedGoal struct {
+	Type        string `json:"type,omitempty"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Priority    int    `json:"priority,omitempty"`
+}
+
 // GenerateCharacterResponse is the response from character generation.
 type GenerateCharacterResponse struct {
-	Bio               string                     `json:"bio"`
-	PersonalityPrompt string                     `json:"personality_prompt"`
-	Big5              *Big5Scores                `json:"big5,omitempty"`
-	SpeechPatterns    []string                   `json:"speech_patterns,omitempty"`
-	TrueInterests     []string                   `json:"true_interests,omitempty"`
-	TrueDislikes      []string                   `json:"true_dislikes,omitempty"`
-	PrimaryTraits     []string                   `json:"primary_traits,omitempty"`
-	Dimensions        *SDKPersonalityDimensions  `json:"dimensions,omitempty"`
-	Preferences       *SDKInteractionPreferences `json:"preferences,omitempty"`
-	Behaviors         *SDKBehavioralTraits       `json:"behaviors,omitempty"`
+	// AgentID is the resolved agent ID (provided or derived from name).
+	AgentID string `json:"agent_id,omitempty"`
+	// Existing is true when the agent already existed and the LLM was not called.
+	Existing                bool                       `json:"existing,omitempty"`
+	Bio                     string                     `json:"bio"`
+	PersonalityPrompt       string                     `json:"personality_prompt"`
+	Big5                    *Big5Scores                `json:"big5,omitempty"`
+	SpeechPatterns          []string                   `json:"speech_patterns,omitempty"`
+	TrueInterests           []string                   `json:"true_interests,omitempty"`
+	TrueDislikes            []string                   `json:"true_dislikes,omitempty"`
+	PrimaryTraits           []string                   `json:"primary_traits,omitempty"`
+	Dimensions              *SDKPersonalityDimensions  `json:"dimensions,omitempty"`
+	Preferences             *SDKInteractionPreferences `json:"preferences,omitempty"`
+	Behaviors               *SDKBehavioralTraits       `json:"behaviors,omitempty"`
+	InitialGoals            []GeneratedGoal            `json:"initial_goals,omitempty"`
+	WorldDescription        string                     `json:"world_description,omitempty"`
+	OriginPromptInstructions string                    `json:"origin_prompt_instructions,omitempty"`
 }
 
 // SDKInteractionPreferences contains conversation style preferences.
@@ -154,6 +171,44 @@ func (g *GenerationResource) GenerateSeedMemories(ctx context.Context, agentID s
 func (g *GenerationResource) GenerateCharacter(ctx context.Context, opts GenerateCharacterOptions) (*GenerateCharacterResponse, error) {
 	var result GenerateCharacterResponse
 	err := g.http.Post(ctx, "/api/v1/agents/generate-character", opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GenerateAndCreateOptions configures a combined generate + create request.
+type GenerateAndCreateOptions struct {
+	// AgentID is an optional UUID. If empty, a deterministic ID is derived from Name.
+	AgentID     string   `json:"agent_id,omitempty"`
+	Name        string   `json:"name"`
+	Gender      string   `json:"gender,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Fields      []string `json:"fields,omitempty"`
+	ProjectID   string   `json:"project_id,omitempty"`
+	Language    string   `json:"language,omitempty"`
+}
+
+// GenerateAndCreateResponse is the response from the combined generate + create endpoint.
+type GenerateAndCreateResponse struct {
+	AgentID   string         `json:"agent_id"`
+	Name      string         `json:"name"`
+	Existing  bool           `json:"existing"`
+	Generated map[string]any `json:"generated,omitempty"`
+	Usage     struct {
+		PromptTokens     int64  `json:"promptTokens"`
+		CompletionTokens int64  `json:"completionTokens"`
+		TotalTokens      int64  `json:"totalTokens"`
+		Model            string `json:"model,omitempty"`
+	} `json:"usage"`
+}
+
+// GenerateAndCreate generates a character and creates the agent in one idempotent call.
+// If the agent already exists, the LLM is skipped and the existing agent is returned.
+// Safe to call on every app startup.
+func (g *GenerationResource) GenerateAndCreate(ctx context.Context, opts GenerateAndCreateOptions) (*GenerateAndCreateResponse, error) {
+	var result GenerateAndCreateResponse
+	err := g.http.Post(ctx, "/api/v1/agents/generate-and-create", opts, &result)
 	if err != nil {
 		return nil, err
 	}

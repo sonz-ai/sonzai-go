@@ -32,10 +32,12 @@ func main() {
 
 	err := client.Agents.ChatStream(
 		context.Background(),
-		*agentID,
-		sonzai.ChatOptions{
-			Messages: []sonzai.ChatMessage{{Role: "user", Content: *message}},
-			UserID:   *userID,
+		sonzai.AgentChatParams{
+			AgentID: *agentID,
+			ChatOptions: sonzai.ChatOptions{
+				Messages: []sonzai.ChatMessage{{Role: "user", Content: *message}},
+				UserID:   *userID,
+			},
 		},
 		func(event sonzai.ChatStreamEvent) error {
 			fmt.Print(event.Content())

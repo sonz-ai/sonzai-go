@@ -12,9 +12,11 @@ type SessionsResource struct {
 
 // SessionStartOptions configures a session start request.
 type SessionStartOptions struct {
-	UserID     string `json:"user_id"`
-	SessionID  string `json:"session_id"`
-	InstanceID string `json:"instance_id,omitempty"`
+	UserID          string           `json:"user_id"`
+	UserDisplayName string           `json:"user_display_name,omitempty"`
+	SessionID       string           `json:"session_id"`
+	InstanceID      string           `json:"instance_id,omitempty"`
+	ToolDefinitions []ToolDefinition `json:"tool_definitions,omitempty"`
 }
 
 // SessionEndOptions configures a session end request.

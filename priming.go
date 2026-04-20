@@ -25,6 +25,7 @@ type UserPrimingMetadata struct {
 	Title        string            `json:"title,omitempty"`
 	Email        string            `json:"email,omitempty"`
 	Phone        string            `json:"phone,omitempty"`
+	Timezone     string            `json:"timezone,omitempty"` // IANA timezone (e.g., "Asia/Singapore")
 	SourceType   string            `json:"source_type,omitempty"`
 	CustomFields map[string]string `json:"custom_fields,omitempty"`
 	PrimedAt     string            `json:"primed_at,omitempty"`
@@ -32,11 +33,12 @@ type UserPrimingMetadata struct {
 
 // PrimeUserMetadata represents metadata to include when priming a user.
 type PrimeUserMetadata struct {
-	Company string            `json:"company,omitempty"`
-	Title   string            `json:"title,omitempty"`
-	Email   string            `json:"email,omitempty"`
-	Phone   string            `json:"phone,omitempty"`
-	Custom  map[string]string `json:"custom,omitempty"`
+	Company  string            `json:"company,omitempty"`
+	Title    string            `json:"title,omitempty"`
+	Email    string            `json:"email,omitempty"`
+	Phone    string            `json:"phone,omitempty"`
+	Timezone string            `json:"timezone,omitempty"` // IANA timezone (e.g., "Asia/Singapore")
+	Custom   map[string]string `json:"custom,omitempty"`
 }
 
 // PrimeContentBlock represents a content block for priming.
@@ -72,12 +74,28 @@ type ImportJobListResponse struct {
 // Request Options
 // ---------------------------------------------------------------------------
 
+// StructuredColumnMapping defines how a CSV column maps to fact metadata.
+type StructuredColumnMapping struct {
+	Property string `json:"property"`
+	IsLabel  bool   `json:"is_label,omitempty"`
+	Type     string `json:"type,omitempty"` // "number", "boolean", or default string
+}
+
+// StructuredImportSpec defines a CSV-to-facts structured import.
+type StructuredImportSpec struct {
+	EntityType    string                             `json:"entity_type"`
+	ContentCSV    string                             `json:"content_csv"`
+	ColumnMapping map[string]StructuredColumnMapping `json:"column_mapping"`
+	ProjectID     string                             `json:"project_id,omitempty"`
+}
+
 // PrimeUserOptions configures a user priming request.
 type PrimeUserOptions struct {
-	DisplayName string              `json:"display_name,omitempty"`
-	Metadata    *PrimeUserMetadata  `json:"metadata,omitempty"`
-	Content     []PrimeContentBlock `json:"content,omitempty"`
-	Source      string              `json:"source,omitempty"`
+	DisplayName      string                `json:"display_name,omitempty"`
+	Metadata         *PrimeUserMetadata    `json:"metadata,omitempty"`
+	Content          []PrimeContentBlock   `json:"content,omitempty"`
+	Source           string                `json:"source,omitempty"`
+	StructuredImport *StructuredImportSpec `json:"structured_import,omitempty"`
 }
 
 // PrimeUserResponse is the response from priming a user.
@@ -85,6 +103,9 @@ type PrimeUserResponse struct {
 	JobID        string `json:"job_id"`
 	Status       string `json:"status"`
 	FactsCreated int    `json:"facts_created"`
+	RowsParsed   int    `json:"rows_parsed,omitempty"`
+	KBResolved   int    `json:"kb_resolved,omitempty"`
+	Unresolved   int    `json:"unresolved,omitempty"`
 }
 
 // AddContentOptions configures an add-content request.
@@ -100,12 +121,15 @@ type AddContentResponse struct {
 }
 
 // UpdateMetadataOptions configures a metadata update request.
+// Custom fields are merged with existing values on the server: keys provided
+// here overwrite existing keys, but keys not included are preserved.
 type UpdateMetadataOptions struct {
 	DisplayName *string           `json:"display_name,omitempty"`
 	Company     *string           `json:"company,omitempty"`
 	Title       *string           `json:"title,omitempty"`
 	Email       *string           `json:"email,omitempty"`
 	Phone       *string           `json:"phone,omitempty"`
+	Timezone    *string           `json:"timezone,omitempty"`
 	Custom      map[string]string `json:"custom,omitempty"`
 }
 

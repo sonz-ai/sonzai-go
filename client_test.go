@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -88,8 +89,9 @@ func TestChatAggregated(t *testing.T) {
 	})
 	defer server.Close()
 
-	resp, err := client.Agents.Chat(context.Background(), "agent-1", ChatOptions{
-		Messages: []ChatMessage{{Role: "user", Content: "Hi"}},
+	resp, err := client.Agents.Chat(context.Background(), AgentChatParams{
+		AgentID:     "agent-1",
+		ChatOptions: ChatOptions{Messages: []ChatMessage{{Role: "user", Content: "Hi"}}},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -112,8 +114,9 @@ func TestChatStream(t *testing.T) {
 	defer server.Close()
 
 	var events []ChatStreamEvent
-	err := client.Agents.ChatStream(context.Background(), "agent-1", ChatOptions{
-		Messages: []ChatMessage{{Role: "user", Content: "Hi"}},
+	err := client.Agents.ChatStream(context.Background(), AgentChatParams{
+		AgentID:     "agent-1",
+		ChatOptions: ChatOptions{Messages: []ChatMessage{{Role: "user", Content: "Hi"}}},
 	}, func(event ChatStreamEvent) error {
 		events = append(events, event)
 		return nil
@@ -373,9 +376,9 @@ func TestImageGenerate(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, ImageGenerateResponse{
-			Success:   true,
-			ImageID:   "img-1",
-			PublicURL: "https://storage.example.com/img-1.png",
+			ImageID:  "img-1",
+			URL:      "https://storage.example.com/img-1.png",
+			MimeType: "image/png",
 		})
 	})
 	defer server.Close()
@@ -385,9 +388,6 @@ func TestImageGenerate(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.Success {
-		t.Fatal("expected success")
 	}
 	if result.ImageID != "img-1" {
 		t.Fatalf("expected 'img-1', got '%s'", result.ImageID)
@@ -467,47 +467,25 @@ func TestPersonalityUpdate(t *testing.T) {
 // Voice
 // ---------------------------------------------------------------------------
 
-func TestVoiceMatch(t *testing.T) {
+func TestVoiceGetToken(t *testing.T) {
 	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agents/agent-1/voice/match" {
+		if r.URL.Path != "/api/v1/agents/agent-1/voice/live-ws-token" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		jsonResponse(w, 200, VoiceMatchResponse{
-			AgentID: "agent-1", MatchedVoice: "NATM0", VoiceName: "Sophia", Confidence: 0.92,
+		jsonResponse(w, 200, VoiceStreamToken{
+			WSURL: "wss://api.sonz.ai/ws/voice/live", AuthToken: "tok-123",
 		})
 	})
 	defer server.Close()
 
-	result, err := client.Agents.Voice.Match(context.Background(), "agent-1", VoiceMatchOptions{
-		GenderHint: "female", PersonalityTraits: []string{"warm", "calm"},
+	result, err := client.Agents.Voice.GetToken(context.Background(), "agent-1", VoiceTokenOptions{
+		VoiceName: "Kore", Language: "en-US",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.VoiceName != "Sophia" {
-		t.Fatalf("expected 'Sophia', got '%s'", result.VoiceName)
-	}
-}
-
-func TestVoiceTTS(t *testing.T) {
-	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agents/agent-1/voice/tts" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-		jsonResponse(w, 200, TTSResponse{
-			AgentID: "agent-1", AudioURL: "https://storage.example.com/tts.wav", DurationMs: 2500,
-		})
-	})
-	defer server.Close()
-
-	result, err := client.Agents.Voice.TTS(context.Background(), "agent-1", TTSOptions{
-		Text: "Hello!", VoiceID: "NATM0",
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.DurationMs != 2500 {
-		t.Fatalf("expected 2500ms, got %d", result.DurationMs)
+	if result.AuthToken != "tok-123" {
+		t.Fatalf("expected 'tok-123', got '%s'", result.AuthToken)
 	}
 }
 
@@ -568,20 +546,111 @@ func TestTriggerEvent(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, TriggerEventResponse{
-			ActivityID: "act-1", AgentID: "agent-1", Status: "triggered", ActivityType: "situation",
+			Accepted: true, EventID: "evt-1",
 		})
 	})
 	defer server.Close()
 
 	result, err := client.Agents.TriggerEvent(context.Background(), "agent-1", TriggerEventOptions{
-		UserID: "user-1", ActivityType: "situation",
+		UserID: "user-1", EventType: "situation",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.ActivityID != "act-1" {
-		t.Fatalf("expected 'act-1', got '%s'", result.ActivityID)
+	if result.EventID != "evt-1" {
+		t.Fatalf("expected 'evt-1', got '%s'", result.EventID)
 	}
+}
+
+// TestTriggerEvent_IncludesMessages verifies raw chat messages on
+// TriggerEventOptions are marshaled into the outbound request body under the
+// "messages" key. Without this, the server cannot tell a session-originated
+// event apart from a bare metadata-only event, and falls back to lossy
+// consolidation summaries (see TD-PLAT-056 / TD-ORC-102 upstream).
+func TestTriggerEvent_IncludesMessages(t *testing.T) {
+	var capturedBody map[string]any
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read body: %v", err)
+		}
+		if err := json.Unmarshal(body, &capturedBody); err != nil {
+			t.Fatalf("unmarshal body: %v", err)
+		}
+		jsonResponse(w, 200, TriggerEventResponse{Accepted: true, EventID: "evt-msg"})
+	})
+	defer server.Close()
+
+	msgs := []ChatMessage{
+		{Role: "user", Content: "I quit my consulting job today."},
+		{Role: "assistant", Content: "Big call. What drove it?"},
+		{Role: "user", Content: "Lee announced Indonesia practice cuts."},
+	}
+
+	_, err := client.Agents.TriggerEvent(context.Background(), "agent-1", TriggerEventOptions{
+		UserID:    "user-1",
+		EventType: "daily_summary",
+		Messages:  msgs,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	raw, ok := capturedBody["messages"]
+	if !ok {
+		t.Fatalf("request body missing 'messages' key; got keys %v", mapKeys(capturedBody))
+	}
+	rawSlice, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("'messages' not an array; got %T", raw)
+	}
+	if len(rawSlice) != len(msgs) {
+		t.Fatalf("messages length: got %d, want %d", len(rawSlice), len(msgs))
+	}
+	for i, want := range msgs {
+		got, ok := rawSlice[i].(map[string]any)
+		if !ok {
+			t.Fatalf("messages[%d] not an object; got %T", i, rawSlice[i])
+		}
+		if got["role"] != want.Role {
+			t.Errorf("messages[%d].role: got %v, want %q", i, got["role"], want.Role)
+		}
+		if got["content"] != want.Content {
+			t.Errorf("messages[%d].content: got %v, want %q", i, got["content"], want.Content)
+		}
+	}
+}
+
+// TestTriggerEvent_OmitsMessagesWhenEmpty guarantees backwards compatibility:
+// callers that don't set Messages must not see the field appear in the JSON
+// body at all (omitempty), so older servers that reject unknown fields keep
+// working.
+func TestTriggerEvent_OmitsMessagesWhenEmpty(t *testing.T) {
+	var capturedBody map[string]any
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &capturedBody)
+		jsonResponse(w, 200, TriggerEventResponse{Accepted: true, EventID: "evt-empty"})
+	})
+	defer server.Close()
+
+	_, err := client.Agents.TriggerEvent(context.Background(), "agent-1", TriggerEventOptions{
+		UserID: "user-1", EventType: "achievement",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, present := capturedBody["messages"]; present {
+		t.Errorf("expected 'messages' absent when caller didn't set it; got body %v", capturedBody)
+	}
+}
+
+func mapKeys(m map[string]any) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }
 
 // ---------------------------------------------------------------------------
@@ -590,26 +659,23 @@ func TestTriggerEvent(t *testing.T) {
 
 func TestDialogue(t *testing.T) {
 	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agents/dialogue" {
+		if r.URL.Path != "/api/v1/agents/agent-1/dialogue" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, DialogueResponse{
-			SessionID: "sess-1",
-			Messages: []DialogueMessage{
-				{MessageID: "m1", AgentID: "agent-1", Role: "assistant", Content: "Hello!"},
-			},
+			Response: "Hello! Nice to meet you.",
 		})
 	})
 	defer server.Close()
 
-	result, err := client.Agents.Dialogue(context.Background(), DialogueOptions{
-		AgentIDs: []string{"agent-1", "agent-2"}, Message: "Talk to each other",
+	result, err := client.Agents.Dialogue(context.Background(), "agent-1", DialogueOptions{
+		Messages: []ChatMessage{{Role: "user", Content: "Talk to each other"}},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(result.Messages) != 1 {
-		t.Fatalf("expected 1 message, got %d", len(result.Messages))
+	if result.Response != "Hello! Nice to meet you." {
+		t.Fatalf("expected response, got '%s'", result.Response)
 	}
 }
 
@@ -727,28 +793,6 @@ func TestGenerateCharacter(t *testing.T) {
 	}
 	if result.PersonalityPrompt != "You are warm" {
 		t.Fatalf("expected 'You are warm', got '%s'", result.PersonalityPrompt)
-	}
-}
-
-func TestVoiceChat(t *testing.T) {
-	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agents/agent-1/voice/chat" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-		jsonResponse(w, 200, VoiceChatResponse{
-			Transcript: "Hello", Response: "Hi there!", Audio: "base64audio",
-		})
-	})
-	defer server.Close()
-
-	result, err := client.Agents.Voice.Chat(context.Background(), "agent-1", VoiceChatOptions{
-		Audio: "base64audio", AudioFormat: "webm",
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.Response != "Hi there!" {
-		t.Fatalf("expected 'Hi there!', got '%s'", result.Response)
 	}
 }
 
