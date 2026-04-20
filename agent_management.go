@@ -19,6 +19,12 @@ type SDKPersonalityDimensions struct {
 	Volatility      float64 `json:"volatility"`
 }
 
+// AgentFeatureCapabilities specifies feature capabilities for an agent (image generation, inventory, etc.).
+type AgentFeatureCapabilities struct {
+	ImageGeneration bool `json:"image_generation"`
+	Inventory       bool `json:"inventory"`
+}
+
 // CreateAgentOptions configures an agent creation request.
 type CreateAgentOptions struct {
 	AgentID                      string                    `json:"agent_id,omitempty"`
@@ -38,7 +44,9 @@ type CreateAgentOptions struct {
 	Dimensions                   *SDKPersonalityDimensions `json:"dimensions,omitempty"`
 	Preferences                  map[string]string         `json:"preferences,omitempty"`
 	Behaviors                    map[string]string         `json:"behaviors,omitempty"`
+	Capabilities                 *AgentFeatureCapabilities `json:"capabilities,omitempty"`
 	ToolCapabilities             *AgentToolCapabilities    `json:"tool_capabilities,omitempty"`
+	GenerateAvatar               *bool                     `json:"generate_avatar,omitempty"`
 	Language                     string                    `json:"language,omitempty"`
 	SeedMemories                 []SeedMemory              `json:"seed_memories,omitempty"`
 	LoreContext                  map[string]interface{}    `json:"lore_generation_context,omitempty"`

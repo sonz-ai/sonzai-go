@@ -52,7 +52,7 @@ client := sonzai.NewClient("sk-...",
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `TriggerEvent(ctx, agentID, opts)` | `*TriggerEventResponse, error` | Trigger a game event or activity |
+| `TriggerEvent(ctx, agentID, opts)` | `*TriggerEventResponse, error` | Trigger a backend event or activity |
 | `Dialogue(ctx, opts)` | `*DialogueResponse, error` | Multi-agent dialogue |
 
 `TriggerEventOptions` fields:

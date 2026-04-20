@@ -27,7 +27,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/sonz-ai/sonzai-go/eval"
@@ -134,16 +133,7 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 		opt(cfg)
 	}
 
-	var hc *httpClient
-	if cfg.httpClient != nil {
-		hc = &httpClient{
-			baseURL:    strings.TrimRight(cfg.baseURL, "/"),
-			apiKey:     apiKey,
-			httpClient: cfg.httpClient,
-		}
-	} else {
-		hc = newHTTPClient(cfg.baseURL, apiKey, cfg.timeout)
-	}
+	hc := newHTTPClient(cfg.baseURL, apiKey, cfg.timeout, cfg.httpClient)
 
 	return &Client{
 		Agents:               newAgentsResource(hc),
@@ -157,3 +147,4 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 		http:                 hc,
 	}
 }
+

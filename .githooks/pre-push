@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Pre-push drift check: warn if committed openapi.json has drifted from production.
+# Skip with `git push --no-verify`.
+set -e
+
+SPEC_URL="${OPENAPI_SPEC_URL:-https://api.sonz.ai/docs/openapi.json}"
+LOCAL_SPEC="openapi.json"
+
+if [ ! -f "$LOCAL_SPEC" ]; then
+  exit 0
+fi
+
+LIVE_SPEC="$(mktemp)"
+trap 'rm -f "$LIVE_SPEC"' EXIT
+
+if ! curl -sfL --max-time 10 "$SPEC_URL" -o "$LIVE_SPEC"; then
+  echo "⚠ Could not fetch $SPEC_URL — skipping drift check."
+  exit 0
+fi
+
+if ! diff -q "$LOCAL_SPEC" "$LIVE_SPEC" > /dev/null 2>&1; then
+  echo ""
+  echo "⚠️  OpenAPI spec has drifted from production."
+  echo ""
+  echo "   Committed: $LOCAL_SPEC ($(wc -c < "$LOCAL_SPEC" | tr -d ' ') bytes)"
+  echo "   Live:      $SPEC_URL ($(wc -c < "$LIVE_SPEC" | tr -d ' ') bytes)"
+  echo ""
+  echo "   → Run 'just sync-spec' to pull the latest spec."
+  echo "   → Review the diff, update SDK types if needed, and re-push."
+  echo "   → To bypass: git push --no-verify"
+  echo ""
+  exit 1
+fi
+
+exit 0
