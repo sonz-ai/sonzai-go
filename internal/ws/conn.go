@@ -193,7 +193,10 @@ func (c *Conn) Close() error {
 		return nil
 	}
 	c.closed = true
-	c.writeFrameLocked(OpClose, nil)
+	// Best-effort close frame. writeFrameLocked can now return an error if
+	// the mask-key RNG fails; ignore it and proceed so we always release
+	// the fd via c.conn.Close().
+	_ = c.writeFrameLocked(OpClose, nil)
 	return c.conn.Close()
 }
 
