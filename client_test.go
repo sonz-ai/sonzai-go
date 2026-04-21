@@ -844,3 +844,10 @@ func TestError400(t *testing.T) {
 		t.Fatalf("expected BadRequestError, got %T: %v", err, err)
 	}
 }
+
+func TestChatSSEChunkErrorType(t *testing.T) {
+	e := ChatSSEChunkError{Message: "stream error"}
+	if e.Message != "stream error" {
+		t.Errorf("unexpected message: %s", e.Message)
+	}
+}

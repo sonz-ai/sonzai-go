@@ -18,7 +18,11 @@ func newTestClient(t *testing.T, handler http.Handler) *Client {
 	t.Helper()
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
-	return NewClient("test-api-key", WithBaseURL(server.URL))
+	client, err := NewClient("test-api-key", WithBaseURL(server.URL))
+	if err != nil {
+		t.Fatalf("failed to create test client: %v", err)
+	}
+	return client
 }
 
 func TestCreateOrgNode_URLAndBody(t *testing.T) {

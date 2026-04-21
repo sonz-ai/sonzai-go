@@ -1396,3 +1396,15 @@ type ToolSchema struct {
 type ToolSchemasResponse struct {
 	Tools []ToolSchema `json:"tools"`
 }
+
+// ---------------------------------------------------------------------------
+// Chat SSE & Session Types
+// ---------------------------------------------------------------------------
+
+// ChatSSEChunkError represents error payloads that may appear in SSE stream chunks.
+type ChatSSEChunkError struct {
+	Message string `json:"message"`
+}
+
+// SessionToolDef is a type alias for ToolDefinition, used to match OpenAPI spec naming.
+type SessionToolDef = ToolDefinition
