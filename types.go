@@ -494,10 +494,12 @@ type TriggerEventOptions struct {
 	Language         string            `json:"language,omitempty"`
 	InstanceID       string            `json:"instance_id,omitempty"`
 	// Messages carries the raw conversation that triggered this event (e.g. the
-	// chat session that just ended). When present, the server uses these as the
-	// LLM's conversation context instead of reconstructing from lossy
-	// consolidation summaries — so diaries / post-session effects reference the
-	// actual dialogue instead of hallucinating generic content.
+	// chat session that just ended). When present, Platform API uses these as
+	// the LLM's conversation context for context-sensitive generation (diary,
+	// summaries) instead of reconstructing from lossy consolidation summaries.
+	// Typically set by the orchestrator after a chat session ends; omit when
+	// triggering from cron jobs or other non-conversation sources. Older
+	// Platform API servers that don't know this field will ignore it.
 	Messages []ChatMessage `json:"messages,omitempty"`
 }
 
