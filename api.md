@@ -243,6 +243,19 @@ import "github.com/sonz-ai/sonzai-go/eval"
 | `Get(ctx, runID)` | `*Run, error` | Get run details |
 | `Delete(ctx, runID)` | `error` | Delete run |
 
+## SupportTickets
+
+Support ticket operations scoped to the authenticated user's active tenant
+(Clerk session auth). Callers can only see and act on tickets they created.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `List(ctx, opts)` | `*TicketListResponse, error` | List my tickets (filter by status, type; paginate with limit, offset) |
+| `Create(ctx, opts)` | `*SupportTicket, error` | Create a support ticket |
+| `Get(ctx, ticketID)` | `*TicketDetailResponse, error` | Get a ticket with comments and change history |
+| `Close(ctx, ticketID)` | `*SupportTicket, error` | Close a ticket (creator only) |
+| `AddComment(ctx, ticketID, opts)` | `*SupportTicketComment, error` | Append a comment to the ticket thread |
+
 ## Error Types
 
 All API errors are returned as typed errors for precise handling:

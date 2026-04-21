@@ -117,6 +117,10 @@ type Client struct {
 	// Workbench provides internal simulation and debugging operations.
 	Workbench *WorkbenchResource
 
+	// SupportTickets provides support ticket operations for the authenticated
+	// user within their active tenant (list, create, get, close, comment).
+	SupportTickets *SupportTicketsResource
+
 	http *httpClient
 }
 
@@ -180,6 +184,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Storefront:           &StorefrontResource{http: hc},
 		Org:                  &OrgResource{http: hc},
 		Workbench:            &WorkbenchResource{http: hc},
+		SupportTickets:       &SupportTicketsResource{http: hc},
 		http:                 hc,
 	}, nil
 }
