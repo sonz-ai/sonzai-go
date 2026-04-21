@@ -80,6 +80,9 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Analytics == nil {
 		t.Fatal("Analytics is nil")
 	}
+	if c.UserPersonas == nil {
+		t.Fatal("UserPersonas is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -1028,6 +1031,57 @@ func TestAnalyticsOverview(t *testing.T) {
 	}
 	if result == nil {
 		t.Error("expected non-nil result")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// UserPersonas
+// ---------------------------------------------------------------------------
+
+func TestUserPersonasCreate(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/user-personas" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, UserPersona{PersonaID: "p-1", Name: "Friendly"})
+	})
+	defer srv.Close()
+	result, err := client.UserPersonas.Create(context.Background(), CreateUserPersonaOptions{Name: "Friendly"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.PersonaID != "p-1" {
+		t.Errorf("got PersonaID %q, want p-1", result.PersonaID)
+	}
+}
+
+func TestUserPersonasList(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/user-personas" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"personas": []UserPersona{{PersonaID: "p-1"}}})
+	})
+	defer srv.Close()
+	result, err := client.UserPersonas.List(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Personas) != 1 {
+		t.Errorf("got %d personas, want 1", len(result.Personas))
+	}
+}
+
+func TestUserPersonasDelete(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/api/v1/user-personas/p-1" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"success": true})
+	})
+	defer srv.Close()
+	if err := client.UserPersonas.Delete(context.Background(), "p-1"); err != nil {
+		t.Fatal(err)
 	}
 }
 

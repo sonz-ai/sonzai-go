@@ -105,6 +105,9 @@ type Client struct {
 	// Analytics provides platform analytics and cost reporting.
 	Analytics *AnalyticsResource
 
+	// UserPersonas provides user persona CRUD operations.
+	UserPersonas *UserPersonasResource
+
 	http *httpClient
 }
 
@@ -164,6 +167,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Tenants:              &TenantsResource{http: hc},
 		APIKeys:              &APIKeysResource{http: hc},
 		Analytics:            &AnalyticsResource{http: hc},
+		UserPersonas:         &UserPersonasResource{http: hc},
 		http:                 hc,
 	}, nil
 }
