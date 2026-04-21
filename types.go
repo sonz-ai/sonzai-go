@@ -442,6 +442,8 @@ type Fact struct {
 	FactID          string   `json:"fact_id"`
 	AgentID         string   `json:"agent_id"`
 	UserID          string   `json:"user_id,omitempty"`
+	SessionID       string   `json:"session_id,omitempty"`
+	SourceID        string   `json:"source_id,omitempty"`
 	Content         string   `json:"content"`
 	Category        string   `json:"category"` // "relationship", "preference", "event", "interest"
 	Confidence      float64  `json:"confidence"`

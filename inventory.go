@@ -89,6 +89,8 @@ type StoredFact struct {
 	Importance   float64        `json:"importance"`
 	Confidence   float64        `json:"confidence"`
 	Entity       string         `json:"entity,omitempty"`
+	SessionID    string         `json:"session_id,omitempty"`
+	SourceID     string         `json:"source_id,omitempty"`
 	SourceType   string         `json:"source_type,omitempty"`
 	MentionCount int            `json:"mention_count"`
 	Metadata     map[string]any `json:"metadata,omitempty"`

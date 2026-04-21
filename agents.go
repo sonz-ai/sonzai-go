@@ -25,6 +25,7 @@ type AgentsResource struct {
 	Generation    *GenerationResource
 	Priming       *PrimingResource
 	Inventory     *InventoryResource
+	Schedules     *SchedulesResource
 }
 
 func newAgentsResource(http *httpClient) *AgentsResource {
@@ -42,6 +43,7 @@ func newAgentsResource(http *httpClient) *AgentsResource {
 		Generation:    &GenerationResource{http: http},
 		Priming:       &PrimingResource{http: http},
 		Inventory:     &InventoryResource{http: http},
+		Schedules:     &SchedulesResource{http: http},
 	}
 }
 
