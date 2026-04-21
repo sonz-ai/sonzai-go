@@ -70,4 +70,3 @@ func (w *WakeupResource) Schedule(ctx context.Context, agentID string, opts Sche
 	}
 	return &result, nil
 }
-

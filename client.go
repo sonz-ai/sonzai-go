@@ -193,4 +193,3 @@ func MustNewClient(apiKey string, opts ...ClientOption) *Client {
 	}
 	return c
 }
-

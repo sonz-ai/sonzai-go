@@ -32,8 +32,8 @@ func main() {
 	fmt.Println("Running simulation...")
 	ref, err := client.Eval.Simulate(ctx, *agentID, eval.SimulateOptions{
 		UserPersona: map[string]interface{}{
-			"name":               "Alex",
-			"background":         "College student who loves sci-fi",
+			"name":                "Alex",
+			"background":          "College student who loves sci-fi",
 			"personality_traits":  []string{"curious", "friendly"},
 			"communication_style": "casual",
 		},

@@ -57,10 +57,10 @@ type CreateAgentOptions struct {
 
 // InitialGoal defines a goal to set during agent creation.
 type InitialGoal struct {
-	Type          string   `json:"type,omitempty"`           // personal_growth, skill_mastery, relationship, learning_discovery
+	Type          string   `json:"type,omitempty"` // personal_growth, skill_mastery, relationship, learning_discovery
 	Title         string   `json:"title"`
 	Description   string   `json:"description"`
-	Priority      int      `json:"priority,omitempty"`       // 0=low, 1=medium, 2=high
+	Priority      int      `json:"priority,omitempty"` // 0=low, 1=medium, 2=high
 	RelatedTraits []string `json:"related_traits,omitempty"`
 }
 
@@ -89,16 +89,16 @@ type Agent struct {
 
 // UpdateAgentOptions configures an agent profile update request.
 type UpdateAgentOptions struct {
-	Name             string                    `json:"name,omitempty"`
-	Bio              string                    `json:"bio,omitempty"`
-	AvatarURL        string                    `json:"avatar_url,omitempty"`
-	PersonalityPrompt string                   `json:"personality_prompt,omitempty"`
-	SpeechPatterns   []string                  `json:"speech_patterns,omitempty"`
-	TrueInterests    []string                  `json:"true_interests,omitempty"`
-	TrueDislikes     []string                  `json:"true_dislikes,omitempty"`
-	Big5             *Big5Scores               `json:"big5,omitempty"`
-	Dimensions       *SDKPersonalityDimensions `json:"dimensions,omitempty"`
-	ToolCapabilities *AgentToolCapabilities    `json:"tool_capabilities,omitempty"`
+	Name              string                    `json:"name,omitempty"`
+	Bio               string                    `json:"bio,omitempty"`
+	AvatarURL         string                    `json:"avatar_url,omitempty"`
+	PersonalityPrompt string                    `json:"personality_prompt,omitempty"`
+	SpeechPatterns    []string                  `json:"speech_patterns,omitempty"`
+	TrueInterests     []string                  `json:"true_interests,omitempty"`
+	TrueDislikes      []string                  `json:"true_dislikes,omitempty"`
+	Big5              *Big5Scores               `json:"big5,omitempty"`
+	Dimensions        *SDKPersonalityDimensions `json:"dimensions,omitempty"`
+	ToolCapabilities  *AgentToolCapabilities    `json:"tool_capabilities,omitempty"`
 }
 
 // Create creates a new agent.

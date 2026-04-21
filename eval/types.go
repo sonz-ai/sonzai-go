@@ -156,25 +156,25 @@ type RunRef struct {
 
 // Run represents a completed evaluation run.
 type Run struct {
-	ID               string                 `json:"id"`
-	TenantID         string                 `json:"tenant_id"`
-	AgentID          string                 `json:"agent_id"`
-	AgentName        string                 `json:"agent_name"`
-	Status           string                 `json:"status"`
-	ErrorReason      string                 `json:"error_reason,omitempty"`
-	CharacterConfig  map[string]interface{} `json:"character_config"`
-	TemplateID       string                 `json:"template_id"`
-	TemplateSnapshot map[string]interface{} `json:"template_snapshot"`
-	SimulationConfig map[string]interface{} `json:"simulation_config"`
-	SimulationModel  string                 `json:"simulation_model"`
-	UserPersona      map[string]interface{} `json:"user_persona"`
-	Transcript       []interface{}          `json:"transcript"`
-	EvaluationResult map[string]interface{} `json:"evaluation_result"`
-	AdaptationResult map[string]interface{} `json:"adaptation_result"`
-	SimulationState  map[string]interface{} `json:"simulation_state"`
-	TotalSessions    int                    `json:"total_sessions"`
-	TotalTurns       int                    `json:"total_turns"`
-	SimulatedMinutes int                    `json:"simulated_minutes"`
+	ID                         string                 `json:"id"`
+	TenantID                   string                 `json:"tenant_id"`
+	AgentID                    string                 `json:"agent_id"`
+	AgentName                  string                 `json:"agent_name"`
+	Status                     string                 `json:"status"`
+	ErrorReason                string                 `json:"error_reason,omitempty"`
+	CharacterConfig            map[string]interface{} `json:"character_config"`
+	TemplateID                 string                 `json:"template_id"`
+	TemplateSnapshot           map[string]interface{} `json:"template_snapshot"`
+	SimulationConfig           map[string]interface{} `json:"simulation_config"`
+	SimulationModel            string                 `json:"simulation_model"`
+	UserPersona                map[string]interface{} `json:"user_persona"`
+	Transcript                 []interface{}          `json:"transcript"`
+	EvaluationResult           map[string]interface{} `json:"evaluation_result"`
+	AdaptationResult           map[string]interface{} `json:"adaptation_result"`
+	SimulationState            map[string]interface{} `json:"simulation_state"`
+	TotalSessions              int                    `json:"total_sessions"`
+	TotalTurns                 int                    `json:"total_turns"`
+	SimulatedMinutes           int                    `json:"simulated_minutes"`
 	TotalCostUSD               float64                `json:"total_cost_usd"`
 	SimulationCostUSD          float64                `json:"simulation_cost_usd,omitempty"`
 	EvaluationCostUSD          float64                `json:"evaluation_cost_usd,omitempty"`

@@ -139,9 +139,9 @@ type ChatOptions struct {
 	ToolDefinitions      []ToolDefinition       `json:"tool_definitions,omitempty"`
 	MaxTurns             int                    `json:"max_turns,omitempty"`
 	SkipContextBuild     bool                   `json:"skip_context_build,omitempty"`
-	GameContext          *GameContext            `json:"game_context,omitempty"`
+	GameContext          *GameContext           `json:"game_context,omitempty"`
 	Capabilities         []string               `json:"capabilities,omitempty"`
-	SkillLevels          map[string]int32        `json:"skill_levels,omitempty"`
+	SkillLevels          map[string]int32       `json:"skill_levels,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -163,41 +163,41 @@ type MemoryNode struct {
 
 // AtomicFact represents a single atomic fact stored in memory.
 type AtomicFact struct {
-	FactID               string                 `json:"fact_id"`
-	AgentID              string                 `json:"agent_id"`
-	UserID               string                 `json:"user_id"`
-	NodeID               string                 `json:"node_id"`
-	AtomicText           string                 `json:"atomic_text"`
-	FactType             string                 `json:"fact_type"`
-	Importance           float64                `json:"importance"`
-	Confidence           float64                `json:"confidence,omitempty"`
-	SupersedesID         string                 `json:"supersedes_id"`
-	SessionID            string                 `json:"session_id"`
-	SourceID             string                 `json:"source_id,omitempty"`
-	SourceType           string                 `json:"source_type,omitempty"`
-	Sentiment            string                 `json:"sentiment,omitempty"`
-	Entities             []string               `json:"entities,omitempty"`
-	InferredEntities     []string               `json:"inferred_entities,omitempty"`
-	TopicTags            []string               `json:"topic_tags,omitempty"`
-	AgentFraming         string                 `json:"agent_framing,omitempty"`
-	CharacterSalience    float64                `json:"character_salience,omitempty"`
-	EmotionalIntensity   float64                `json:"emotional_intensity,omitempty"`
-	RelationshipRelevance float64               `json:"relationship_relevance,omitempty"`
-	RetentionStrength    float64                `json:"retention_strength,omitempty"`
-	TemporalRelevance    string                 `json:"temporal_relevance,omitempty"`
-	TimeSensitiveAt      string                 `json:"time_sensitive_at,omitempty"`
-	EpisodeID            string                 `json:"episode_id,omitempty"`
-	EventTime            string                 `json:"event_time,omitempty"`
-	EvidenceMessageIDs   []string               `json:"evidence_message_ids,omitempty"`
-	PolarityGroupID      string                 `json:"polarity_group_id,omitempty"`
-	HitCount             int                    `json:"hit_count,omitempty"`
-	MissCount            int                    `json:"miss_count,omitempty"`
-	MentionCount         int                    `json:"mention_count,omitempty"`
-	LastConfirmed        string                 `json:"last_confirmed,omitempty"`
-	LastRetrievedAt      string                 `json:"last_retrieved_at,omitempty"`
-	Metadata             map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt            string                 `json:"created_at,omitempty"`
-	UpdatedAt            string                 `json:"updated_at,omitempty"`
+	FactID                string                 `json:"fact_id"`
+	AgentID               string                 `json:"agent_id"`
+	UserID                string                 `json:"user_id"`
+	NodeID                string                 `json:"node_id"`
+	AtomicText            string                 `json:"atomic_text"`
+	FactType              string                 `json:"fact_type"`
+	Importance            float64                `json:"importance"`
+	Confidence            float64                `json:"confidence,omitempty"`
+	SupersedesID          string                 `json:"supersedes_id"`
+	SessionID             string                 `json:"session_id"`
+	SourceID              string                 `json:"source_id,omitempty"`
+	SourceType            string                 `json:"source_type,omitempty"`
+	Sentiment             string                 `json:"sentiment,omitempty"`
+	Entities              []string               `json:"entities,omitempty"`
+	InferredEntities      []string               `json:"inferred_entities,omitempty"`
+	TopicTags             []string               `json:"topic_tags,omitempty"`
+	AgentFraming          string                 `json:"agent_framing,omitempty"`
+	CharacterSalience     float64                `json:"character_salience,omitempty"`
+	EmotionalIntensity    float64                `json:"emotional_intensity,omitempty"`
+	RelationshipRelevance float64                `json:"relationship_relevance,omitempty"`
+	RetentionStrength     float64                `json:"retention_strength,omitempty"`
+	TemporalRelevance     string                 `json:"temporal_relevance,omitempty"`
+	TimeSensitiveAt       string                 `json:"time_sensitive_at,omitempty"`
+	EpisodeID             string                 `json:"episode_id,omitempty"`
+	EventTime             string                 `json:"event_time,omitempty"`
+	EvidenceMessageIDs    []string               `json:"evidence_message_ids,omitempty"`
+	PolarityGroupID       string                 `json:"polarity_group_id,omitempty"`
+	HitCount              int                    `json:"hit_count,omitempty"`
+	MissCount             int                    `json:"miss_count,omitempty"`
+	MentionCount          int                    `json:"mention_count,omitempty"`
+	LastConfirmed         string                 `json:"last_confirmed,omitempty"`
+	LastRetrievedAt       string                 `json:"last_retrieved_at,omitempty"`
+	Metadata              map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt             string                 `json:"created_at,omitempty"`
+	UpdatedAt             string                 `json:"updated_at,omitempty"`
 }
 
 // MemoryResponse is the response from the memory list endpoint.
@@ -619,23 +619,23 @@ type PendingCapability struct {
 
 // AgentCapabilities represents the capabilities enabled for an agent.
 type AgentCapabilities struct {
-	WebSearch           bool                   `json:"webSearch"`
-	RememberName        bool                   `json:"rememberName"`
-	ImageGeneration     bool                   `json:"imageGeneration"`
-	Inventory           bool                   `json:"inventory"`
-	KnowledgeBase       bool                   `json:"knowledgeBase,omitempty"`
-	KnowledgeBaseProjectID string              `json:"knowledgeBaseProjectId,omitempty"`
-	VoiceGeneration     bool                   `json:"voiceGeneration"`
-	VoiceID             string                 `json:"voiceId,omitempty"`
-	VoiceTier           int                    `json:"voiceTier,omitempty"`
-	VoiceUnlockedAt     string                 `json:"voiceUnlockedAt,omitempty"`
-	ImageUnlockedAt     string                 `json:"imageUnlockedAt,omitempty"`
-	MusicGeneration     bool                   `json:"musicGeneration"`
-	MusicUnlockedAt     string                 `json:"musicUnlockedAt,omitempty"`
-	VideoGeneration     bool                   `json:"videoGeneration"`
-	VideoUnlockedAt     string                 `json:"videoUnlockedAt,omitempty"`
-	PendingCapabilities []PendingCapability    `json:"pendingCapabilities,omitempty"`
-	CustomTools         []CustomToolDefinition `json:"customTools,omitempty"`
+	WebSearch              bool                   `json:"webSearch"`
+	RememberName           bool                   `json:"rememberName"`
+	ImageGeneration        bool                   `json:"imageGeneration"`
+	Inventory              bool                   `json:"inventory"`
+	KnowledgeBase          bool                   `json:"knowledgeBase,omitempty"`
+	KnowledgeBaseProjectID string                 `json:"knowledgeBaseProjectId,omitempty"`
+	VoiceGeneration        bool                   `json:"voiceGeneration"`
+	VoiceID                string                 `json:"voiceId,omitempty"`
+	VoiceTier              int                    `json:"voiceTier,omitempty"`
+	VoiceUnlockedAt        string                 `json:"voiceUnlockedAt,omitempty"`
+	ImageUnlockedAt        string                 `json:"imageUnlockedAt,omitempty"`
+	MusicGeneration        bool                   `json:"musicGeneration"`
+	MusicUnlockedAt        string                 `json:"musicUnlockedAt,omitempty"`
+	VideoGeneration        bool                   `json:"videoGeneration"`
+	VideoUnlockedAt        string                 `json:"videoUnlockedAt,omitempty"`
+	PendingCapabilities    []PendingCapability    `json:"pendingCapabilities,omitempty"`
+	CustomTools            []CustomToolDefinition `json:"customTools,omitempty"`
 }
 
 // UpdateCapabilitiesOptions configures a capabilities update request.
