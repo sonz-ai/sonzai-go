@@ -851,3 +851,41 @@ func TestChatSSEChunkErrorType(t *testing.T) {
 		t.Errorf("unexpected message: %s", e.Message)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Me
+// ---------------------------------------------------------------------------
+
+func TestMe(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/me" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, MeResponse{
+			UserID: "user-1",
+			Email:  "user@example.com",
+			Orgs:   []OrgMembership{{OrgID: "org-1", Role: "admin"}},
+		})
+	})
+	defer srv.Close()
+
+	result, err := client.Me(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.UserID != "user-1" {
+		t.Errorf("got UserID %q, want %q", result.UserID, "user-1")
+	}
+	if result.Email != "user@example.com" {
+		t.Errorf("got Email %q, want %q", result.Email, "user@example.com")
+	}
+	if len(result.Orgs) != 1 {
+		t.Errorf("got %d orgs, want 1", len(result.Orgs))
+	}
+	if result.Orgs[0].OrgID != "org-1" {
+		t.Errorf("got OrgID %q, want %q", result.Orgs[0].OrgID, "org-1")
+	}
+	if result.Orgs[0].Role != "admin" {
+		t.Errorf("got Role %q, want %q", result.Orgs[0].Role, "admin")
+	}
+}
