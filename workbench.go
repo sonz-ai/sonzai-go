@@ -26,8 +26,9 @@ func (w *WorkbenchResource) Prepare(ctx context.Context, body map[string]any) (m
 	return result, nil
 }
 
-// GetState returns the current workbench state.
-func (w *WorkbenchResource) GetState(ctx context.Context, body map[string]any) (map[string]any, error) {
+// FetchState returns the current workbench state. Uses POST because the session
+// context must be sent in the request body; callers should not expect GET-style auto-retry.
+func (w *WorkbenchResource) FetchState(ctx context.Context, body map[string]any) (map[string]any, error) {
 	var result map[string]any
 	if err := w.http.Post(ctx, "/api/v1/workbench/state", body, &result); err != nil {
 		return nil, err

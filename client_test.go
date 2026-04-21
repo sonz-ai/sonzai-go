@@ -1161,8 +1161,8 @@ func TestOrgRedeemVoucher(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result == nil {
-		t.Error("expected result")
+	if result["redeemed"] != true {
+		t.Errorf("expected redeemed=true, got %v", result["redeemed"])
 	}
 }
 

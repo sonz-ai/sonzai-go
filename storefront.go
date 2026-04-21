@@ -29,7 +29,7 @@ type StorefrontAgentOptions struct {
 	Description      string `json:"description,omitempty"`
 	AvatarURL        string `json:"avatar_url,omitempty"`
 	Slug             string `json:"slug,omitempty"`
-	Featured         bool   `json:"featured,omitempty"`
+	Featured         *bool  `json:"featured,omitempty"`
 	MaxTurnsPerVisit int    `json:"max_turns_per_visit,omitempty"`
 }
 
