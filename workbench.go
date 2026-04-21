@@ -37,9 +37,25 @@ func (w *WorkbenchResource) FetchState(ctx context.Context, body map[string]any)
 }
 
 // AdvanceTime advances the workbench simulation clock.
+//
+// Pass body["async"] = true to run in the background. The response will be
+// {"job_id": "...", "status": "running"} — poll GetAdvanceTimeJob until
+// status is "succeeded" or "failed". Useful when a large simulated window
+// exceeds the caller/proxy read timeout (Cloudflare ~100s).
 func (w *WorkbenchResource) AdvanceTime(ctx context.Context, body map[string]any) (map[string]any, error) {
 	var result map[string]any
 	if err := w.http.Post(ctx, "/api/v1/workbench/advance-time", body, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetAdvanceTimeJob returns the state of an async advance-time job. Fields:
+// job_id, status ("running" | "succeeded" | "failed"), result (on success),
+// error (on failure). State has a 30-minute TTL in Redis.
+func (w *WorkbenchResource) GetAdvanceTimeJob(ctx context.Context, jobID string) (map[string]any, error) {
+	var result map[string]any
+	if err := w.http.Get(ctx, "/api/v1/workbench/advance-time/jobs/"+jobID, nil, &result); err != nil {
 		return nil, err
 	}
 	return result, nil
