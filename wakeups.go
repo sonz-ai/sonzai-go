@@ -43,6 +43,9 @@ type ScheduledWakeup struct {
 func (w *WakeupResource) List(ctx context.Context, agentID string, opts *WakeupListOptions) (*WakeupsResponse, error) {
 	params := map[string]string{}
 	if opts != nil {
+		if opts.UserID != "" {
+			params["user_id"] = opts.UserID
+		}
 		if opts.Limit > 0 {
 			params["limit"] = fmt.Sprintf("%d", opts.Limit)
 		}
@@ -67,3 +70,4 @@ func (w *WakeupResource) Schedule(ctx context.Context, agentID string, opts Sche
 	}
 	return &result, nil
 }
+

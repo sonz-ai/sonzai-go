@@ -807,6 +807,7 @@ type BreakthroughsResponse struct {
 
 // WakeupListOptions configures a list wakeups request.
 type WakeupListOptions struct {
+	UserID string // Filter by user (optional; empty means all users on the agent).
 	Limit  int    // Maximum number of wakeups to return (default 50, max 500).
 	Status string // Filter by status (e.g. "pending", "executed").
 }
