@@ -89,6 +89,9 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Org == nil {
 		t.Fatal("Org is nil")
 	}
+	if c.Workbench == nil {
+		t.Fatal("Workbench is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -1160,6 +1163,27 @@ func TestOrgRedeemVoucher(t *testing.T) {
 	}
 	if result == nil {
 		t.Error("expected result")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Workbench
+// ---------------------------------------------------------------------------
+
+func TestWorkbenchChat(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/workbench/chat" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"response": "hello"})
+	})
+	defer srv.Close()
+	result, err := client.Workbench.Chat(context.Background(), map[string]any{"message": "hi"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["response"] != "hello" {
+		t.Error("unexpected result")
 	}
 }
 

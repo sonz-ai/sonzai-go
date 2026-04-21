@@ -114,6 +114,9 @@ type Client struct {
 	// Org provides organization-level billing, usage, and contract operations.
 	Org *OrgResource
 
+	// Workbench provides internal simulation and debugging operations.
+	Workbench *WorkbenchResource
+
 	http *httpClient
 }
 
@@ -176,6 +179,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		UserPersonas:         &UserPersonasResource{http: hc},
 		Storefront:           &StorefrontResource{http: hc},
 		Org:                  &OrgResource{http: hc},
+		Workbench:            &WorkbenchResource{http: hc},
 		http:                 hc,
 	}, nil
 }
