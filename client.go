@@ -111,6 +111,9 @@ type Client struct {
 	// Storefront provides agent marketplace (storefront) management.
 	Storefront *StorefrontResource
 
+	// Org provides organization-level billing, usage, and contract operations.
+	Org *OrgResource
+
 	http *httpClient
 }
 
@@ -172,6 +175,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Analytics:            &AnalyticsResource{http: hc},
 		UserPersonas:         &UserPersonasResource{http: hc},
 		Storefront:           &StorefrontResource{http: hc},
+		Org:                  &OrgResource{http: hc},
 		http:                 hc,
 	}, nil
 }

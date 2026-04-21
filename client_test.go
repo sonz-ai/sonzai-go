@@ -86,6 +86,9 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Storefront == nil {
 		t.Fatal("Storefront is nil")
 	}
+	if c.Org == nil {
+		t.Fatal("Org is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -1119,6 +1122,44 @@ func TestStorefrontUpsertAgent(t *testing.T) {
 	defer srv.Close()
 	if err := client.Storefront.UpsertAgent(context.Background(), "agent-1", StorefrontAgentOptions{DisplayName: "My Agent"}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Org
+// ---------------------------------------------------------------------------
+
+func TestOrgGetBilling(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/org/billing" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"status": "active"})
+	})
+	defer srv.Close()
+	result, err := client.Org.GetBilling(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["status"] != "active" {
+		t.Error("unexpected result")
+	}
+}
+
+func TestOrgRedeemVoucher(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/org/vouchers/redeem" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"redeemed": true})
+	})
+	defer srv.Close()
+	result, err := client.Org.RedeemVoucher(context.Background(), "VOUCHER123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result == nil {
+		t.Error("expected result")
 	}
 }
 
