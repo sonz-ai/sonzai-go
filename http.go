@@ -18,7 +18,9 @@ import (
 )
 
 // SDKVersion is the current version of the sonzai-go SDK.
-const SDKVersion = "1.2.2"
+// v1.3.0 changes NewClient's signature to return (*Client, error). Callers
+// must update; MustNewClient preserves the panic-on-error shape for tests.
+const SDKVersion = "1.3.0"
 
 type httpClient struct {
 	baseURL    string
@@ -35,6 +37,7 @@ func newHTTPClient(baseURL, apiKey string, timeout time.Duration, customClient *
 			Timeout: timeout,
 			Transport: &http.Transport{
 				MaxIdleConns:        100,
+				MaxConnsPerHost:     10,
 				MaxIdleConnsPerHost: 10,
 				IdleConnTimeout:     90 * time.Second,
 			},
@@ -239,7 +242,65 @@ func (c *httpClient) DeleteWithParams(ctx context.Context, path string, params m
 	return nil
 }
 
-// PostMultipart sends a multipart/form-data POST request.
+// PostMultipartFile uploads a file (provided as bytes) as a multipart form POST and unmarshals the response into result.
+func (c *httpClient) PostMultipartFile(ctx context.Context, path, fieldName, fileName string, fileData []byte, result interface{}) error {
+	u, err := url.Parse(c.baseURL + path)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile(fieldName, fileName)
+	if err != nil {
+		return fmt.Errorf("create form file: %w", err)
+	}
+	if _, err := part.Write(fileData); err != nil {
+		return fmt.Errorf("write file data: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &body)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read body: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		msg := string(respBody)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+			msg = errResp.Error
+		}
+		return newErrorForStatus(resp.StatusCode, msg, nil)
+	}
+
+	if result != nil {
+		return json.Unmarshal(respBody, result)
+	}
+	return nil
+}
+
+// PostMultipart sends a multipart/form-data POST request using an io.Reader for the file body,
+// plus arbitrary string fields.
 func (c *httpClient) PostMultipart(ctx context.Context, path string, fields map[string]string, fileName string, fileContent io.Reader, contentType string, result interface{}) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)

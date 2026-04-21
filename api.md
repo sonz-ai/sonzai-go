@@ -12,6 +12,7 @@ client := sonzai.NewClient("sk-...",
 | Field | Type | Description |
 |-------|------|-------------|
 | `client.Agents` | `*AgentsResource` | Chat, memory, personality, voice, and agent-scoped operations |
+| `client.Knowledge` | `*KnowledgeResource` | Project-scoped knowledge base operations |
 | `client.Eval` | `*eval.Client` | Evaluation, simulation, and benchmarking |
 | `client.Voices` | `*VoicesResource` | Global voice catalog |
 
@@ -54,6 +55,18 @@ client := sonzai.NewClient("sk-...",
 |--------|---------|-------------|
 | `TriggerEvent(ctx, agentID, opts)` | `*TriggerEventResponse, error` | Trigger a backend event or activity |
 | `Dialogue(ctx, opts)` | `*DialogueResponse, error` | Multi-agent dialogue |
+
+`TriggerEventOptions` fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `UserID` | `string` | Required. The user the event belongs to. |
+| `EventType` | `string` | Required. e.g. `"achievement"`, `"daily_summary"`, `"level_up"`. |
+| `EventDescription` | `string` | Optional human-readable context for the AI. |
+| `Metadata` | `map[string]string` | Optional structured metadata. |
+| `Language` | `string` | Optional locale override. |
+| `InstanceID` | `string` | Optional instance scope. |
+| `Messages` | `[]ChatMessage` | Optional raw conversation messages that triggered this event. When present, Platform API uses these directly for context-sensitive generation (e.g. diary, summaries) instead of reconstructing from lossy consolidation summaries. Older servers ignore this field. |
 
 ## Agents.Memory
 
@@ -125,6 +138,7 @@ client := sonzai.NewClient("sk-...",
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `Schedule(ctx, agentID, opts)` | `*WakeupResponse, error` | Schedule a proactive check-in |
+| `List(ctx, agentID, opts)` | `*WakeupsResponse, error` | List scheduled wakeups (filter by user, status, limit) |
 
 ## Agents.Generation
 
@@ -134,6 +148,63 @@ client := sonzai.NewClient("sk-...",
 | `GenerateCharacter(ctx, opts)` | `*GenerateCharacterResponse, error` | Generate full character profile |
 | `GenerateSeedMemories(ctx, agentID, opts)` | `*SeedMemoriesResponse, error` | Generate seed memories |
 | `SeedMemories(ctx, agentID, opts)` | `*SeedMemoriesResponse, error` | Plant seed memories |
+| `RegenerateAvatar(ctx, agentID, opts)` | `*RegenerateAvatarResponse, error` | Regenerate agent avatar image |
+
+## Knowledge
+
+Project-scoped knowledge base operations accessed via `client.Knowledge`.
+
+### Documents
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `ListDocuments(ctx, projectID, limit)` | `*KBDocumentListResponse, error` | List documents |
+| `GetDocument(ctx, projectID, docID)` | `*KBDocument, error` | Get a document |
+| `UploadDocument(ctx, projectID, opts)` | `*KBDocument, error` | Upload a document (multipart file) |
+| `DeleteDocument(ctx, projectID, docID)` | `error` | Delete a document |
+
+### Facts / Graph
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `InsertFacts(ctx, projectID, opts)` | `*InsertFactsResponse, error` | Insert entities and relationships |
+| `ListNodes(ctx, projectID, nodeType, limit)` | `*KBNodeListResponse, error` | List graph nodes |
+| `GetNode(ctx, projectID, nodeID, includeHistory)` | `*KBNodeDetailResponse, error` | Get node with edges |
+| `DeleteNode(ctx, projectID, nodeID)` | `error` | Soft-delete a node |
+| `GetNodeHistory(ctx, projectID, nodeID, limit)` | `*KBNodeHistoryResponse, error` | Node version history |
+| `BulkUpdate(ctx, projectID, opts)` | `*KBBulkUpdateResponse, error` | Batch-update node properties |
+
+### Search
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `Search(ctx, projectID, opts)` | `*KBSearchResponse, error` | BM25 search with graph traversal |
+
+### Schemas
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `CreateSchema(ctx, projectID, opts)` | `*KBEntitySchema, error` | Create entity schema |
+| `ListSchemas(ctx, projectID)` | `*KBSchemaListResponse, error` | List schemas |
+| `UpdateSchema(ctx, projectID, schemaID, opts)` | `*KBEntitySchema, error` | Update schema |
+| `DeleteSchema(ctx, projectID, schemaID)` | `error` | Delete schema |
+
+### Analytics
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `CreateAnalyticsRule(ctx, projectID, opts)` | `*KBAnalyticsRule, error` | Create analytics rule |
+| `ListAnalyticsRules(ctx, projectID)` | `*KBAnalyticsRuleListResponse, error` | List rules |
+| `GetAnalyticsRule(ctx, projectID, ruleID)` | `*KBAnalyticsRule, error` | Get rule |
+| `UpdateAnalyticsRule(ctx, projectID, ruleID, opts)` | `*KBAnalyticsRule, error` | Update rule |
+| `DeleteAnalyticsRule(ctx, projectID, ruleID)` | `error` | Delete rule |
+| `RunAnalyticsRule(ctx, projectID, ruleID)` | `error` | Trigger manual rule run |
+| `GetRecommendations(ctx, projectID, ruleID, sourceID, limit)` | `*KBRecommendationsResponse, error` | Get recommendations |
+| `GetTrends(ctx, projectID, nodeID)` | `*KBTrendsResponse, error` | Get trend aggregations |
+| `GetTrendRankings(ctx, projectID, ruleID, type, window, limit)` | `*KBTrendRankingsResponse, error` | Get trend rankings |
+| `GetConversions(ctx, projectID, ruleID, segment)` | `*KBConversionsResponse, error` | Get conversion stats |
+| `RecordFeedback(ctx, projectID, opts)` | `error` | Record recommendation feedback |
+| `GetStats(ctx, projectID)` | `*KBStats, error` | Knowledge base statistics |
 
 ## Voices (Global)
 

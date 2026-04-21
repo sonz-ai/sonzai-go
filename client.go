@@ -25,6 +25,7 @@ package sonzai
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -84,6 +85,11 @@ type Client struct {
 	// ProjectConfig provides project-scoped configuration management.
 	ProjectConfig *ProjectConfigResource
 
+	// AccountConfig provides tenant-scoped ("account-level") configuration
+	// management. Use it to set defaults that apply across every project
+	// inside a tenant — for example, the post-processing model map.
+	AccountConfig *AccountConfigResource
+
 	// CustomLLM provides project-scoped custom LLM configuration.
 	CustomLLM *CustomLLMResource
 
@@ -112,12 +118,13 @@ func (c *Client) ListModels(ctx context.Context) (*PlatformModelsResponse, error
 
 // NewClient creates a new Sonzai client with the given API key.
 // If apiKey is empty, it falls back to the SONZAI_API_KEY environment variable.
-func NewClient(apiKey string, opts ...ClientOption) *Client {
+// Returns an error if no API key is available (instead of panicking).
+func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 	if apiKey == "" {
 		apiKey = os.Getenv("SONZAI_API_KEY")
 	}
 	if apiKey == "" {
-		panic("sonzai: apiKey must be provided or set via SONZAI_API_KEY environment variable")
+		return nil, fmt.Errorf("sonzai: apiKey must be provided or set via SONZAI_API_KEY environment variable")
 	}
 
 	cfg := &clientConfig{
@@ -142,9 +149,20 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 		Voices:               &VoicesResource{http: hc},
 		Webhooks:             &WebhooksResource{http: hc},
 		ProjectConfig:        &ProjectConfigResource{http: hc},
+		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		http:                 hc,
+	}, nil
+}
+
+// MustNewClient is like NewClient but panics on error.
+// Use in tests or CLI tools where error handling is unnecessary.
+func MustNewClient(apiKey string, opts ...ClientOption) *Client {
+	c, err := NewClient(apiKey, opts...)
+	if err != nil {
+		panic(err)
 	}
+	return c
 }
 

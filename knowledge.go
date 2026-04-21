@@ -393,6 +393,23 @@ func (k *KnowledgeResource) GetDocument(ctx context.Context, projectID, docID st
 	return &result, nil
 }
 
+// UploadDocumentOptions configures a document upload request.
+type UploadDocumentOptions struct {
+	FileName string
+	FileData []byte
+}
+
+// UploadDocumentBytes uploads a document to the knowledge base from an in-memory byte slice.
+// For streaming uploads from an io.Reader, use UploadDocument instead.
+func (k *KnowledgeResource) UploadDocumentBytes(ctx context.Context, projectID string, opts UploadDocumentOptions) (*KBDocument, error) {
+	var result KBDocument
+	err := k.http.PostMultipartFile(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/documents", projectID), "file", opts.FileName, opts.FileData, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // DeleteDocument deletes a document.
 func (k *KnowledgeResource) DeleteDocument(ctx context.Context, projectID, docID string) error {
 	return k.http.Delete(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/documents/%s", projectID, docID), nil)
