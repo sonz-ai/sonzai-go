@@ -12,7 +12,7 @@ import (
 
 func testServer(handler http.HandlerFunc) (*httptest.Server, *Client) {
 	server := httptest.NewServer(handler)
-	client := NewClient("test-key", WithBaseURL(server.URL))
+	client := MustNewClient("test-key", WithBaseURL(server.URL))
 	return server, client
 }
 
@@ -35,17 +35,24 @@ func sseResponse(w http.ResponseWriter, events ...string) {
 // Client Init
 // ---------------------------------------------------------------------------
 
-func TestNewClientPanicsWithoutKey(t *testing.T) {
+func TestNewClientErrorWithoutKey(t *testing.T) {
+	_, err := NewClient("")
+	if err == nil {
+		t.Fatal("expected error for missing API key")
+	}
+}
+
+func TestMustNewClientPanicsWithoutKey(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("expected panic")
 		}
 	}()
-	NewClient("")
+	MustNewClient("")
 }
 
 func TestNewClientCreatesResources(t *testing.T) {
-	c := NewClient("test-key")
+	c := MustNewClient("test-key")
 	if c.Agents == nil {
 		t.Fatal("Agents is nil")
 	}

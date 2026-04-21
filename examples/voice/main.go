@@ -26,7 +26,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client := sonzai.NewClient("")
+	client := sonzai.MustNewClient("")
 	ctx := context.Background()
 
 	// Get a voice live WebSocket token

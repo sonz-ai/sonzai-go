@@ -26,7 +26,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client := sonzai.NewClient("")
+	client := sonzai.MustNewClient("")
 
 	fmt.Printf("You: %s\n\nAgent: ", *message)
 

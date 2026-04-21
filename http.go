@@ -18,7 +18,9 @@ import (
 )
 
 // SDKVersion is the current version of the sonzai-go SDK.
-const SDKVersion = "1.2.2"
+// v1.3.0 changes NewClient's signature to return (*Client, error). Callers
+// must update; MustNewClient preserves the panic-on-error shape for tests.
+const SDKVersion = "1.3.0"
 
 type httpClient struct {
 	baseURL    string
@@ -35,6 +37,7 @@ func newHTTPClient(baseURL, apiKey string, timeout time.Duration, customClient *
 			Timeout: timeout,
 			Transport: &http.Transport{
 				MaxIdleConns:        100,
+				MaxConnsPerHost:     10,
 				MaxIdleConnsPerHost: 10,
 				IdleConnTimeout:     90 * time.Second,
 			},

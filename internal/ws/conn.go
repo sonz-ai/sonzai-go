@@ -280,9 +280,11 @@ func (c *Conn) writeFrameLocked(opcode int, payload []byte) error {
 		header = append(header, ext[:]...)
 	}
 
-	// Generate 4-byte mask key.
+	// Generate 4-byte mask key — TD-SDK-002: check error.
 	var maskKey [4]byte
-	io.ReadFull(rand.Reader, maskKey[:])
+	if _, err := io.ReadFull(rand.Reader, maskKey[:]); err != nil {
+		return fmt.Errorf("ws: generate mask key: %w", err)
+	}
 	header = append(header, maskKey[:]...)
 
 	// Mask the payload.

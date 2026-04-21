@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"strings"
+	"sync/atomic"
 )
 
 // AgentsResource provides agent-scoped operations.
@@ -48,11 +49,22 @@ func newAgentsResource(http *httpClient) *AgentsResource {
 func (a *AgentsResource) Chat(ctx context.Context, params AgentChatParams) (*ChatResponse, error) {
 	var parts []string
 	var usage *ChatUsage
+	var totalEvents, malformedEvents int64
 
 	err := a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
+		totalEvents++
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
-			log.Printf("sonzai: skipping malformed SSE event: %v", err)
+			malformedEvents++
+			slog.Warn("skipping malformed SSE event in Chat",
+				"error", err,
+				"agent_id", params.AgentID,
+				"malformed_count", malformedEvents,
+				"total_count", totalEvents,
+			)
+			if totalEvents >= 4 && malformedEvents*2 > totalEvents {
+				return fmt.Errorf("too many malformed SSE events: %d/%d", malformedEvents, totalEvents)
+			}
 			return nil
 		}
 		if c := event.Content(); c != "" {
@@ -75,10 +87,21 @@ func (a *AgentsResource) Chat(ctx context.Context, params AgentChatParams) (*Cha
 
 // ChatStream sends a chat message and calls the callback for each streaming event.
 func (a *AgentsResource) ChatStream(ctx context.Context, params AgentChatParams, callback func(ChatStreamEvent) error) error {
+	var totalEvents, malformedEvents atomic.Int64
 	return a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
+		total := totalEvents.Add(1)
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
-			log.Printf("sonzai: skipping malformed SSE event: %v", err)
+			malformed := malformedEvents.Add(1)
+			slog.Warn("skipping malformed SSE event in ChatStream",
+				"error", err,
+				"agent_id", params.AgentID,
+				"malformed_count", malformed,
+				"total_count", total,
+			)
+			if total >= 4 && malformed*2 > total {
+				return fmt.Errorf("too many malformed SSE events: %d/%d", malformed, total)
+			}
 			return nil
 		}
 		return callback(event)
@@ -686,7 +709,7 @@ func (a *AgentsResource) PlaygroundChat(ctx context.Context, params AgentChatPar
 	err := a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/playground/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
-			log.Printf("sonzai: skipping malformed SSE event: %v", err)
+			slog.Warn("skipping malformed SSE event", "error", err)
 			return nil
 		}
 		if c := event.Content(); c != "" {
@@ -712,7 +735,7 @@ func (a *AgentsResource) PlaygroundChatStream(ctx context.Context, params AgentC
 	return a.http.StreamSSE(ctx, "POST", fmt.Sprintf("/api/v1/agents/%s/playground/chat", params.AgentID), params.ChatOptions, func(raw json.RawMessage) error {
 		var event ChatStreamEvent
 		if err := json.Unmarshal(raw, &event); err != nil {
-			log.Printf("sonzai: skipping malformed SSE event: %v", err)
+			slog.Warn("skipping malformed SSE event", "error", err)
 			return nil
 		}
 		return callback(event)
