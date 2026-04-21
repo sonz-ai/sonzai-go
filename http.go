@@ -18,9 +18,7 @@ import (
 )
 
 // SDKVersion is the current version of the sonzai-go SDK.
-// v1.3.0 changes NewClient's signature to return (*Client, error). Callers
-// must update; MustNewClient preserves the panic-on-error shape for tests.
-const SDKVersion = "1.3.0"
+const SDKVersion = "1.2.4"
 
 type httpClient struct {
 	baseURL    string
