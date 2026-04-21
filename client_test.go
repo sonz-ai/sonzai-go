@@ -74,6 +74,9 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Tenants == nil {
 		t.Fatal("Tenants is nil")
 	}
+	if c.APIKeys == nil {
+		t.Fatal("APIKeys is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -945,5 +948,61 @@ func TestKnowledgeListOrgNodes(t *testing.T) {
 	}
 	if result.Total != 1 {
 		t.Errorf("got total %d, want 1", result.Total)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// API Keys
+// ---------------------------------------------------------------------------
+
+func TestAPIKeysCreate(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/projects/proj-1/keys" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, APIKey{
+			KeyID:     "key-1",
+			Key:       "sk-live-abc123",
+			ProjectID: "proj-1",
+			IsActive:  true,
+		})
+	})
+	defer srv.Close()
+	result, err := client.APIKeys.Create(context.Background(), "proj-1", CreateAPIKeyOptions{Name: "my-key"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.KeyID != "key-1" {
+		t.Errorf("got KeyID %q, want key-1", result.KeyID)
+	}
+}
+
+func TestAPIKeysList(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/projects/proj-1/keys" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"keys": []APIKey{{KeyID: "key-1"}}})
+	})
+	defer srv.Close()
+	result, err := client.APIKeys.List(context.Background(), "proj-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Keys) != 1 {
+		t.Errorf("got %d keys, want 1", len(result.Keys))
+	}
+}
+
+func TestAPIKeysRevoke(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/api/v1/projects/proj-1/keys/key-1" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"success": true})
+	})
+	defer srv.Close()
+	if err := client.APIKeys.Revoke(context.Background(), "proj-1", "key-1"); err != nil {
+		t.Fatal(err)
 	}
 }
