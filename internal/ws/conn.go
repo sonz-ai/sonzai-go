@@ -193,7 +193,10 @@ func (c *Conn) Close() error {
 		return nil
 	}
 	c.closed = true
-	c.writeFrameLocked(OpClose, nil)
+	// Best-effort close frame. writeFrameLocked can now return an error if
+	// the mask-key RNG fails; ignore it and proceed so we always release
+	// the fd via c.conn.Close().
+	_ = c.writeFrameLocked(OpClose, nil)
 	return c.conn.Close()
 }
 
@@ -280,10 +283,12 @@ func (c *Conn) writeFrameLocked(opcode int, payload []byte) error {
 		header = append(header, ext[:]...)
 	}
 
-	// Generate 4-byte mask key — TD-SDK-002: check error.
+	// Generate 4-byte mask key. Per RFC 6455 §5.3 this MUST be
+	// cryptographically random; a predictable (e.g. all-zero) key lets an
+	// on-path attacker trivially unmask payloads, so surface RNG failure.
 	var maskKey [4]byte
 	if _, err := io.ReadFull(rand.Reader, maskKey[:]); err != nil {
-		return fmt.Errorf("ws: generate mask key: %w", err)
+		return err
 	}
 	header = append(header, maskKey[:]...)
 
