@@ -117,6 +117,9 @@ type Client struct {
 	// Workbench provides internal simulation and debugging operations.
 	Workbench *WorkbenchResource
 
+	// Support provides support ticket management.
+	Support *SupportResource
+
 	http *httpClient
 }
 
@@ -180,6 +183,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Storefront:           &StorefrontResource{http: hc},
 		Org:                  &OrgResource{http: hc},
 		Workbench:            &WorkbenchResource{http: hc},
+		Support:              &SupportResource{http: hc},
 		http:                 hc,
 	}, nil
 }

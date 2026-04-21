@@ -92,6 +92,9 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Workbench == nil {
 		t.Fatal("Workbench is nil")
 	}
+	if c.Support == nil {
+		t.Fatal("Support is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -1204,5 +1207,66 @@ func TestAnalyticsCostBreakdown(t *testing.T) {
 	}
 	if result == nil {
 		t.Error("expected non-nil result")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Support
+// ---------------------------------------------------------------------------
+
+func TestSupportList(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/support/tickets" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, TicketListResponse{
+			Tickets: []SupportTicket{{TicketID: "t-1", Title: "Help"}},
+			Total:   1,
+		})
+	})
+	defer srv.Close()
+	result, err := client.Support.List(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Tickets) != 1 || result.Tickets[0].TicketID != "t-1" {
+		t.Error("unexpected result")
+	}
+}
+
+func TestSupportCreate(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/support/tickets" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, SupportTicket{TicketID: "t-2", Title: "New issue", Status: "open"})
+	})
+	defer srv.Close()
+	result, err := client.Support.Create(context.Background(), CreateTicketOptions{
+		Title:       "New issue",
+		Description: "Something broke",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TicketID != "t-2" {
+		t.Errorf("got TicketID %q, want t-2", result.TicketID)
+	}
+}
+
+func TestSupportAddComment(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/support/tickets/t-1/comments" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, SupportTicketComment{CommentID: "c-1", TicketID: "t-1", Content: "Thanks"})
+	})
+	defer srv.Close()
+	result, err := client.Support.AddComment(context.Background(), "t-1", AddTicketCommentOptions{Content: "Thanks"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.CommentID != "c-1" {
+		t.Errorf("got CommentID %q, want c-1", result.CommentID)
 	}
 }
