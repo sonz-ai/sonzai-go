@@ -77,6 +77,9 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.APIKeys == nil {
 		t.Fatal("APIKeys is nil")
 	}
+	if c.Analytics == nil {
+		t.Fatal("Analytics is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -1004,5 +1007,46 @@ func TestAPIKeysRevoke(t *testing.T) {
 	defer srv.Close()
 	if err := client.APIKeys.Revoke(context.Background(), "proj-1", "key-1"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Analytics
+// ---------------------------------------------------------------------------
+
+func TestAnalyticsOverview(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/analytics/overview" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"total_agents": 5})
+	})
+	defer srv.Close()
+	result, err := client.Analytics.Overview(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result == nil {
+		t.Error("expected non-nil result")
+	}
+}
+
+func TestAnalyticsCostBreakdown(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/analytics/cost/breakdown" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("days") != "7" {
+			t.Errorf("expected days=7, got %q", r.URL.Query().Get("days"))
+		}
+		jsonResponse(w, 200, map[string]any{"total_usd": 1.23})
+	})
+	defer srv.Close()
+	result, err := client.Analytics.CostBreakdown(context.Background(), &AnalyticsOptions{Days: 7})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result == nil {
+		t.Error("expected non-nil result")
 	}
 }

@@ -102,6 +102,9 @@ type Client struct {
 	// APIKeys provides project API key management.
 	APIKeys *APIKeysResource
 
+	// Analytics provides platform analytics and cost reporting.
+	Analytics *AnalyticsResource
+
 	http *httpClient
 }
 
@@ -160,6 +163,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		Tenants:              &TenantsResource{http: hc},
 		APIKeys:              &APIKeysResource{http: hc},
+		Analytics:            &AnalyticsResource{http: hc},
 		http:                 hc,
 	}, nil
 }
