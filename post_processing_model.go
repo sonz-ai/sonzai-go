@@ -103,3 +103,69 @@ func (c *AccountConfigResource) SetPostProcessingModelMap(ctx context.Context, m
 func (c *AccountConfigResource) DeletePostProcessingModelMap(ctx context.Context) error {
 	return c.Delete(ctx, PostProcessingModelMapKey)
 }
+
+// ────────────────────────────────────────────────────────────────────────
+// Agent-scope post-processing override (layer 1 of the resolver cascade)
+// ────────────────────────────────────────────────────────────────────────
+
+// PostProcessingModelOverride mirrors the server's persisted agent-level
+// override. Both fields empty == no override; the cascade falls through
+// to project → account → system-default.
+type PostProcessingModelOverride struct {
+	Provider string `json:"post_processing_provider"`
+	Model    string `json:"post_processing_model"`
+}
+
+// EffectivePostProcessingModel is the resolved ModelConfig returned by
+// the preview endpoint. Mirrors entity.ModelConfig on the server —
+// includes sampling so callers can see the full config the resolver
+// would hand to the Provider.
+type EffectivePostProcessingModel struct {
+	Provider    string  `json:"provider"`
+	Model       string  `json:"model"`
+	Temperature float64 `json:"temperature,omitempty"`
+	MaxTokens   int     `json:"max_tokens,omitempty"`
+}
+
+// UpdatePostProcessingModel sets the agent-level post-processing override.
+// Both provider and model must be non-empty for the cascade to honour the
+// override — mixed empty values mean "no override" (use ClearPostProcessingModel
+// for that).
+//
+// The override short-circuits the resolver cascade: when set, project /
+// account / system-default layers are not consulted.
+func (a *AgentsResource) UpdatePostProcessingModel(ctx context.Context, agentID, provider, model string) error {
+	body := map[string]string{
+		"post_processing_provider": provider,
+		"post_processing_model":    model,
+	}
+	var result struct {
+		Success                bool   `json:"success"`
+		PostProcessingProvider string `json:"post_processing_provider"`
+		PostProcessingModel    string `json:"post_processing_model"`
+	}
+	return a.http.Patch(ctx, fmt.Sprintf("/api/v1/agents/%s/post-processing-model", agentID), body, &result)
+}
+
+// ClearPostProcessingModel removes the agent-level override so the
+// resolver cascade falls through to the project/account/system layers.
+// Equivalent to UpdatePostProcessingModel with empty strings.
+func (a *AgentsResource) ClearPostProcessingModel(ctx context.Context, agentID string) error {
+	return a.UpdatePostProcessingModel(ctx, agentID, "", "")
+}
+
+// EffectivePostProcessingModel runs the cascade resolver server-side for
+// the given chat model on this agent, without firing any inference.
+// Useful for "which model would run diary tonight?" UIs.
+//
+// When the server has ENABLE_POST_PROCESSING_MODEL_MAP=false, the response
+// echoes the chat model itself — matching runtime behaviour on disabled
+// deployments.
+func (a *AgentsResource) EffectivePostProcessingModel(ctx context.Context, agentID, chatModel string) (*EffectivePostProcessingModel, error) {
+	params := map[string]string{"chat_model": chatModel}
+	var result EffectivePostProcessingModel
+	if err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/effective-post-processing-model", agentID), params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
