@@ -199,7 +199,10 @@ func (s *VoiceStream) SendAudio(audio []byte) error {
 
 // SendText sends a text message to the agent instead of audio.
 func (s *VoiceStream) SendText(text string) error {
-	data, _ := json.Marshal(map[string]string{"type": "text_input", "text": text})
+	data, err := json.Marshal(map[string]string{"type": "text_input", "text": text})
+	if err != nil {
+		return fmt.Errorf("voice stream: marshal text_input: %w", err)
+	}
 	return s.conn.WriteText(data)
 }
 
@@ -218,7 +221,10 @@ func (s *VoiceStream) Configure(audioFormat string, sampleRate int) error {
 	if sampleRate > 0 {
 		msg["sampleRate"] = sampleRate
 	}
-	data, _ := json.Marshal(msg)
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("voice stream: marshal config: %w", err)
+	}
 	return s.conn.WriteText(data)
 }
 
