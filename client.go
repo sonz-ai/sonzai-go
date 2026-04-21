@@ -108,6 +108,9 @@ type Client struct {
 	// UserPersonas provides user persona CRUD operations.
 	UserPersonas *UserPersonasResource
 
+	// Storefront provides agent marketplace (storefront) management.
+	Storefront *StorefrontResource
+
 	http *httpClient
 }
 
@@ -168,6 +171,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		APIKeys:              &APIKeysResource{http: hc},
 		Analytics:            &AnalyticsResource{http: hc},
 		UserPersonas:         &UserPersonasResource{http: hc},
+		Storefront:           &StorefrontResource{http: hc},
 		http:                 hc,
 	}, nil
 }
