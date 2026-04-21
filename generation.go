@@ -38,6 +38,11 @@ type GenerateCharacterOptions struct {
 	Gender      string   `json:"gender,omitempty"`
 	Description string   `json:"description,omitempty"`
 	Fields      []string `json:"fields,omitempty"`
+	// Provider selects the LLM backend ("gemini" | "openrouter" | "xai").
+	// Leave empty to use the platform default (currently "gemini").
+	Provider string `json:"provider,omitempty"`
+	// Model optionally overrides the provider's default model.
+	Model string `json:"model,omitempty"`
 }
 
 // GeneratedGoal represents a goal generated as part of character generation.
@@ -187,6 +192,11 @@ type GenerateAndCreateOptions struct {
 	Fields      []string `json:"fields,omitempty"`
 	ProjectID   string   `json:"project_id,omitempty"`
 	Language    string   `json:"language,omitempty"`
+	// Provider selects the LLM backend ("gemini" | "openrouter" | "xai").
+	// Leave empty to use the platform default (currently "gemini").
+	Provider string `json:"provider,omitempty"`
+	// Model optionally overrides the provider's default model.
+	Model string `json:"model,omitempty"`
 }
 
 // GenerateAndCreateResponse is the response from the combined generate + create endpoint.
