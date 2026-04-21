@@ -3,6 +3,7 @@ package sonzai
 import (
 	"context"
 	"fmt"
+	"strconv"
 )
 
 // =============================================================================
@@ -77,6 +78,26 @@ func (k *KnowledgeResource) PromoteNodeToOrg(ctx context.Context, projectID, nod
 		TenantID string `json:"tenant_id"`
 	}{TenantID: tenantID}
 	if err := k.http.Post(ctx, path, body, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// OrgNodeListResponse is the response from listing org-global KB nodes.
+type OrgNodeListResponse struct {
+	Nodes []*KBNode `json:"nodes"`
+	Total int       `json:"total"`
+}
+
+// ListOrgNodes returns all nodes in the organization-global knowledge base scope.
+func (k *KnowledgeResource) ListOrgNodes(ctx context.Context, tenantID string, limit int) (*OrgNodeListResponse, error) {
+	params := map[string]string{}
+	if limit > 0 {
+		params["limit"] = strconv.Itoa(limit)
+	}
+	var result OrgNodeListResponse
+	path := fmt.Sprintf("/api/v1/tenants/%s/knowledge/org-nodes", tenantID)
+	if err := k.http.Get(ctx, path, params, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

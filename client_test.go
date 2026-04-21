@@ -71,6 +71,9 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Agents.Image == nil {
 		t.Fatal("Agents.Image is nil")
 	}
+	if c.Tenants == nil {
+		t.Fatal("Tenants is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -887,5 +890,60 @@ func TestMe(t *testing.T) {
 	}
 	if result.Orgs[0].Role != "admin" {
 		t.Errorf("got Role %q, want %q", result.Orgs[0].Role, "admin")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Tenants
+// ---------------------------------------------------------------------------
+
+func TestTenantsList(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/tenants" {
+			t.Errorf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"tenants": []Tenant{{TenantID: "t-1", Name: "Acme"}}})
+	})
+	defer srv.Close()
+	result, err := client.Tenants.List(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Tenants) != 1 || result.Tenants[0].TenantID != "t-1" {
+		t.Error("unexpected result")
+	}
+}
+
+func TestTenantsGet(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/tenants/t-1" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, Tenant{TenantID: "t-1", Name: "Acme", IsActive: true})
+	})
+	defer srv.Close()
+	result, err := client.Tenants.Get(context.Background(), "t-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TenantID != "t-1" {
+		t.Error("unexpected result")
+	}
+}
+
+func TestKnowledgeListOrgNodes(t *testing.T) {
+	srv, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/tenants/t-1/knowledge/org-nodes" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		jsonResponse(w, 200, map[string]any{"nodes": []KBNode{{NodeID: "n-1"}}, "total": 1})
+	})
+	defer srv.Close()
+	result, err := client.Knowledge.ListOrgNodes(context.Background(), "t-1", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Total != 1 {
+		t.Errorf("got total %d, want 1", result.Total)
 	}
 }

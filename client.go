@@ -96,6 +96,9 @@ type Client struct {
 	// ProjectNotifications provides project-scoped notification polling.
 	ProjectNotifications *ProjectNotificationsResource
 
+	// Tenants provides tenant lookup operations.
+	Tenants *TenantsResource
+
 	http *httpClient
 }
 
@@ -152,6 +155,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
+		Tenants:              &TenantsResource{http: hc},
 		http:                 hc,
 	}, nil
 }
