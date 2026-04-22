@@ -31,6 +31,9 @@ func (m *MemoryResource) List(ctx context.Context, agentID string, opts *MemoryL
 		if opts.Limit > 0 {
 			params["limit"] = strconv.Itoa(opts.Limit)
 		}
+		if opts.MemoryType != "" {
+			params["memory_type"] = opts.MemoryType
+		}
 	}
 
 	var result MemoryResponse

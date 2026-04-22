@@ -234,6 +234,7 @@ type MemoryListOptions struct {
 	ParentID        string
 	IncludeContents bool
 	Limit           int
+	MemoryType      string
 }
 
 // MemorySearchOptions configures a memory search request.

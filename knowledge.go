@@ -135,6 +135,7 @@ type KBSchemaField struct {
 	Required    bool     `json:"required"`
 	Description string   `json:"description,omitempty"`
 	EnumValues  []string `json:"enum_values,omitempty"`
+	Indexed     *bool    `json:"indexed,omitempty"`
 }
 
 // KBSimilarityConfig configures similarity matching for a schema.
@@ -367,6 +368,7 @@ type RecordFeedbackOptions struct {
 	RuleID       string  `json:"rule_id"`
 	Converted    bool    `json:"converted"`
 	ScoreAtTime  float64 `json:"score_at_time"`
+	Action       string  `json:"action,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
