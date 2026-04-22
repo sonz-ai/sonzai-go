@@ -29,6 +29,9 @@ type SessionEndOptions struct {
 	Messages        []ChatMessage `json:"messages,omitempty"`
 	UserDisplayName string        `json:"user_display_name,omitempty"`
 	UserTimezone    string        `json:"user_timezone,omitempty"`
+	// Wait runs the CE pipeline synchronously before responding.
+	// Useful for benchmarks or tests that query memory immediately after session end.
+	Wait bool `json:"wait,omitempty"`
 }
 
 // SessionToolsOptions configures tools for a session.
