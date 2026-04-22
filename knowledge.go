@@ -130,9 +130,11 @@ type KBSearchResponse struct {
 
 // KBSchemaField represents a field in an entity schema.
 type KBSchemaField struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Required bool   `json:"required,omitempty"`
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	Required    bool     `json:"required"`
+	Description string   `json:"description,omitempty"`
+	EnumValues  []string `json:"enum_values,omitempty"`
 }
 
 // KBSimilarityConfig configures similarity matching for a schema.
@@ -328,7 +330,7 @@ type KBSearchOptions struct {
 	IncludeHistory bool
 	EntityTypes    string // comma-separated
 	Filters        string // JSON string
-	Hops           int    // number of graph traversal hops (default 1)
+	Depth          int    // graph traversal depth (query param: depth)
 }
 
 // CreateSchemaOptions configures a schema creation request.
@@ -560,8 +562,8 @@ func (k *KnowledgeResource) Search(ctx context.Context, projectID string, opts K
 	if opts.Filters != "" {
 		params["filters"] = opts.Filters
 	}
-	if opts.Hops > 0 {
-		params["hops"] = strconv.Itoa(opts.Hops)
+	if opts.Depth > 0 {
+		params["depth"] = strconv.Itoa(opts.Depth)
 	}
 	var result KBSearchResponse
 	err := k.http.Get(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/search", projectID), params, &result)

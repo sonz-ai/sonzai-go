@@ -43,6 +43,8 @@ type GenerateCharacterOptions struct {
 	Provider string `json:"provider,omitempty"`
 	// Model optionally overrides the provider's default model.
 	Model string `json:"model,omitempty"`
+	// Regenerate forces re-generation even if an existing agent profile is found.
+	Regenerate bool `json:"regenerate,omitempty"`
 }
 
 // GeneratedGoal represents a goal generated as part of character generation.
@@ -97,7 +99,6 @@ type GenerateSeedMemoriesOptions struct {
 	AgentName                    string                 `json:"agentName,omitempty"`
 	Big5                         *Big5Scores            `json:"big5,omitempty"`
 	PersonalityPrompt            string                 `json:"personalityPrompt,omitempty"`
-	GuideSummary                 string                 `json:"guide_summary,omitempty"`
 	TrueInterests                []string               `json:"trueInterests,omitempty"`
 	TrueDislikes                 []string               `json:"trueDislikes,omitempty"`
 	SpeechPatterns               []string               `json:"speechPatterns,omitempty"`
@@ -107,8 +108,6 @@ type GenerateSeedMemoriesOptions struct {
 	IdentityMemoryTemplates      []IdentityMemory       `json:"identityMemoryTemplates,omitempty"`
 	GenerateOriginStory          bool                   `json:"generateOriginStory,omitempty"`
 	GeneratePersonalizedMemories bool                   `json:"generatePersonalizedMemories,omitempty"`
-	ModelConfig                  *ModelConfig           `json:"model_config,omitempty"`
-	StoreMemories                bool                   `json:"store_memories,omitempty"`
 }
 
 // LoreGenerationContext provides world context for LLM-based lore generation.

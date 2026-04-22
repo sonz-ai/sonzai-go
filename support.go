@@ -69,10 +69,33 @@ type AddTicketCommentOptions struct {
 	IsInternal bool   `json:"is_internal,omitempty"`
 }
 
+// SupportListOptions configures a list support tickets request.
+type SupportListOptions struct {
+	Limit  int    `url:"limit,omitempty"`
+	Offset int    `url:"offset,omitempty"`
+	Status string `url:"status,omitempty"`
+	Type   string `url:"type,omitempty"`
+}
+
 // List returns all support tickets for the authenticated user.
-func (s *SupportResource) List(ctx context.Context) (*TicketListResponse, error) {
+func (s *SupportResource) List(ctx context.Context, opts *SupportListOptions) (*TicketListResponse, error) {
+	params := map[string]string{}
+	if opts != nil {
+		if opts.Limit > 0 {
+			params["limit"] = fmt.Sprintf("%d", opts.Limit)
+		}
+		if opts.Offset > 0 {
+			params["offset"] = fmt.Sprintf("%d", opts.Offset)
+		}
+		if opts.Status != "" {
+			params["status"] = opts.Status
+		}
+		if opts.Type != "" {
+			params["type"] = opts.Type
+		}
+	}
 	var result TicketListResponse
-	if err := s.http.Get(ctx, "/api/v1/support/tickets", nil, &result); err != nil {
+	if err := s.http.Get(ctx, "/api/v1/support/tickets", params, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

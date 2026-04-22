@@ -403,9 +403,24 @@ func (a *AgentsResource) GetDiary(ctx context.Context, agentID string, userID, i
 }
 
 // GetUsers returns users for an agent.
-func (a *AgentsResource) GetUsers(ctx context.Context, agentID string) (*UsersResponse, error) {
+func (a *AgentsResource) GetUsers(ctx context.Context, agentID string, opts *GetUsersOptions) (*UsersResponse, error) {
+	params := map[string]string{}
+	if opts != nil {
+		if opts.Limit > 0 {
+			params["limit"] = fmt.Sprintf("%d", opts.Limit)
+		}
+		if opts.Offset > 0 {
+			params["offset"] = fmt.Sprintf("%d", opts.Offset)
+		}
+		if opts.SortBy != "" {
+			params["sort_by"] = opts.SortBy
+		}
+		if opts.SortOrder != "" {
+			params["sort_order"] = opts.SortOrder
+		}
+	}
 	var result UsersResponse
-	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/users", agentID), nil, &result)
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/users", agentID), params, &result)
 	return &result, err
 }
 
@@ -473,7 +488,7 @@ func (a *AgentsResource) GetCapabilities(ctx context.Context, agentID string) (*
 // UpdateCapabilities updates the capabilities for an agent.
 func (a *AgentsResource) UpdateCapabilities(ctx context.Context, agentID string, opts UpdateCapabilitiesOptions) (*AgentCapabilities, error) {
 	var result AgentCapabilities
-	err := a.http.Patch(ctx, fmt.Sprintf("/api/v1/agents/%s/capabilities", agentID), opts, &result)
+	err := a.http.Put(ctx, fmt.Sprintf("/api/v1/agents/%s/capabilities", agentID), opts, &result)
 	return &result, err
 }
 
@@ -649,16 +664,6 @@ func (a *AgentsResource) GetContext(ctx context.Context, agentID string, opts Ge
 	var result EnrichedContextResponse
 	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/context", agentID), params, &result)
 	return &result, err
-}
-
-// RespondToToolCall sends a tool call result back to the agent mid-conversation.
-func (a *AgentsResource) RespondToToolCall(ctx context.Context, agentID string, opts ToolCallResponseOptions) (*ChatResponse, error) {
-	var result ChatResponse
-	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/respond", agentID), opts, &result)
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
 }
 
 // KnowledgeSearch searches the knowledge base for an agent using the tool endpoint.

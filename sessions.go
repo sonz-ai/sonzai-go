@@ -24,9 +24,11 @@ type SessionEndOptions struct {
 	UserID          string        `json:"user_id"`
 	SessionID       string        `json:"session_id"`
 	InstanceID      string        `json:"instance_id,omitempty"`
-	TotalMessages   int           `json:"total_messages,omitempty"`
-	DurationSeconds int           `json:"duration_seconds,omitempty"`
+	TotalMessages   int           `json:"total_messages"`
+	DurationSeconds int           `json:"duration_seconds"`
 	Messages        []ChatMessage `json:"messages,omitempty"`
+	UserDisplayName string        `json:"user_display_name,omitempty"`
+	UserTimezone    string        `json:"user_timezone,omitempty"`
 }
 
 // SessionToolsOptions configures tools for a session.

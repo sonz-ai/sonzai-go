@@ -96,13 +96,6 @@ type ExternalToolCall struct {
 	Parameters map[string]any `json:"parameters,omitempty"`
 }
 
-type ToolCallResponseOptions struct {
-	SessionID  string `json:"session_id"`
-	UserID     string `json:"user_id,omitempty"`
-	ToolCallID string `json:"tool_call_id"`
-	Result     any    `json:"result"`
-}
-
 // AgentToolCapabilities specifies which built-in tools to enable for an agent.
 type AgentToolCapabilities struct {
 	WebSearch       bool `json:"web_search"`
@@ -811,7 +804,6 @@ type BreakthroughsResponse struct {
 
 // WakeupListOptions configures a list wakeups request.
 type WakeupListOptions struct {
-	UserID string // Filter by user (optional; empty means all users on the agent).
 	Limit  int    // Maximum number of wakeups to return (default 50, max 500).
 	Status string // Filter by status (e.g. "pending", "executed").
 }
@@ -827,13 +819,12 @@ type WakeupsResponse struct {
 
 // ProcessOptions configures a process request.
 type ProcessOptions struct {
-	UserID             string        `json:"userId"`
-	SessionID          string        `json:"sessionId,omitempty"`
-	InstanceID         string        `json:"instanceId,omitempty"`
-	Messages           []ChatMessage `json:"messages"`
-	Provider           string        `json:"provider,omitempty"`
-	Model              string        `json:"model,omitempty"`
-	IncludeExtractions bool          `json:"include_extractions,omitempty"`
+	UserID    string        `json:"userId"`
+	SessionID string        `json:"sessionId,omitempty"`
+	InstanceID string       `json:"instanceId,omitempty"`
+	Messages   []ChatMessage `json:"messages"`
+	Provider   string        `json:"provider,omitempty"`
+	Model      string        `json:"model,omitempty"`
 }
 
 // ProcessSideEffectsSummary summarises behavioral side effects.
@@ -1314,6 +1305,14 @@ type DiaryResponse struct {
 // UsersResponse wraps agent users data.
 type UsersResponse struct {
 	Users []map[string]interface{} `json:"users"`
+}
+
+// GetUsersOptions configures a get users request.
+type GetUsersOptions struct {
+	Limit     int    `url:"limit,omitempty"`
+	Offset    int    `url:"offset,omitempty"`
+	SortBy    string `url:"sort_by,omitempty"`
+	SortOrder string `url:"sort_order,omitempty"`
 }
 
 // ---------------------------------------------------------------------------

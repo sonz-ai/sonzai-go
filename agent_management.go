@@ -96,6 +96,7 @@ type UpdateAgentOptions struct {
 	SpeechPatterns    []string                  `json:"speech_patterns,omitempty"`
 	TrueInterests     []string                  `json:"true_interests,omitempty"`
 	TrueDislikes      []string                  `json:"true_dislikes,omitempty"`
+	PrimaryTraits     []string                  `json:"primary_traits,omitempty"`
 	Big5              *Big5Scores               `json:"big5,omitempty"`
 	Dimensions        *SDKPersonalityDimensions `json:"dimensions,omitempty"`
 	ToolCapabilities  *AgentToolCapabilities    `json:"tool_capabilities,omitempty"`

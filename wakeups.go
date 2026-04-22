@@ -12,13 +12,10 @@ type WakeupResource struct {
 
 // ScheduleWakeupOptions configures a wakeup scheduling request.
 type ScheduleWakeupOptions struct {
-	UserID           string `json:"user_id"`
-	ScheduledAt      string `json:"scheduled_at"` // RFC3339 timestamp
-	CheckType        string `json:"check_type"`   // "birthday", "occasion", "recurring_event", "interest_check", "general"
-	Intent           string `json:"intent,omitempty"`
-	Occasion         string `json:"occasion,omitempty"`
-	InterestTopic    string `json:"interest_topic,omitempty"`
-	EventDescription string `json:"event_description,omitempty"`
+	UserID     string `json:"user_id"`
+	CheckType  string `json:"check_type"`
+	Intent     string `json:"intent"`
+	DelayHours int64  `json:"delay_hours"`
 }
 
 // ScheduledWakeup represents a scheduled wakeup.
@@ -43,9 +40,6 @@ type ScheduledWakeup struct {
 func (w *WakeupResource) List(ctx context.Context, agentID string, opts *WakeupListOptions) (*WakeupsResponse, error) {
 	params := map[string]string{}
 	if opts != nil {
-		if opts.UserID != "" {
-			params["user_id"] = opts.UserID
-		}
 		if opts.Limit > 0 {
 			params["limit"] = fmt.Sprintf("%d", opts.Limit)
 		}

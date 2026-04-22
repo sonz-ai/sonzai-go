@@ -550,7 +550,7 @@ func TestScheduleWakeup(t *testing.T) {
 	defer server.Close()
 
 	result, err := client.Agents.Wakeups.Schedule(context.Background(), "agent-1", ScheduleWakeupOptions{
-		UserID: "user-1", ScheduledAt: "2026-03-20T09:00:00Z", CheckType: "birthday",
+		UserID: "user-1", CheckType: "birthday", Intent: "check_in", DelayHours: 24,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1225,7 +1225,7 @@ func TestSupportList(t *testing.T) {
 		})
 	})
 	defer srv.Close()
-	result, err := client.Support.List(context.Background())
+	result, err := client.Support.List(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
