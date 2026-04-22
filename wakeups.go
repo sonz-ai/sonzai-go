@@ -12,10 +12,14 @@ type WakeupResource struct {
 
 // ScheduleWakeupOptions configures a wakeup scheduling request.
 type ScheduleWakeupOptions struct {
-	UserID     string `json:"user_id"`
-	CheckType  string `json:"check_type"`
-	Intent     string `json:"intent"`
-	DelayHours int64  `json:"delay_hours"`
+	UserID           string `json:"user_id"`
+	CheckType        string `json:"check_type"`
+	Intent           string `json:"intent"`
+	DelayHours       int64  `json:"delay_hours"`
+	ScheduledAt      string `json:"scheduled_at,omitempty"`      // RFC3339 absolute time; overrides DelayHours
+	Occasion         string `json:"occasion,omitempty"`
+	InterestTopic    string `json:"interest_topic,omitempty"`
+	EventDescription string `json:"event_description,omitempty"`
 }
 
 // ScheduledWakeup represents a scheduled wakeup.

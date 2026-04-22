@@ -33,16 +33,18 @@ type KBCandidate struct {
 
 // InventoryUpdateResponse is the response from an inventory write operation.
 type InventoryUpdateResponse struct {
-	Status       string            `json:"status"`
-	FactID       string            `json:"fact_id,omitempty"`
-	KBResolution *KBResolutionInfo `json:"kb_resolution,omitempty"`
-	Candidates   []KBCandidate     `json:"candidates,omitempty"`
-	Error        string            `json:"error,omitempty"`
+	Status          string            `json:"status"`
+	FactID          string            `json:"fact_id,omitempty"`
+	InventoryItemID string            `json:"inventory_item_id,omitempty"` // alias for FactID; preferred going forward
+	KBResolution    *KBResolutionInfo `json:"kb_resolution,omitempty"`
+	Candidates      []KBCandidate     `json:"candidates,omitempty"`
+	Error           string            `json:"error,omitempty"`
 }
 
 // InventoryItem represents a single item in an inventory query response.
 type InventoryItem struct {
 	FactID           string         `json:"fact_id"`
+	InventoryItemID  string         `json:"inventory_item_id,omitempty"` // alias for FactID; preferred going forward
 	ItemLabel        string         `json:"item_label"`
 	KBNodeID         string         `json:"kb_node_id,omitempty"`
 	UserProperties   map[string]any `json:"user_properties"`
@@ -113,6 +115,7 @@ type InventoryUpdateOptions struct {
 	Action      string         `json:"action"`                // "add", "update", "remove"
 	ItemType    string         `json:"item_type"`             // e.g. "pokemon_card", "property"
 	Description string         `json:"description,omitempty"` // Natural language (for KB search)
+	Label       string         `json:"label,omitempty"`       // Explicit display label; priority over Description
 	KBNodeID    string         `json:"kb_node_id,omitempty"`  // If already resolved
 	Properties  map[string]any `json:"properties,omitempty"`
 	ProjectID   string         `json:"project_id,omitempty"`
@@ -143,6 +146,7 @@ type InventoryQueryOptions struct {
 type InventoryBatchItem struct {
 	ItemType    string         `json:"item_type"`
 	Description string         `json:"description,omitempty"`
+	Label       string         `json:"label,omitempty"` // Explicit display label; priority over Description
 	KBNodeID    string         `json:"kb_node_id,omitempty"`
 	Properties  map[string]any `json:"properties,omitempty"`
 }

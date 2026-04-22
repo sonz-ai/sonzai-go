@@ -239,6 +239,7 @@ type MemoryListOptions struct {
 // MemorySearchOptions configures a memory search request.
 type MemorySearchOptions struct {
 	Query      string
+	UserID     string
 	InstanceID string
 	Limit      int
 }

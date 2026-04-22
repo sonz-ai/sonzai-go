@@ -46,6 +46,9 @@ func (m *MemoryResource) Search(ctx context.Context, agentID string, opts Memory
 	params := map[string]string{
 		"q": opts.Query,
 	}
+	if opts.UserID != "" {
+		params["user_id"] = opts.UserID
+	}
 	if opts.InstanceID != "" {
 		params["instance_id"] = opts.InstanceID
 	}

@@ -148,6 +148,7 @@ type KBEntitySchema struct {
 	ProjectID        string              `json:"project_id"`
 	SchemaID         string              `json:"schema_id"`
 	EntityType       string              `json:"entity_type"`
+	DisplayName      string              `json:"display_name,omitempty"`
 	Fields           []KBSchemaField     `json:"fields"`
 	Description      string              `json:"description,omitempty"`
 	SimilarityConfig *KBSimilarityConfig `json:"similarity_config,omitempty"`
@@ -336,6 +337,7 @@ type KBSearchOptions struct {
 // CreateSchemaOptions configures a schema creation request.
 type CreateSchemaOptions struct {
 	EntityType       string              `json:"entity_type"`
+	DisplayName      string              `json:"display_name,omitempty"`
 	Fields           []KBSchemaField     `json:"fields"`
 	Description      string              `json:"description,omitempty"`
 	SimilarityConfig *KBSimilarityConfig `json:"similarity_config,omitempty"`
@@ -766,6 +768,7 @@ type KBBulkUpdateEntry struct {
 type KBBulkUpdateOptions struct {
 	Source  string              `json:"source,omitempty"`
 	Updates []KBBulkUpdateEntry `json:"updates"`
+	Upsert  *bool               `json:"upsert,omitempty"` // default true; false skips missing nodes
 }
 
 // KBBulkUpdateResponse is the response from a bulk update.
