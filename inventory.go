@@ -184,6 +184,34 @@ func (inv *InventoryResource) Update(ctx context.Context, agentID, userID string
 	return &result, nil
 }
 
+// CreateItemOptions configures a dedicated inventory-item create call.
+// Equivalent to calling Update with Action:"add", but with clearer semantics —
+// the caller does not need to supply an action field.
+type CreateItemOptions struct {
+	ItemType    string         `json:"item_type"`             // Required: e.g. "medication", "pokemon_card"
+	Description string         `json:"description,omitempty"` // Natural language for KB search
+	Label       string         `json:"label,omitempty"`       // Short display label; takes priority over Description
+	KBNodeID    string         `json:"kb_node_id,omitempty"`  // Pre-resolved KB node ID; skips search when set
+	Properties  map[string]any `json:"properties,omitempty"`
+	ProjectID   string         `json:"project_id,omitempty"`
+	InstanceID  string         `json:"-"` // Query param for multi-instance scoping
+}
+
+// Create adds a new inventory item via the dedicated POST .../inventory/items route.
+// Equivalent to Update with Action:"add" but without requiring the action field.
+func (inv *InventoryResource) Create(ctx context.Context, agentID, userID string, opts CreateItemOptions) (*InventoryUpdateResponse, error) {
+	path := fmt.Sprintf("/api/v1/agents/%s/users/%s/inventory/items", agentID, url.PathEscape(userID))
+	if opts.InstanceID != "" {
+		path += "?instance_id=" + url.QueryEscape(opts.InstanceID)
+	}
+	var result InventoryUpdateResponse
+	err := inv.http.Post(ctx, path, opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // Query queries a user's inventory with optional KB-joined valuations and aggregation.
 func (inv *InventoryResource) Query(ctx context.Context, agentID, userID string, opts InventoryQueryOptions) (*InventoryQueryResponse, error) {
 	params := map[string]string{}
