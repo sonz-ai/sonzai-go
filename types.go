@@ -636,12 +636,18 @@ type AgentCapabilities struct {
 }
 
 // UpdateCapabilitiesOptions configures a capabilities update request.
+//
+// MemoryMode controls supplementary memory recall timing: "sync" (default)
+// blocks context build until recall returns; "async" lets recall race a
+// deadline for lower first-token latency. Leave empty to keep the current
+// value.
 type UpdateCapabilitiesOptions struct {
-	WebSearch       *bool `json:"webSearch,omitempty"`
-	RememberName    *bool `json:"rememberName,omitempty"`
-	ImageGeneration *bool `json:"imageGeneration,omitempty"`
-	Inventory       *bool `json:"inventory,omitempty"`
-	KnowledgeBase   *bool `json:"knowledgeBase,omitempty"`
+	WebSearch       *bool  `json:"webSearch,omitempty"`
+	RememberName    *bool  `json:"rememberName,omitempty"`
+	ImageGeneration *bool  `json:"imageGeneration,omitempty"`
+	Inventory       *bool  `json:"inventory,omitempty"`
+	KnowledgeBase   *bool  `json:"knowledgeBase,omitempty"`
+	MemoryMode      string `json:"memoryMode,omitempty"` // "sync" | "async"
 }
 
 // CustomToolListResponse is the response from listing custom tools.
