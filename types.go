@@ -98,10 +98,19 @@ type ExternalToolCall struct {
 
 // AgentToolCapabilities specifies which built-in tools to enable for an agent.
 type AgentToolCapabilities struct {
-	WebSearch       bool `json:"web_search"`
-	RememberName    bool `json:"remember_name"`
-	ImageGeneration bool `json:"image_generation"`
-	Inventory       bool `json:"inventory"`
+	WebSearch       bool   `json:"web_search"`
+	RememberName    bool   `json:"remember_name"`
+	ImageGeneration bool   `json:"image_generation"`
+	Inventory       bool   `json:"inventory"`
+	// KnowledgeBase enables the knowledge_search tool (reads from the
+	// agent's project-scoped KB). Pointer so omission leaves the current
+	// value unchanged on update.
+	KnowledgeBase *bool `json:"knowledge_base,omitempty"`
+	// MemoryMode selects supplementary memory recall timing: "sync"
+	// (default) blocks context build until recall returns; "async" lets
+	// recall race a deadline for lower first-token latency. Empty string
+	// leaves the current value unchanged on update.
+	MemoryMode string `json:"memory_mode,omitempty"` // "sync" | "async"
 }
 
 // AgentChatParams is the single-struct params type for Chat, ChatStream, and ChatStreamChannel.

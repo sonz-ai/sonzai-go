@@ -144,6 +144,13 @@ agent, _ := client.Agents.Create(ctx, sonzai.CreateAgentOptions{
         Openness: 85, Conscientiousness: 60, Extraversion: 70,
         Agreeableness: 75, Neuroticism: 25,
     },
+    // Tool capabilities are configurable at creation time:
+    ToolCapabilities: &sonzai.AgentToolCapabilities{
+        WebSearch:     true,
+        RememberName:  true,
+        KnowledgeBase: sonzai.Ptr(true), // enable project-scoped KB search
+        MemoryMode:    "async",           // "sync" (default) or "async"
+    },
 })
 
 fetched, _ := client.Agents.Get(ctx, agent.AgentID)
@@ -197,23 +204,25 @@ if err := <-errCh; err != nil {
 
 Supplementary memory recall can be **synchronous** (blocks on recall, facts always land in the current turn) or **asynchronous** (races a deadline, slow hits spill to the next turn for lower first-token latency). Default is `sync`.
 
-`memoryMode` is an agent-wide capability — you set it on the agent once with `UpdateCapabilities`, and every subsequent chat uses that mode until you change it:
+`memoryMode` is an agent-wide capability. You can set it at creation time or flip it later with `UpdateCapabilities`:
 
 ```go
-// Switch to async for lower first-token latency
-caps, _ := client.Agents.UpdateCapabilities(ctx, "agent-id", sonzai.UpdateCapabilitiesOptions{
+// At creation
+client.Agents.Create(ctx, sonzai.CreateAgentOptions{
+    Name: "Aria",
+    ToolCapabilities: &sonzai.AgentToolCapabilities{
+        MemoryMode: "async",
+    },
+})
+
+// Or flip an existing agent
+client.Agents.UpdateCapabilities(ctx, "agent-id", sonzai.UpdateCapabilitiesOptions{
     MemoryMode: "async", // or "sync"
 })
-fmt.Println(caps.MemoryMode)
 
 // Read the current mode
-current, _ := client.Agents.GetCapabilities(ctx, "agent-id")
-fmt.Println(current.MemoryMode)
-
-// Switch back to sync
-client.Agents.UpdateCapabilities(ctx, "agent-id", sonzai.UpdateCapabilitiesOptions{
-    MemoryMode: "sync",
-})
+caps, _ := client.Agents.GetCapabilities(ctx, "agent-id")
+fmt.Println(caps.MemoryMode)
 ```
 
 `UpdateCapabilities` is PATCH-style — omitted fields are left unchanged. To skip the context engine entirely on a single chat (e.g. test paths), set `SkipContextBuild: true` in the chat options.

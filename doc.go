@@ -68,3 +68,10 @@
 //	    }
 //	}
 package sonzai
+
+// Ptr returns a pointer to v. Convenience helper for option structs that use
+// pointer fields to distinguish "not set" from zero value (e.g.
+// UpdateCapabilitiesOptions.WebSearch, AgentToolCapabilities.KnowledgeBase).
+//
+//	opts := sonzai.UpdateCapabilitiesOptions{WebSearch: sonzai.Ptr(true)}
+func Ptr[T any](v T) *T { return &v }
