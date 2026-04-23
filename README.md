@@ -15,7 +15,7 @@ Zero dependencies — Go standard library only.
 ## Installation
 
 ```bash
-go get github.com/sonz-ai/sonzai-go@v1.4.0
+go get github.com/sonz-ai/sonzai-go@v1.4.2
 ```
 
 ```go
@@ -287,11 +287,24 @@ fact, _ := client.Agents.Memory.CreateFact(ctx, "agent-id", sonzai.CreateFactOpt
 
 // Update, delete, audit
 client.Agents.Memory.UpdateFact(ctx, "agent-id", fact.FactID, sonzai.UpdateFactOptions{Importance: 0.9})
-history, _ := client.Agents.Memory.FactHistory(ctx, "agent-id", fact.FactID)
+history, _ := client.Agents.Memory.GetFactHistory(ctx, "agent-id", fact.FactID)
 client.Agents.Memory.DeleteFact(ctx, "agent-id", fact.FactID)
 
+// Wisdom (agent-global) facts
+client.Agents.Memory.GetWisdomAudit(ctx, "agent-id", fact.FactID)
+client.Agents.Memory.DeleteWisdomFact(ctx, "agent-id", fact.FactID)
+
+// Bulk create up to 1000 pre-formed facts (source_type="manual", no LLM extraction)
+client.Agents.Memory.BulkCreateFacts(ctx, "agent-id", sonzai.BulkCreateFactsOptions{
+    UserID: "user-123",
+    Facts: []sonzai.BulkFactItem{
+        {Content: "prefers espresso"},
+        {Content: "based in Singapore", FactType: "location"},
+    },
+})
+
 // Seed memories in bulk at agent creation
-client.Agents.Memory.Seed(ctx, "agent-id", sonzai.SeedMemoryOptions{
+client.Agents.Memory.Seed(ctx, "agent-id", sonzai.SeedMemoriesOptions{
     UserID:   "user-123",
     Memories: []sonzai.SeedMemory{ /* ... */ },
 })
@@ -307,11 +320,13 @@ profile, _ := client.Agents.Personality.Get(ctx, "agent-id")
 fmt.Println(profile.Profile.Big5.Openness)
 fmt.Println(profile.Profile.Dimensions.Warmth)
 
-// Recent personality shifts
-shifts, _ := client.Agents.Personality.RecentShifts(ctx, "agent-id")
+// Recent personality shifts and significant moments
+shifts, _ := client.Agents.Personality.GetRecentShifts(ctx, "agent-id")
+moments, _ := client.Agents.Personality.GetSignificantMoments(ctx, "agent-id", 10)
 
 // Per-user overlays (how the agent perceives a specific user)
-overlay, _ := client.Agents.Personality.GetOverlay(ctx, "agent-id", "user-123")
+overlays, _ := client.Agents.Personality.ListUserOverlays(ctx, "agent-id")
+overlay, _ := client.Agents.Personality.GetUserOverlay(ctx, "agent-id", "user-123", sonzai.UserOverlayOptions{})
 ```
 
 ### Sessions & instances
@@ -338,17 +353,30 @@ client.Agents.Instances.Delete(ctx, "agent-id", instance.InstanceID)
 ### Context engine introspection
 
 ```go
-mood, _          := client.Agents.GetMood(ctx, "agent-id", sonzai.GetMoodOptions{UserID: "user-123"})
-relationships, _ := client.Agents.GetRelationships(ctx, "agent-id")
-habits, _        := client.Agents.ListHabits(ctx, "agent-id")
-goals, _         := client.Agents.ListGoals(ctx, "agent-id")
-interests, _     := client.Agents.GetInterests(ctx, "agent-id")
-diary, _         := client.Agents.GetDiary(ctx, "agent-id")
-users, _         := client.Agents.GetUsers(ctx, "agent-id")
-breakthroughs, _ := client.Agents.GetBreakthroughs(ctx, "agent-id")
+mood, _          := client.Agents.GetMood(ctx, "agent-id", "user-123", "")
+relationships, _ := client.Agents.GetRelationships(ctx, "agent-id", "user-123", "")
+habits, _        := client.Agents.ListHabits(ctx, "agent-id", "user-123", "")
+goals, _         := client.Agents.ListGoals(ctx, "agent-id", "user-123", "")
+interests, _     := client.Agents.GetInterests(ctx, "agent-id", "user-123", "")
+diary, _         := client.Agents.GetDiary(ctx, "agent-id", "user-123", "")
+users, _         := client.Agents.GetUsers(ctx, "agent-id", nil)
+breakthroughs, _ := client.Agents.GetBreakthroughs(ctx, "agent-id", "user-123", "")
+
+// Single-call enriched context (memory, personality, mood, relationships, goals,
+// plus recent_turns from this session for mid-session recall before consolidation runs)
+enriched, _ := client.Agents.GetContext(ctx, "agent-id", sonzai.GetContextOptions{
+    UserID: "user-123",
+    Query:  "what did we discuss earlier about espresso?",
+})
+for _, t := range enriched.RecentTurns {
+    fmt.Printf("[%s] %s: %s\n", t.Timestamp, t.Role, t.Content)
+}
 
 // Point-in-time personality snapshot
-snapshot, _ := client.Agents.GetTimeMachine(ctx, "agent-id", "2026-01-15T00:00:00Z")
+snapshot, _ := client.Agents.GetTimeMachine(ctx, "agent-id", sonzai.TimeMachineOptions{
+    At:     "2026-01-15T00:00:00Z",
+    UserID: "user-123",
+})
 ```
 
 ### Custom state (scoped key-value)
@@ -405,9 +433,14 @@ client.Knowledge.GetDocument(ctx, "project-id", doc.DocumentID)
 client.Knowledge.DeleteDocument(ctx, "project-id", doc.DocumentID)
 
 // Direct fact/graph insertion
-client.Knowledge.InsertFacts(ctx, "project-id", sonzai.KnowledgeFactBatch{
-    Entities:      []sonzai.KnowledgeEntity{ /* ... */ },
-    Relationships: []sonzai.KnowledgeRelationship{ /* ... */ },
+client.Knowledge.InsertFacts(ctx, "project-id", sonzai.InsertFactsOptions{
+    Source: "manual",
+    Facts: []sonzai.InsertFactEntry{
+        {EntityType: "person", Label: "Alice"},
+    },
+    Relationships: []sonzai.InsertRelEntry{
+        {FromLabel: "Alice", ToLabel: "Bob", EdgeType: "knows"},
+    },
 })
 
 // Cross-document semantic search
