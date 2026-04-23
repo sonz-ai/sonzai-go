@@ -1044,6 +1044,13 @@ type EnrichedContextResponse struct {
 	LoadedFacts       []map[string]interface{} `json:"loaded_facts,omitempty"`
 	LongTermSummaries []interface{}            `json:"long_term_summaries,omitempty"`
 
+	// RecentTurns are raw messages buffered by /process for the current
+	// session, in chronological order. Empty when the buffer is cold or
+	// /process hasn't been called yet this session. Closes the latency
+	// gap between a fact being said this turn and that fact becoming
+	// searchable via the consolidated fact pipeline.
+	RecentTurns []RecentTurn `json:"recent_turns,omitempty"`
+
 	// Layer 6b: Proactive
 	ProactiveMemories []interface{} `json:"proactive_memories,omitempty"`
 
@@ -1052,6 +1059,14 @@ type EnrichedContextResponse struct {
 
 	// Layer 7: Backend Context
 	BackendContext map[string]interface{} `json:"game_context,omitempty"`
+}
+
+// RecentTurn is a raw message from the current session, buffered by
+// /process and exposed via /context.recent_turns. Chronological order.
+type RecentTurn struct {
+	Role      string `json:"role"`      // "user" | "assistant" | "system"
+	Content   string `json:"content"`   // raw message content
+	Timestamp string `json:"timestamp"` // RFC3339 UTC, set by backend on Push
 }
 
 // ---------------------------------------------------------------------------
