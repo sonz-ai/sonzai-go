@@ -148,6 +148,55 @@ type CreateFactOptions struct {
 	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 
+// BulkFactItem describes a single fact in a BulkCreateFacts request.
+type BulkFactItem struct {
+	Content    string                 `json:"content"`
+	UserID     string                 `json:"user_id,omitempty"`
+	FactType   string                 `json:"fact_type,omitempty"`
+	Importance *float64               `json:"importance,omitempty"`
+	Confidence *float64               `json:"confidence,omitempty"`
+	Entities   []string               `json:"entities,omitempty"`
+	NodeID     string                 `json:"node_id,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// BulkCreateFactsOptions configures a bulk fact creation request.
+type BulkCreateFactsOptions struct {
+	Facts      []BulkFactItem `json:"facts"`
+	UserID     string         `json:"user_id,omitempty"`
+	InstanceID string         `json:"-"` // query param
+}
+
+// BulkCreateFactsResponse reports how many facts were written and returns them
+// in input order.
+type BulkCreateFactsResponse struct {
+	FactsCreated int64        `json:"facts_created"`
+	Facts        []AtomicFact `json:"facts"`
+}
+
+// BulkCreateFacts writes up to 1000 pre-formed facts in a single request.
+// source_type is "manual" — no LLM extraction. Individual fact failures are
+// logged server-side and skipped; the response reports how many were written.
+func (m *MemoryResource) BulkCreateFacts(ctx context.Context, agentID string, opts BulkCreateFactsOptions) (*BulkCreateFactsResponse, error) {
+	path := fmt.Sprintf("/api/v1/agents/%s/memory/facts/bulk", url.PathEscape(agentID))
+	if opts.InstanceID != "" {
+		path = path + "?instance_id=" + url.QueryEscape(opts.InstanceID)
+	}
+	body := struct {
+		Facts  []BulkFactItem `json:"facts"`
+		UserID string         `json:"user_id,omitempty"`
+	}{
+		Facts:  opts.Facts,
+		UserID: opts.UserID,
+	}
+	var result BulkCreateFactsResponse
+	err := m.http.Post(ctx, path, body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // UpdateFactOptions configures a fact update request.
 type UpdateFactOptions struct {
 	Content    string                 `json:"content,omitempty"`
