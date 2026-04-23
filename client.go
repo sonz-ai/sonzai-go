@@ -99,6 +99,9 @@ type Client struct {
 	// Tenants provides tenant lookup operations.
 	Tenants *TenantsResource
 
+	// Projects provides project management operations.
+	Projects *ProjectsResource
+
 	// APIKeys provides project API key management.
 	APIKeys *APIKeysResource
 
@@ -177,6 +180,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		CustomLLM:            &CustomLLMResource{http: hc},
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		Tenants:              &TenantsResource{http: hc},
+		Projects:             &ProjectsResource{http: hc},
 		APIKeys:              &APIKeysResource{http: hc},
 		Analytics:            &AnalyticsResource{http: hc},
 		UserPersonas:         &UserPersonasResource{http: hc},
