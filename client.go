@@ -123,6 +123,16 @@ type Client struct {
 	// Support provides support ticket management.
 	Support *SupportResource
 
+	// Skills provides project-scoped skill library + per-agent enablement.
+	// Skills are markdown playbooks the agent loads on demand via the
+	// sonzai_load_skill tool.
+	Skills *SkillsResource
+
+	// Wisdom provides attributed-wisdom operations: cross-user, agent-
+	// scoped facts and relations gated on the WisdomPublicSharing
+	// capability. Includes CRUD, relations, bulk import, and audit.
+	Wisdom *WisdomResource
+
 	http *httpClient
 }
 
@@ -188,6 +198,8 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Org:                  &OrgResource{http: hc},
 		Workbench:            &WorkbenchResource{http: hc},
 		Support:              &SupportResource{http: hc},
+		Skills:               &SkillsResource{http: hc},
+		Wisdom:               &WisdomResource{http: hc},
 		http:                 hc,
 	}, nil
 }
