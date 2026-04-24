@@ -1334,9 +1334,27 @@ type DiaryResponse struct {
 // Users
 // ---------------------------------------------------------------------------
 
+// UserMetadata holds contact details and custom fields for a primed user.
+type UserMetadata struct {
+	Email  string            `json:"email,omitempty"`
+	Phone  string            `json:"phone,omitempty"`
+	Custom map[string]string `json:"custom,omitempty"`
+}
+
+// UserEntry represents a user known to an agent.
+type UserEntry struct {
+	UserID            string        `json:"user_id"`
+	DisplayName       string        `json:"display_name,omitempty"`
+	Role              string        `json:"role,omitempty"`
+	Metadata          *UserMetadata `json:"metadata,omitempty"`
+	LastInteractionAt string        `json:"last_interaction_at,omitempty"`
+	CreatedAt         string        `json:"created_at,omitempty"`
+}
+
 // UsersResponse wraps agent users data.
 type UsersResponse struct {
-	Users []map[string]interface{} `json:"users"`
+	Users []UserEntry `json:"users"`
+	Total int         `json:"total"`
 }
 
 // GetUsersOptions configures a get users request.
@@ -1345,6 +1363,16 @@ type GetUsersOptions struct {
 	Offset    int    `url:"offset,omitempty"`
 	SortBy    string `url:"sort_by,omitempty"`
 	SortOrder string `url:"sort_order,omitempty"`
+	// Phone filters users by phone number (digits-only comparison, platform-side).
+	Phone string `url:"phone,omitempty"`
+	// Email filters users by email address (case-insensitive, platform-side).
+	Email string `url:"email,omitempty"`
+	// Search filters by display name or email (case-insensitive substring, platform-side).
+	Search string `url:"search,omitempty"`
+	// CustomFilters adds custom.{key}={value} query params for server-side filtering.
+	// Supports operators via key suffixes: __neq, __gte, __lte, __gt, __lt, __in, __contains.
+	// Example: map[string]string{"status": "delivered", "score__gte": "70"}
+	CustomFilters map[string]string `url:"-"`
 }
 
 // ---------------------------------------------------------------------------

@@ -403,6 +403,7 @@ func (a *AgentsResource) GetDiary(ctx context.Context, agentID string, userID, i
 }
 
 // GetUsers returns users for an agent.
+// Supports server-side filtering via GetUsersOptions.CustomFilters, Phone, Email, and Search.
 func (a *AgentsResource) GetUsers(ctx context.Context, agentID string, opts *GetUsersOptions) (*UsersResponse, error) {
 	params := map[string]string{}
 	if opts != nil {
@@ -417,6 +418,18 @@ func (a *AgentsResource) GetUsers(ctx context.Context, agentID string, opts *Get
 		}
 		if opts.SortOrder != "" {
 			params["sort_order"] = opts.SortOrder
+		}
+		if opts.Phone != "" {
+			params["phone"] = opts.Phone
+		}
+		if opts.Email != "" {
+			params["email"] = opts.Email
+		}
+		if opts.Search != "" {
+			params["search"] = opts.Search
+		}
+		for k, v := range opts.CustomFilters {
+			params["custom."+k] = v
 		}
 	}
 	var result UsersResponse
