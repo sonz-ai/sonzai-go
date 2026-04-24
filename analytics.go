@@ -19,6 +19,36 @@ type AnalyticsOptions struct {
 	Start     string
 	End       string
 	ProjectID string
+	// AgentID scopes the result to a single agent. Only honored by endpoints
+	// that accept per-agent filtering (e.g. Composio usage).
+	AgentID string
+}
+
+// ComposioAppUsage is per-app tool-call volume and cost within the queried window.
+type ComposioAppUsage struct {
+	App     string  `json:"app"`
+	Calls   int64   `json:"calls"`
+	CostUSD float64 `json:"cost_usd"`
+}
+
+// ComposioUsagePeriod is the actual window returned by the server (after
+// defaulting to the last 30 days when Start/End are omitted).
+type ComposioUsagePeriod struct {
+	Start string `json:"start"`
+	End   string `json:"end"`
+}
+
+// ComposioUsageSummary is aggregate totals across every app in the window.
+type ComposioUsageSummary struct {
+	TotalCalls   int64   `json:"total_calls"`
+	TotalCostUSD float64 `json:"total_cost_usd"`
+}
+
+// ComposioUsageResponse is the payload returned from /analytics/composio.
+type ComposioUsageResponse struct {
+	ByApp   []ComposioAppUsage   `json:"by_app"`
+	Period  ComposioUsagePeriod  `json:"period"`
+	Summary ComposioUsageSummary `json:"summary"`
 }
 
 func (o *AnalyticsOptions) toParams() map[string]string {
@@ -40,6 +70,9 @@ func (o *AnalyticsOptions) toParams() map[string]string {
 	}
 	if o.ProjectID != "" {
 		p["project_id"] = o.ProjectID
+	}
+	if o.AgentID != "" {
+		p["agent_id"] = o.AgentID
 	}
 	return p
 }
@@ -87,4 +120,16 @@ func (a *AnalyticsResource) Realtime(ctx context.Context, opts *AnalyticsOptions
 		return nil, err
 	}
 	return result, nil
+}
+
+// ComposioUsage returns Composio tool-call counts and costs grouped by app
+// (gmail, slack, github, …) over the requested window. Start/End accept
+// "YYYY-MM-DD"; when both are empty the server defaults to the last 30 days.
+// Setting AgentID scopes the result to a single agent.
+func (a *AnalyticsResource) ComposioUsage(ctx context.Context, opts *AnalyticsOptions) (*ComposioUsageResponse, error) {
+	var result ComposioUsageResponse
+	if err := a.http.Get(ctx, "/api/v1/analytics/composio", opts.toParams(), &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
