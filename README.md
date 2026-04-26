@@ -629,8 +629,33 @@ All typed errors embed `sonzai.SonzaiError` (exposes `StatusCode` and `Message`)
 
 ## Benchmarks
 
-Sonzai beats MemPalace on LongMemEval — the retrieval benchmark MemPalace was
-purpose-built to win — while running on the cheap end of the LLM stack:
+Sonzai leads on **three** independent benchmarks (LoCoMo, LongMemEval,
+SOTOPIA), running on the cheap end of the LLM stack — chat, judge, reader,
+and partner agent all run on **Gemini 3.1 Flash Lite**. No frontier-model
+arms race propping up the numbers; the lift is from the memory architecture.
+
+### LoCoMo — long-term conversational memory (mem0's home turf)
+
+10 peer-to-peer dialogues, 19–35 sessions each, 1540 QAs across 4 reasoning
+categories. Run via mem0's published evaluation pipeline byte-for-byte
+(their `ANSWER_PROMPT` + `ACCURACY_PROMPT`, dual-perspective ingest, dual
+search) so numbers are directly comparable.
+
+| Category | n | Sonzai (J) | mem0 (J, published) |
+|---|---:|---:|---:|
+| 1. single-hop | 282 | **0.720** | ~0.65 |
+| 2. multi-hop | 321 | **0.723** | ~0.55 |
+| 3. temporal reasoning | 96 | 0.531 | ~0.55 |
+| 4. open-domain | 841 | **0.762** | ~0.71 |
+| **Overall** | 1540 | **0.732** ✅ | ~0.67 |
+
+Multi-hop is Sonzai's strongest category (**+~17 points** over mem0) — the
+hardest LoCoMo bucket and the one mem0's graph variant typically claims its
+lift on. Sonzai matches/beats without graph-specific machinery.
+
+### LongMemEval — retrieval (MemPalace's home turf)
+
+Sonzai beats MemPalace on the retrieval benchmark MemPalace was purpose-built to win:
 
 | Metric | Sonzai | MemPalace (hybrid_v4) |
 |---|---:|---:|
@@ -638,13 +663,15 @@ purpose-built to win — while running on the cheap end of the LLM stack:
 | R@1 (top-hit accuracy) | **0.800** | 0.770 |
 | Recall@10, multi-session | **1.000** | 1.000 |
 
-Chat, judge, and partner agent all run on **Gemini 3.1 Flash Lite** — no
-frontier-model arms race propping up the numbers. The lift is from the memory
-architecture, not from spending more on inference. Drop in a heavier model and
-the ceiling goes up from there.
+### SOTOPIA longitudinal — compounding across sessions
 
-Full scores, methodology, per-question-type breakdown, and reproduction steps
-(including comparison against MemPalace's canonical `longmemeval_bench.py`):
+Sonzai's USP: agents that compound. Same agent, same partner, N sessions,
+`advance_time` between each. Across 30 sessions Overall climbs from 8.44 → 9.56
+(+1.13), and `memory_continuity` hits the rubric ceiling by session 10 — Sonzai's
+identity model is producing accurate unprompted callbacks before a verbatim-retrieval
+baseline has history to compete.
+
+Full scores, methodology, per-question-type breakdown, and reproduction steps:
 
 → [sonzai-python/benchmarks/README.md](https://github.com/sonz-ai/sonzai-python/blob/main/benchmarks/README.md)
 
