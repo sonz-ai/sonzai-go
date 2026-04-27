@@ -20,9 +20,14 @@ type SDKPersonalityDimensions struct {
 }
 
 // AgentFeatureCapabilities specifies feature capabilities for an agent (image generation, inventory, etc.).
+//
+// Inventory is opt-out: server-side default is enabled (count/sum/avg
+// aggregate-compute tools wired automatically). Pass &false explicitly
+// to disable; nil leaves the server default. ImageGeneration stays a
+// plain bool — required and false-default.
 type AgentFeatureCapabilities struct {
-	ImageGeneration bool `json:"image_generation"`
-	Inventory       bool `json:"inventory"`
+	ImageGeneration bool  `json:"image_generation"`
+	Inventory       *bool `json:"inventory,omitempty"`
 }
 
 // CreateAgentOptions configures an agent creation request.

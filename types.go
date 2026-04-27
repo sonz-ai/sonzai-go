@@ -97,11 +97,16 @@ type ExternalToolCall struct {
 }
 
 // AgentToolCapabilities specifies which built-in tools to enable for an agent.
+//
+// Inventory is opt-out: server-side default is enabled (sonzai_inventory
+// + sonzai_inventory_update tools wired automatically so count/sum/avg
+// questions resolve via authoritative aggregates). Pass &false explicitly
+// to disable; nil leaves the server default.
 type AgentToolCapabilities struct {
-	WebSearch       bool   `json:"web_search"`
-	RememberName    bool   `json:"remember_name"`
-	ImageGeneration bool   `json:"image_generation"`
-	Inventory       bool   `json:"inventory"`
+	WebSearch       bool  `json:"web_search"`
+	RememberName    bool  `json:"remember_name"`
+	ImageGeneration bool  `json:"image_generation"`
+	Inventory       *bool `json:"inventory,omitempty"`
 	// KnowledgeBase enables the knowledge_search tool (reads from the
 	// agent's project-scoped KB). Pointer so omission leaves the current
 	// value unchanged on update.
