@@ -343,7 +343,10 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 		return newErrorForStatus(resp.StatusCode, msg, nil)
 	}
 
-	reader := bufio.NewReaderSize(resp.Body, 64*1024)
+	reader := bufio.NewReaderSize(resp.Body, 5*1024*1024)
+	var chunkBuf []string
+	chunkTotal := 0
+
 	for {
 		line, err := reader.ReadString('\n')
 		line = strings.TrimSpace(line)
@@ -353,7 +356,28 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 				return nil
 			}
 			if strings.HasPrefix(line, "data: ") {
-				if cbErr := callback(json.RawMessage(line[6:])); cbErr != nil {
+				raw := json.RawMessage(line[6:])
+
+				var envelope sseChunkEnvelope
+				if json.Unmarshal(raw, &envelope) == nil && envelope.Chunk != nil {
+					if envelope.Chunk.Index == 0 {
+						chunkBuf = make([]string, 0, envelope.Chunk.Total)
+						chunkTotal = envelope.Chunk.Total
+					}
+					chunkBuf = append(chunkBuf, envelope.Data)
+
+					if len(chunkBuf) == chunkTotal {
+						assembled := json.RawMessage(strings.Join(chunkBuf, ""))
+						chunkBuf = nil
+						chunkTotal = 0
+						if cbErr := callback(assembled); cbErr != nil {
+							return cbErr
+						}
+					}
+					continue
+				}
+
+				if cbErr := callback(raw); cbErr != nil {
 					return cbErr
 				}
 			}
