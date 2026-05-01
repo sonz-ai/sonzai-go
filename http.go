@@ -402,26 +402,53 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 		return newErrorForStatus(resp.StatusCode, msg, nil)
 	}
 
-	scanner := bufio.NewScanner(resp.Body)
-	// Increase buffer size to handle large SSE responses (default is 64KB, set to 1MB max)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		if line == "data: [DONE]" {
-			return nil
-		}
-		if strings.HasPrefix(line, "data: ") {
-			data := line[6:]
-			if err := callback(json.RawMessage(data)); err != nil {
-				return err
+	reader := bufio.NewReaderSize(resp.Body, 5*1024*1024)
+	var chunkBuf []string
+	chunkTotal := 0
+
+	for {
+		line, err := reader.ReadString('\n')
+		line = strings.TrimSpace(line)
+
+		if line != "" {
+			if line == "data: [DONE]" {
+				return nil
+			}
+			if strings.HasPrefix(line, "data: ") {
+				raw := json.RawMessage(line[6:])
+
+				var envelope sseChunkEnvelope
+				if json.Unmarshal(raw, &envelope) == nil && envelope.Chunk != nil {
+					if envelope.Chunk.Index == 0 {
+						chunkBuf = make([]string, 0, envelope.Chunk.Total)
+						chunkTotal = envelope.Chunk.Total
+					}
+					chunkBuf = append(chunkBuf, envelope.Data)
+
+					if len(chunkBuf) == chunkTotal {
+						assembled := json.RawMessage(strings.Join(chunkBuf, ""))
+						chunkBuf = nil
+						chunkTotal = 0
+						if cbErr := callback(assembled); cbErr != nil {
+							return cbErr
+						}
+					}
+					continue
+				}
+
+				if cbErr := callback(raw); cbErr != nil {
+					return cbErr
+				}
 			}
 		}
-	}
 
-	return scanner.Err()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return fmt.Errorf("read SSE stream: %w", err)
+		}
+	}
 }
 
 // UploadFile sends a multipart/form-data POST request and unmarshals the
