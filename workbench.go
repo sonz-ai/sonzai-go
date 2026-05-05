@@ -114,3 +114,21 @@ func (w *WorkbenchResource) GenerateSeedMemories(ctx context.Context, body map[s
 	}
 	return result, nil
 }
+
+// CheckpointEvaluateRequest is the body of /workbench/checkpoint-evaluate.
+type CheckpointEvaluateRequest struct {
+	InstanceID   string `json:"instanceId"`
+	SessionIndex int64  `json:"sessionIndex"`
+	JudgeModel   string `json:"judgeModel"`
+}
+
+// CheckpointEvaluate runs an LLM-judge evaluation at a fixed session checkpoint
+// in a workbench run. Used by the eval harness to score progressing personas at
+// session boundaries (e.g. session 1, 10, 30) against a rubric.
+func (w *WorkbenchResource) CheckpointEvaluate(ctx context.Context, req CheckpointEvaluateRequest) (map[string]any, error) {
+	var result map[string]any
+	if err := w.http.Post(ctx, "/api/v1/workbench/checkpoint-evaluate", req, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}

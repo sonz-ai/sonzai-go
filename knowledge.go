@@ -531,6 +531,32 @@ func (k *KnowledgeResource) DeleteNode(ctx context.Context, projectID, nodeID st
 	return k.http.Delete(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes/%s", projectID, nodeID), nil)
 }
 
+// AgentDeleteNodeRequest is the body of the agent-scoped soft-delete with
+// label CAS. The expected_label must match the node's stored label or the
+// server returns 409 stale_value (surfaced as an HTTPError).
+type AgentDeleteNodeRequest struct {
+	ExpectedLabel string `json:"expected_label"`
+	Reason        string `json:"reason,omitempty"`
+}
+
+// AgentDeleteNodeResponse mirrors KbAgentDeleteNodeOutputBody.
+type AgentDeleteNodeResponse struct {
+	OK bool `json:"ok"`
+}
+
+// AgentDeleteNode performs an agent-scoped soft-delete of a KB node with a
+// label compare-and-swap. Used by the knowledge_delete agent tool. The X-Agent-Id
+// audit header is not yet plumbed through this binding; callers needing it
+// should fall back to the lower-level transport.
+func (k *KnowledgeResource) AgentDeleteNode(ctx context.Context, projectID, nodeID string, req AgentDeleteNodeRequest) (*AgentDeleteNodeResponse, error) {
+	var result AgentDeleteNodeResponse
+	err := k.http.Post(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes/%s/agent-delete", projectID, nodeID), req, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // GetNodeHistory returns version history for a node.
 func (k *KnowledgeResource) GetNodeHistory(ctx context.Context, projectID, nodeID string, limit int) (*KBNodeHistoryResponse, error) {
 	params := map[string]string{}
