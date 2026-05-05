@@ -59,6 +59,19 @@ type ChatStreamEvent struct {
 	ErrorMessage      string             `json:"error_message,omitempty"`
 	ErrorCode         string             `json:"error_code,omitempty"`
 	IsTokenError      bool               `json:"is_token_error,omitempty"`
+
+	// Phase is the agentic-loop lifecycle stage on type=phase events
+	// (iter-140u-1 progressive elaboration). Values: planning,
+	// tool_call, composing, verifying, complete. Lets clients show
+	// "looking up your inventory…" / "composing answer…" while the
+	// model is silent. Naive consumers can ignore phase events
+	// entirely (they carry no choices/content).
+	Phase string `json:"phase,omitempty"`
+
+	// Tool is the in-progress tool name on phase=tool_call events
+	// (e.g. "sonzai_inventory", "memory_search"). Empty on other
+	// phase values.
+	Tool string `json:"tool,omitempty"`
 }
 
 // Content returns the text content from the first choice delta,
