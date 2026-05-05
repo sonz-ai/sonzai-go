@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 // AgentsResource provides agent-scoped operations.
@@ -134,6 +135,76 @@ func (a *AgentsResource) ChatStreamChannel(ctx context.Context, params AgentChat
 	}()
 
 	return ch, errCh
+}
+
+// ChatAsync queues a chat request for background processing and
+// returns a processing_id immediately (iter-140u-2). Use this when
+// the chat may run longer than your network's tolerance for an open
+// SSE stream (Cloudflare/LB ~100s).
+//
+// Poll the result via PollChatResult, or use ChatAsyncBlocking for
+// a convenience helper that polls until terminal.
+//
+// The request body is the same as Chat / ChatStream — agent ID,
+// messages, capabilities, etc.
+func (a *AgentsResource) ChatAsync(ctx context.Context, params AgentChatParams) (*ChatAsyncResponse, error) {
+	var result ChatAsyncResponse
+	err := a.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/chat/async", params.AgentID), params.ChatOptions, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// PollChatResult fetches the current state of an async chat task.
+// Status will be "queued" or "running" while the agent is still
+// working, and "complete" or "failed" once terminal. The Response
+// field accumulates streamed text as it arrives, so a poller mid-
+// flight already sees a partial answer.
+func (a *AgentsResource) PollChatResult(ctx context.Context, agentID, processingID string) (*ChatAsyncResult, error) {
+	var result ChatAsyncResult
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/chat/result/%s", agentID, processingID), nil, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ChatAsyncBlocking is a convenience helper that POSTs an async chat
+// and polls the result endpoint until terminal (complete or failed).
+// Backoff: starts at 1s, doubles up to 5s. Honors ctx cancellation —
+// the server-side task continues even after ctx is cancelled (that's
+// the async pattern), so cancelling here just stops local polling.
+//
+// Returns the final ChatAsyncResult. Caller should inspect Status:
+// "complete" → Response is the answer; "failed" → Error explains why.
+func (a *AgentsResource) ChatAsyncBlocking(ctx context.Context, params AgentChatParams) (*ChatAsyncResult, error) {
+	queued, err := a.ChatAsync(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("queue async chat: %w", err)
+	}
+	delay := 1 * time.Second
+	const maxDelay = 5 * time.Second
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(delay):
+		}
+		result, perr := a.PollChatResult(ctx, params.AgentID, queued.ProcessingID)
+		if perr != nil {
+			return nil, fmt.Errorf("poll async chat: %w", perr)
+		}
+		if result.IsTerminal() {
+			return result, nil
+		}
+		if delay < maxDelay {
+			delay *= 2
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
+	}
 }
 
 // GetMood returns the current mood for an agent.

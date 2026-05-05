@@ -2,6 +2,7 @@ package sonzai
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // GameContext provides game-specific context for chat requests.
@@ -94,6 +95,43 @@ func (e *ChatStreamEvent) IsFinished() bool {
 		return *e.Choices[0].FinishReason == "stop"
 	}
 	return e.Type == "complete"
+}
+
+// ChatAsyncResponse is the immediate 202-Accepted return shape for
+// `POST /agents/{id}/chat/async` (iter-140u-2). The caller stores
+// ProcessingID and polls /chat/result/{ProcessingID} until terminal.
+type ChatAsyncResponse struct {
+	ProcessingID string `json:"processing_id"`
+	Status       string `json:"status"`
+}
+
+// ChatAsyncResult is the JSON shape returned by
+// `GET /agents/{id}/chat/result/{processing_id}` (iter-140u-2).
+//
+//	Status:     queued | running | complete | failed
+//	Response:   accumulated assistant message (partial while running,
+//	            final on complete). Best-effort partial text is also
+//	            returned on a deadline-aborted complete.
+//	Phase:      latest progressive-elaboration phase (iter-140u-1):
+//	            planning | tool_call | composing | verifying | complete.
+//	Tool:       latest tool name on phase=tool_call (sticky).
+//	SideEffects: side-effects payload from the terminal chunk.
+//	Error:      populated only on status=failed.
+type ChatAsyncResult struct {
+	Status      string          `json:"status"`
+	Response    string          `json:"response,omitempty"`
+	Phase       string          `json:"phase,omitempty"`
+	Tool        string          `json:"tool,omitempty"`
+	SideEffects json.RawMessage `json:"side_effects,omitempty"`
+	Error       string          `json:"error,omitempty"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
+// IsTerminal returns true when the async chat task has reached a
+// terminal state (complete or failed) — i.e. polling can stop.
+func (r *ChatAsyncResult) IsTerminal() bool {
+	return r.Status == "complete" || r.Status == "failed"
 }
 
 // ChatResponse is the aggregated result of a non-streaming chat call.
