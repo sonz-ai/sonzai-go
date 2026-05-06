@@ -197,6 +197,13 @@ type ChatOptions struct {
 	ToolDefinitions      []ToolDefinition       `json:"tool_definitions,omitempty"`
 	MaxTurns             int                    `json:"max_turns,omitempty"`
 	SkipContextBuild     bool                   `json:"skip_context_build,omitempty"`
+	// SkipServerHistoryCache instructs the Platform NOT to load or write
+	// its Redis session message cache for this turn. Set true when this
+	// caller is the authoritative source of conversation history (e.g.
+	// orchestrator guide/FTUE flows where ScyllaDB holds the canonical
+	// transcript). Without this, caller-supplied history is double-loaded
+	// against the Platform's Redis cache and the LLM sees every turn twice.
+	SkipServerHistoryCache bool                 `json:"skip_server_history_cache,omitempty"`
 	GameContext          *GameContext           `json:"game_context,omitempty"`
 	Capabilities         []string               `json:"capabilities,omitempty"`
 	SkillLevels          map[string]int32       `json:"skill_levels,omitempty"`
