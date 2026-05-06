@@ -457,6 +457,86 @@ type SessionResponse struct {
 }
 
 // ---------------------------------------------------------------------------
+// Realtime per-turn API
+// ---------------------------------------------------------------------------
+
+// TurnToolCallFunction is the function payload of a tool call on a TurnMessage.
+type TurnToolCallFunction struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+// TurnToolCall is an OpenAI-compatible tool call entry on an assistant TurnMessage.
+type TurnToolCall struct {
+	ID       string               `json:"id"`
+	Type     string               `json:"type"`
+	Function TurnToolCallFunction `json:"function"`
+}
+
+// TurnMessage is a single message in a /turn request.
+// Only the latest exchange is sent — not the full history.
+type TurnMessage struct {
+	Role       string         `json:"role"`
+	Content    string         `json:"content,omitempty"`
+	ToolCallID string         `json:"tool_call_id,omitempty"`
+	ToolCalls  []TurnToolCall `json:"tool_calls,omitempty"`
+}
+
+// TurnMood is the sync mood-only extraction returned inline on /turn.
+// nil when the analyzer didn't produce a mood update.
+type TurnMood struct {
+	Valence     float64 `json:"valence"`
+	Arousal     float64 `json:"arousal"`
+	Tension     float64 `json:"tension"`
+	Affiliation float64 `json:"affiliation"`
+	Reason      string  `json:"reason,omitempty"`
+	TriggerType string  `json:"trigger_type,omitempty"`
+}
+
+// FetchNextContext, when set on TurnOptions, asks /turn to also fetch
+// an enriched context (same shape as GET /context) and inline it on
+// the response under next_context — saves a round-trip on the next turn.
+type FetchNextContext struct {
+	Query    string `json:"query,omitempty"`
+	Language string `json:"language,omitempty"`
+	Timezone string `json:"timezone,omitempty"`
+}
+
+// TurnOptions configures a POST /turn request.
+type TurnOptions struct {
+	UserID           string            `json:"userId"`
+	UserDisplayName  string            `json:"userDisplayName,omitempty"`
+	UserTimezone     string            `json:"userTimezone,omitempty"`
+	InstanceID       string            `json:"instanceId,omitempty"`
+	Messages         []TurnMessage     `json:"messages"`
+	Provider         string            `json:"provider,omitempty"`
+	Model            string            `json:"model,omitempty"`
+	FetchNextContext *FetchNextContext `json:"fetchNextContext,omitempty"`
+}
+
+// TurnResult is the response body from POST /turn.
+type TurnResult struct {
+	Success          bool            `json:"success"`
+	ExtractionID     string          `json:"extraction_id"`
+	ExtractionStatus string          `json:"extraction_status"`
+	Mood             *TurnMood       `json:"mood,omitempty"`
+	NextContext      json.RawMessage `json:"next_context,omitempty"`
+}
+
+// TurnStatusResult is the response from GET /agents/{agentId}/turns/{extractionId}/status.
+// State is one of: queued, running, done, failed.
+type TurnStatusResult struct {
+	ExtractionID string `json:"extraction_id"`
+	State        string `json:"state"`
+	Error        string `json:"error,omitempty"`
+}
+
+// IsTerminal reports whether the deferred-turn job has reached a final state.
+func (s *TurnStatusResult) IsTerminal() bool {
+	return s.State == "done" || s.State == "failed"
+}
+
+// ---------------------------------------------------------------------------
 // Instances
 // ---------------------------------------------------------------------------
 

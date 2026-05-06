@@ -12,11 +12,19 @@ type SessionsResource struct {
 }
 
 // SessionStartOptions configures a session start request.
+//
+// Provider/Model set session-level defaults that apply to caller-overridable
+// post-processing tasks (fact extraction, mood analysis, per-turn extraction).
+// Both must be set together to take effect; per-call /turn or /sessions/end
+// requests can override them. Otherwise the server-side resolver picks a
+// default (currently gemini-3.1-flash-lite-preview).
 type SessionStartOptions struct {
 	UserID          string           `json:"user_id"`
 	UserDisplayName string           `json:"user_display_name,omitempty"`
 	SessionID       string           `json:"session_id"`
 	InstanceID      string           `json:"instance_id,omitempty"`
+	Provider        string           `json:"provider,omitempty"`
+	Model           string           `json:"model,omitempty"`
 	ToolDefinitions []ToolDefinition `json:"tool_definitions,omitempty"`
 }
 
@@ -171,4 +179,152 @@ func (s *SessionsResource) SetTools(ctx context.Context, agentID, sessionID stri
 		return nil, err
 	}
 	return &result, nil
+}
+
+// Turn submits a conversation turn to the realtime per-turn API.
+//
+// Runs sync mood-only extraction inline and publishes the rest of the
+// post-processing (facts, personality, habits, etc.) as a deferred work
+// item; poll the status with TurnStatus using result.ExtractionID.
+//
+// /turn does not auto-create sessions — call Sessions.Start first when you
+// need session-level tool definitions or provider/model defaults.
+func (s *SessionsResource) Turn(ctx context.Context, agentID, sessionID string, opts TurnOptions) (*TurnResult, error) {
+	var result TurnResult
+	err := s.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/%s/turn", agentID, sessionID), opts, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// TurnStatus polls the lifecycle state of a deferred-turn job. State is
+// one of queued, running, done, failed. Callers should poll with
+// exponential backoff until TurnStatusResult.IsTerminal returns true.
+func (s *SessionsResource) TurnStatus(ctx context.Context, agentID, extractionID string) (*TurnStatusResult, error) {
+	var result TurnStatusResult
+	err := s.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/turns/%s/status", agentID, extractionID), nil, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// StartSession begins a chat session and returns an ergonomic *Session
+// handle that owns the agent/user/session triple plus optional
+// provider/model defaults. Subsequent Context / Turn / End calls on the
+// handle automatically thread these through; per-call options on those
+// methods override the defaults.
+//
+// Existing callers that only need the boolean success response should
+// keep using Start.
+func (s *SessionsResource) StartSession(ctx context.Context, agentID string, opts SessionStartOptions) (*Session, error) {
+	resp, err := s.Start(ctx, agentID, opts)
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil && !resp.Success {
+		return nil, fmt.Errorf("session start returned success=false")
+	}
+	return &Session{
+		sessions:        s,
+		AgentID:         agentID,
+		UserID:          opts.UserID,
+		UserDisplayName: opts.UserDisplayName,
+		SessionID:       opts.SessionID,
+		InstanceID:      opts.InstanceID,
+		Provider:        opts.Provider,
+		Model:           opts.Model,
+	}, nil
+}
+
+// Session is an ergonomic wrapper around the agent/user/session triple
+// returned by StartSession. It threads provider/model defaults through
+// Context/Turn/End calls and lets the caller skip repeating identifiers.
+//
+// Per-call provider/model on TurnOptions override the session defaults;
+// otherwise the server-side resolver picks a default model.
+type Session struct {
+	sessions *SessionsResource
+
+	AgentID         string
+	UserID          string
+	UserDisplayName string
+	SessionID       string
+	InstanceID      string
+	Provider        string
+	Model           string
+}
+
+// ContextOptions configures a Session.Context call. Mirrors the relevant
+// subset of GetContextOptions; user/session/instance come from the Session
+// handle.
+type ContextOptions struct {
+	Query    string `json:"query,omitempty"`
+	Language string `json:"language,omitempty"`
+	Timezone string `json:"timezone,omitempty"`
+}
+
+// Context fetches the enriched agent context for this session — equivalent
+// to AgentsResource.GetContext but pre-populated from the Session handle.
+func (s *Session) Context(ctx context.Context, opts ContextOptions) (*EnrichedContextResponse, error) {
+	return (&AgentsResource{http: s.sessions.http}).GetContext(ctx, s.AgentID, GetContextOptions{
+		UserID:     s.UserID,
+		SessionID:  s.SessionID,
+		InstanceID: s.InstanceID,
+		Query:      opts.Query,
+		Language:   opts.Language,
+		Timezone:   opts.Timezone,
+	})
+}
+
+// Turn submits a conversation turn for this session. Provider/Model on
+// opts override the session defaults; otherwise the session defaults
+// flow through. UserID/InstanceID are pre-filled from the handle.
+func (s *Session) Turn(ctx context.Context, opts TurnOptions) (*TurnResult, error) {
+	if opts.UserID == "" {
+		opts.UserID = s.UserID
+	}
+	if opts.UserDisplayName == "" {
+		opts.UserDisplayName = s.UserDisplayName
+	}
+	if opts.InstanceID == "" {
+		opts.InstanceID = s.InstanceID
+	}
+	// Per-call provider/model wins; only fall back to session defaults
+	// when both sides on the call are empty.
+	if opts.Provider == "" && opts.Model == "" {
+		opts.Provider = s.Provider
+		opts.Model = s.Model
+	}
+	return s.sessions.Turn(ctx, s.AgentID, s.SessionID, opts)
+}
+
+// TurnStatus polls the deferred-turn pipeline state for a previously
+// submitted Turn on this session.
+func (s *Session) TurnStatus(ctx context.Context, extractionID string) (*TurnStatusResult, error) {
+	return s.sessions.TurnStatus(ctx, s.AgentID, extractionID)
+}
+
+// End concludes the session. The handle is unusable afterwards; create
+// a new one via StartSession for the next session.
+func (s *Session) End(ctx context.Context, opts ...SessionEndOptions) error {
+	var endOpts SessionEndOptions
+	if len(opts) > 0 {
+		endOpts = opts[0]
+	}
+	if endOpts.UserID == "" {
+		endOpts.UserID = s.UserID
+	}
+	if endOpts.SessionID == "" {
+		endOpts.SessionID = s.SessionID
+	}
+	if endOpts.InstanceID == "" {
+		endOpts.InstanceID = s.InstanceID
+	}
+	if endOpts.UserDisplayName == "" {
+		endOpts.UserDisplayName = s.UserDisplayName
+	}
+	_, err := s.sessions.End(ctx, s.AgentID, endOpts)
+	return err
 }
