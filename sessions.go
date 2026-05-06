@@ -96,14 +96,31 @@ const (
 	sessionEndPollOverallTimeout  = 15 * time.Minute
 )
 
-// Start begins a chat session.
-func (s *SessionsResource) Start(ctx context.Context, agentID string, opts SessionStartOptions) (*SessionResponse, error) {
-	var result SessionResponse
-	err := s.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/start", agentID), opts, &result)
-	if err != nil {
+// Start begins a chat session and returns an ergonomic *Session handle
+// that owns the agent/user/session triple plus optional provider/model
+// defaults. Subsequent Context / Turn / End calls on the handle thread
+// these through automatically.
+//
+// Backward compat: *Session embeds SessionResponse, so existing callers
+// that read `result.Success` on the return value keep working after
+// this signature change (the field is promoted from the embedded
+// SessionResponse).
+func (s *SessionsResource) Start(ctx context.Context, agentID string, opts SessionStartOptions) (*Session, error) {
+	var resp SessionResponse
+	if err := s.http.Post(ctx, fmt.Sprintf("/api/v1/agents/%s/sessions/start", agentID), opts, &resp); err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return &Session{
+		sessions:        s,
+		SessionResponse: resp,
+		AgentID:         agentID,
+		UserID:          opts.UserID,
+		UserDisplayName: opts.UserDisplayName,
+		SessionID:       opts.SessionID,
+		InstanceID:      opts.InstanceID,
+		Provider:        opts.Provider,
+		Model:           opts.Model,
+	}, nil
 }
 
 // End concludes a chat session.
@@ -210,42 +227,31 @@ func (s *SessionsResource) TurnStatus(ctx context.Context, agentID, extractionID
 	return &result, nil
 }
 
-// StartSession begins a chat session and returns an ergonomic *Session
-// handle that owns the agent/user/session triple plus optional
-// provider/model defaults. Subsequent Context / Turn / End calls on the
-// handle automatically thread these through; per-call options on those
-// methods override the defaults.
+// StartSession is a deprecated alias for Start kept for callers that
+// adopted the prior name. Use Start; it now returns *Session directly.
 //
-// Existing callers that only need the boolean success response should
-// keep using Start.
+// Deprecated: use Start.
 func (s *SessionsResource) StartSession(ctx context.Context, agentID string, opts SessionStartOptions) (*Session, error) {
-	resp, err := s.Start(ctx, agentID, opts)
-	if err != nil {
-		return nil, err
-	}
-	if resp != nil && !resp.Success {
-		return nil, fmt.Errorf("session start returned success=false")
-	}
-	return &Session{
-		sessions:        s,
-		AgentID:         agentID,
-		UserID:          opts.UserID,
-		UserDisplayName: opts.UserDisplayName,
-		SessionID:       opts.SessionID,
-		InstanceID:      opts.InstanceID,
-		Provider:        opts.Provider,
-		Model:           opts.Model,
-	}, nil
+	return s.Start(ctx, agentID, opts)
 }
 
 // Session is an ergonomic wrapper around the agent/user/session triple
-// returned by StartSession. It threads provider/model defaults through
+// returned by Start. It threads provider/model defaults through
 // Context/Turn/End calls and lets the caller skip repeating identifiers.
+//
+// SessionResponse is embedded so legacy callers that read `Success` on
+// the Start return value still work via Go field promotion
+// (`session.Success` reads through to the embedded SessionResponse).
 //
 // Per-call provider/model on TurnOptions override the session defaults;
 // otherwise the server-side resolver picks a default model.
 type Session struct {
 	sessions *SessionsResource
+
+	// SessionResponse mirrors the /sessions/start response body.
+	// Embedded (not a named field) so `session.Success` keeps working
+	// for callers written against the prior return type.
+	SessionResponse
 
 	AgentID         string
 	UserID          string
