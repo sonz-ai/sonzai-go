@@ -473,34 +473,17 @@ func (a *AgentsResource) GetDiary(ctx context.Context, agentID string, userID, i
 	return &result, err
 }
 
-// GetUsers returns users for an agent.
-// Supports server-side filtering via GetUsersOptions.CustomFilters, Phone, Email, and Search.
+// GetUsers returns a cursor-paginated page of users for an agent, ordered
+// by user_id ASC. To walk every user, loop while UsersResponse.HasMore is
+// true and pass UsersResponse.NextCursor as the next call's Cursor.
 func (a *AgentsResource) GetUsers(ctx context.Context, agentID string, opts *GetUsersOptions) (*UsersResponse, error) {
 	params := map[string]string{}
 	if opts != nil {
-		if opts.Limit > 0 {
-			params["limit"] = fmt.Sprintf("%d", opts.Limit)
+		if opts.PageSize > 0 {
+			params["page_size"] = fmt.Sprintf("%d", opts.PageSize)
 		}
-		if opts.Offset > 0 {
-			params["offset"] = fmt.Sprintf("%d", opts.Offset)
-		}
-		if opts.SortBy != "" {
-			params["sort_by"] = opts.SortBy
-		}
-		if opts.SortOrder != "" {
-			params["sort_order"] = opts.SortOrder
-		}
-		if opts.Phone != "" {
-			params["phone"] = opts.Phone
-		}
-		if opts.Email != "" {
-			params["email"] = opts.Email
-		}
-		if opts.Search != "" {
-			params["search"] = opts.Search
-		}
-		for k, v := range opts.CustomFilters {
-			params["custom."+k] = v
+		if opts.Cursor != "" {
+			params["cursor"] = opts.Cursor
 		}
 	}
 	var result UsersResponse

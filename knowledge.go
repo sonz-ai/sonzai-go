@@ -55,11 +55,12 @@ type KBNode struct {
 	UpdatedAt  string         `json:"updated_at,omitempty"`
 }
 
-// KBNodeListResponse is the response from listing nodes.
+// KBNodeListResponse is the response from listing nodes. Single-page
+// (no cursor): HasMore=true means the underlying scan was truncated; raise
+// the request's Limit to widen the window.
 type KBNodeListResponse struct {
-	Nodes      []*KBNode `json:"nodes"`
-	Total      int       `json:"total"`
-	NextCursor string    `json:"next_cursor,omitempty"`
+	Nodes   []*KBNode `json:"nodes"`
+	HasMore bool      `json:"has_more"`
 }
 
 // KBEdge represents an edge in the knowledge graph.
@@ -315,12 +316,15 @@ type InsertFactDetail struct {
 	Version int    `json:"version"`
 }
 
-// ListNodesOptions configures a list nodes request with filtering, pagination, and sorting.
+// ListNodesOptions configures a list nodes request with filtering and
+// sorting. Limit caps a single-page response — sort_by + property filters
+// require a full in-memory scan server-side, so cursor pagination is not
+// exposed for this endpoint. Raise Limit (max 10000) to widen the window;
+// KBNodeListResponse.HasMore signals the underlying scan was truncated.
 type ListNodesOptions struct {
 	NodeType   string            `json:"node_type,omitempty"`
 	Properties map[string]string `json:"properties,omitempty"`
 	Limit      int               `json:"limit,omitempty"`
-	Offset     int               `json:"offset,omitempty"`
 	SortBy     string            `json:"sort_by,omitempty"`
 	SortOrder  string            `json:"sort_order,omitempty"`
 }
@@ -452,7 +456,9 @@ func (k *KnowledgeResource) InsertFacts(ctx context.Context, projectID string, o
 	return &result, nil
 }
 
-// ListNodes returns knowledge graph nodes for a project.
+// ListNodes returns a single page of knowledge graph nodes for a project.
+// Cursor pagination is not exposed for this endpoint; raise opts.Limit to
+// widen the window (capped at 10000 server-side).
 func (k *KnowledgeResource) ListNodes(ctx context.Context, projectID string, opts *ListNodesOptions) (*KBNodeListResponse, error) {
 	params := map[string]string{}
 	if opts != nil {
@@ -461,9 +467,6 @@ func (k *KnowledgeResource) ListNodes(ctx context.Context, projectID string, opt
 		}
 		if opts.Limit > 0 {
 			params["limit"] = strconv.Itoa(opts.Limit)
-		}
-		if opts.Offset > 0 {
-			params["offset"] = strconv.Itoa(opts.Offset)
 		}
 		if opts.SortBy != "" {
 			params["sort_by"] = opts.SortBy
@@ -483,33 +486,10 @@ func (k *KnowledgeResource) ListNodes(ctx context.Context, projectID string, opt
 	return &result, nil
 }
 
-// ListNodesWithOptions returns knowledge graph nodes with filtering, pagination, and sorting.
+// ListNodesWithOptions is identical to ListNodes but accepts a value-typed
+// options struct for callers that prefer that style.
 func (k *KnowledgeResource) ListNodesWithOptions(ctx context.Context, projectID string, opts ListNodesOptions) (*KBNodeListResponse, error) {
-	params := map[string]string{}
-	if opts.NodeType != "" {
-		params["type"] = opts.NodeType
-	}
-	if opts.Limit > 0 {
-		params["limit"] = strconv.Itoa(opts.Limit)
-	}
-	if opts.Offset > 0 {
-		params["offset"] = strconv.Itoa(opts.Offset)
-	}
-	if opts.SortBy != "" {
-		params["sort_by"] = opts.SortBy
-	}
-	if opts.SortOrder != "" {
-		params["sort_order"] = opts.SortOrder
-	}
-	for k, v := range opts.Properties {
-		params["properties."+k] = v
-	}
-	var result KBNodeListResponse
-	err := k.http.Get(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes", projectID), params, &result)
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return k.ListNodes(ctx, projectID, &opts)
 }
 
 // GetNode returns a single node with its connected edges.

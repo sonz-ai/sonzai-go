@@ -184,8 +184,16 @@ type Run struct {
 	CompletedAt                string                 `json:"completed_at,omitempty"`
 }
 
-// RunListResponse is the response from listing eval runs.
+// RunListResponse is the cursor-paginated response from listing eval runs.
 type RunListResponse struct {
-	Runs       []Run `json:"runs"`
-	TotalCount int   `json:"total_count"`
+	Runs       []Run  `json:"runs"`
+	NextCursor string `json:"next_cursor,omitempty"`
+	HasMore    bool   `json:"has_more"`
+}
+
+// RunListOptions configures an eval-runs list request.
+type RunListOptions struct {
+	AgentID  string
+	PageSize int
+	Cursor   string
 }

@@ -1494,28 +1494,18 @@ type UserEntry struct {
 	CreatedAt         string        `json:"created_at,omitempty"`
 }
 
-// UsersResponse wraps agent users data.
+// UsersResponse is the cursor-paginated response from listing agent users.
 type UsersResponse struct {
-	Users []UserEntry `json:"users"`
-	Total int         `json:"total"`
+	Users      []UserEntry `json:"users"`
+	NextCursor string      `json:"next_cursor,omitempty"`
+	HasMore    bool        `json:"has_more"`
 }
 
-// GetUsersOptions configures a get users request.
+// GetUsersOptions configures a get users request. Pages are ordered by
+// user_id ASC for stable cursor traversal.
 type GetUsersOptions struct {
-	Limit     int    `url:"limit,omitempty"`
-	Offset    int    `url:"offset,omitempty"`
-	SortBy    string `url:"sort_by,omitempty"`
-	SortOrder string `url:"sort_order,omitempty"`
-	// Phone filters users by phone number (digits-only comparison, platform-side).
-	Phone string `url:"phone,omitempty"`
-	// Email filters users by email address (case-insensitive, platform-side).
-	Email string `url:"email,omitempty"`
-	// Search filters by display name or email (case-insensitive substring, platform-side).
-	Search string `url:"search,omitempty"`
-	// CustomFilters adds custom.{key}={value} query params for server-side filtering.
-	// Supports operators via key suffixes: __neq, __gte, __lte, __gt, __lt, __in, __contains.
-	// Example: map[string]string{"status": "delivered", "score__gte": "70"}
-	CustomFilters map[string]string `url:"-"`
+	PageSize int    `url:"page_size,omitempty"`
+	Cursor   string `url:"cursor,omitempty"`
 }
 
 // ---------------------------------------------------------------------------

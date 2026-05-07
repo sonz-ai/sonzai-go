@@ -245,9 +245,6 @@ func (inv *InventoryResource) Query(ctx context.Context, agentID, userID string,
 	if opts.Limit > 0 {
 		params["limit"] = strconv.Itoa(opts.Limit)
 	}
-	if opts.Offset > 0 {
-		params["offset"] = strconv.Itoa(opts.Offset)
-	}
 	if opts.Cursor != "" {
 		params["cursor"] = opts.Cursor
 	}

@@ -1221,7 +1221,7 @@ func TestSupportList(t *testing.T) {
 		}
 		jsonResponse(w, 200, TicketListResponse{
 			Tickets: []SupportTicket{{TicketID: "t-1", Title: "Help"}},
-			Total:   1,
+			HasMore: false,
 		})
 	})
 	defer srv.Close()

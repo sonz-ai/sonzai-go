@@ -12,17 +12,19 @@ type RunsResource struct {
 	backend Backend
 }
 
-// List returns eval runs, optionally filtered by agent.
-func (r *RunsResource) List(ctx context.Context, agentID string, limit, offset int) (*RunListResponse, error) {
+// List returns a cursor-paginated page of eval runs, optionally filtered by
+// agent. To walk every run, loop while RunListResponse.HasMore is true and
+// pass RunListResponse.NextCursor as the next call's Cursor.
+func (r *RunsResource) List(ctx context.Context, opts RunListOptions) (*RunListResponse, error) {
 	params := map[string]string{}
-	if agentID != "" {
-		params["agent_id"] = agentID
+	if opts.AgentID != "" {
+		params["agent_id"] = opts.AgentID
 	}
-	if limit > 0 {
-		params["limit"] = strconv.Itoa(limit)
+	if opts.PageSize > 0 {
+		params["page_size"] = strconv.Itoa(opts.PageSize)
 	}
-	if offset > 0 {
-		params["offset"] = strconv.Itoa(offset)
+	if opts.Cursor != "" {
+		params["cursor"] = opts.Cursor
 	}
 
 	var result RunListResponse

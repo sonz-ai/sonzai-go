@@ -133,14 +133,14 @@ func TestRunsList(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		jsonResponse(w, 200, RunListResponse{
-			Runs:       []Run{{ID: "run-1", Status: "completed", TotalTurns: 20}},
-			TotalCount: 1,
+			Runs:    []Run{{ID: "run-1", Status: "completed", TotalTurns: 20}},
+			HasMore: false,
 		})
 	})
 	defer backend.server.Close()
 
 	client := New(backend)
-	result, err := client.Runs.List(context.Background(), "", 0, 0)
+	result, err := client.Runs.List(context.Background(), RunListOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -42,11 +42,11 @@ type SupportTicketComment struct {
 	CreatedAt  string `json:"created_at,omitempty"`
 }
 
-// TicketListResponse is the response from listing support tickets.
+// TicketListResponse is the cursor-paginated response from listing support tickets.
 type TicketListResponse struct {
-	Tickets []SupportTicket `json:"tickets"`
-	Total   int             `json:"total"`
-	HasMore bool            `json:"has_more"`
+	Tickets    []SupportTicket `json:"tickets"`
+	NextCursor string          `json:"next_cursor,omitempty"`
+	HasMore    bool            `json:"has_more"`
 }
 
 // TicketDetailResponse is the response from getting a single ticket.
@@ -71,21 +71,23 @@ type AddTicketCommentOptions struct {
 
 // SupportListOptions configures a list support tickets request.
 type SupportListOptions struct {
-	Limit  int    `url:"limit,omitempty"`
-	Offset int    `url:"offset,omitempty"`
-	Status string `url:"status,omitempty"`
-	Type   string `url:"type,omitempty"`
+	PageSize int    `url:"page_size,omitempty"`
+	Cursor   string `url:"cursor,omitempty"`
+	Status   string `url:"status,omitempty"`
+	Type     string `url:"type,omitempty"`
 }
 
-// List returns all support tickets for the authenticated user.
+// List returns a cursor-paginated page of support tickets for the
+// authenticated user. Call repeatedly while HasMore is true, passing
+// the previous response's NextCursor as the next call's Cursor.
 func (s *SupportResource) List(ctx context.Context, opts *SupportListOptions) (*TicketListResponse, error) {
 	params := map[string]string{}
 	if opts != nil {
-		if opts.Limit > 0 {
-			params["limit"] = fmt.Sprintf("%d", opts.Limit)
+		if opts.PageSize > 0 {
+			params["page_size"] = fmt.Sprintf("%d", opts.PageSize)
 		}
-		if opts.Offset > 0 {
-			params["offset"] = fmt.Sprintf("%d", opts.Offset)
+		if opts.Cursor != "" {
+			params["cursor"] = opts.Cursor
 		}
 		if opts.Status != "" {
 			params["status"] = opts.Status
