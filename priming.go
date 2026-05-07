@@ -236,6 +236,43 @@ func (p *PrimingResource) GetImportStatus(ctx context.Context, agentID, jobID st
 	return &result, nil
 }
 
+// ImportJobUserRow is one user row from an import job — surfaced from the
+// per-job /users endpoint so admins can see exactly which users in a batch
+// import are queued, running, succeeded, or failed.
+type ImportJobUserRow struct {
+	UserID         string `json:"user_id"`
+	Status         string `json:"status"` // queued | running | succeeded | failed
+	MessageCount   int    `json:"message_count"`
+	StartedAt      string `json:"started_at,omitempty"`
+	CompletedAt    string `json:"completed_at,omitempty"`
+	ErrorMessage   string `json:"error_message,omitempty"`
+	DurationMillis int    `json:"duration_ms,omitempty"`
+}
+
+// ListImportJobUsersResponse is the response from listing per-user rows
+// for a single import job.
+type ListImportJobUsersResponse struct {
+	Users []ImportJobUserRow `json:"users"`
+	Count int                `json:"count"`
+}
+
+// ListImportJobUsers returns one row per user inside a specific import
+// job, with current status and any error. Use this to diagnose stuck or
+// failed users during a large migration — `GetImportStatus` only returns
+// the job-level summary.
+func (p *PrimingResource) ListImportJobUsers(ctx context.Context, agentID, jobID string, limit int) (*ListImportJobUsersResponse, error) {
+	params := map[string]string{}
+	if limit > 0 {
+		params["limit"] = strconv.Itoa(limit)
+	}
+	var result ListImportJobUsersResponse
+	err := p.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/users/import/%s/users", agentID, jobID), params, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ListImportJobs returns recent import jobs for an agent.
 func (p *PrimingResource) ListImportJobs(ctx context.Context, agentID string, limit int) (*ImportJobListResponse, error) {
 	params := map[string]string{}

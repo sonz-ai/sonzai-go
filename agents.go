@@ -678,6 +678,39 @@ func (a *AgentsResource) ListCustomTools(ctx context.Context, agentID string) (*
 	return &result, err
 }
 
+// ToolSchemaEntry is one tool description from `GetToolSchemas`. Same
+// shape as the JSON tool schemas BYO-LLM frameworks (LangChain, Vercel
+// AI SDK, Gemini function calling, etc.) consume — drop these directly
+// into your agent framework's tool config.
+type ToolSchemaEntry struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+}
+
+// GetToolSchemasResponse is the response from listing the agent's full
+// tool catalog (built-in sonzai_* tools + any developer-defined custom
+// tools).
+type GetToolSchemasResponse struct {
+	Tools []ToolSchemaEntry `json:"tools"`
+}
+
+// GetToolSchemas returns JSON tool definitions that BYO-LLM integrations
+// can add to their LLM's tool calling config. This is the catalog an
+// external agent framework reads to know what `sonzai_*` and custom tools
+// the agent currently has wired up — so the LLM can call them and your
+// backend can route the side-effects back through Sonzai's process
+// endpoint.
+//
+// Use this when running standalone-memory mode: Sonzai handles memory and
+// dispatches tool side-effects, but the LLM call itself runs in your own
+// framework.
+func (a *AgentsResource) GetToolSchemas(ctx context.Context, agentID string) (*GetToolSchemasResponse, error) {
+	var result GetToolSchemasResponse
+	err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/tools/schemas", agentID), nil, &result)
+	return &result, err
+}
+
 // CreateCustomTool creates a custom tool for an agent.
 func (a *AgentsResource) CreateCustomTool(ctx context.Context, agentID string, opts CreateCustomToolOptions) (*CustomToolDefinition, error) {
 	var result CustomToolDefinition
