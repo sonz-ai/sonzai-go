@@ -15,7 +15,7 @@ Zero dependencies — Go standard library only.
 ## Installation
 
 ```bash
-go get github.com/sonz-ai/sonzai-go@v1.5.0
+go get github.com/sonz-ai/sonzai-go@v1.5.1
 ```
 
 ```go
