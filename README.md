@@ -131,6 +131,43 @@ client.Agents.Inventory     // user inventory
 client.Agents.Schedules     // user-scoped recurring events
 ```
 
+## Bring Your Own Key (BYOK)
+
+BYOK lets you register your own LLM provider API keys with a project. Once set,
+upstream LLM calls for that project route through your key — token billing falls
+on your provider account, not Sonzai's. Keys are encrypted at rest server-side
+and are never returned by the API (only the key prefix and health metadata are
+exposed). Requires `read:byok` / `write:byok` scopes on the API key you use to
+call these endpoints.
+
+```go
+ctx := context.Background()
+
+// List all configured BYOK providers for a project
+keys, _ := client.BYOK.List(ctx, "project-id")
+for _, k := range keys {
+    fmt.Printf("%s: %s (active: %v)\n", k.Provider, k.HealthStatus, k.IsActive)
+}
+
+// Store or replace a key (validated against the provider before saving)
+key, _ := client.BYOK.Set(ctx, "project-id", sonzai.BYOKProviderOpenAI, "sk-...")
+fmt.Println("Stored prefix:", key.APIKeyPrefix)
+
+// Enable or disable without rotating
+client.BYOK.SetActive(ctx, "project-id", sonzai.BYOKProviderOpenAI, false)
+
+// Re-run the provider health check on a stored key
+result, _ := client.BYOK.Test(ctx, "project-id", sonzai.BYOKProviderGemini)
+fmt.Println(result.HealthStatus) // "healthy" | "invalid" | "unknown"
+
+// Remove a stored key (project falls back to platform billing)
+client.BYOK.Delete(ctx, "project-id", sonzai.BYOKProviderXAI)
+```
+
+Provider constants: `sonzai.BYOKProviderOpenAI`, `sonzai.BYOKProviderGemini`,
+`sonzai.BYOKProviderXAI`, `sonzai.BYOKProviderOpenRouter`.
+REST path: `/api/v1/projects/{project_id}/byok-keys[/{provider}[/test]]`.
+
 ## Usage
 
 ### Agent CRUD
