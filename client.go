@@ -106,6 +106,12 @@ type Client struct {
 	// Projects provides project management operations.
 	Projects *ProjectsResource
 
+	// MCPCatalog provides per-project MCP server catalog management.
+	// Each entry registers a remote MCP server URL + auth; agents opt
+	// into specific entries via the `mcpEnabled` capability. Org-admin
+	// only on writes.
+	MCPCatalog *MCPCatalogResource
+
 	// APIKeys provides project API key management.
 	APIKeys *APIKeysResource
 
@@ -222,6 +228,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		Tenants:              &TenantsResource{http: hc},
 		Projects:             &ProjectsResource{http: hc},
+		MCPCatalog:           &MCPCatalogResource{http: hc},
 		APIKeys:              &APIKeysResource{http: hc},
 		Analytics:            &AnalyticsResource{http: hc},
 		UserPersonas:         &UserPersonasResource{http: hc},
