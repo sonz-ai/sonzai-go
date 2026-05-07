@@ -200,6 +200,52 @@ if err := <-errCh; err != nil {
 
 `ChatStreamEvent` exposes `Content()`, `IsFinished()`, `Usage`, `FinishReason`, `ExternalToolCalls`, and `SideEffectsJSON` (facts, emotions, relationship updates).
 
+### Chat (async with polling)
+
+For chats that may run longer than your network can hold an SSE stream
+open (Cloudflare/LB cuts at ~100s), queue the request and poll the
+result endpoint. Cancelling the local context does **not** cancel the
+server-side task — re-poll the same `processing_id` later if needed.
+
+```go
+// Fire-and-forget — returns ProcessingID immediately.
+queued, _ := client.Agents.ChatAsync(ctx, sonzai.AgentChatParams{
+    AgentID: "agent-id",
+    ChatOptions: sonzai.ChatOptions{
+        Messages: []sonzai.ChatMessage{{Role: "user", Content: "Plan my week."}},
+        UserID:   "user-123",
+        Provider: "openai",
+        Model:    "gpt-4o",
+    },
+})
+
+// Manual poll loop — recommended backoff: 1s → 2s → 4s, capped at 5s.
+delay := time.Second
+for {
+    result, _ := client.Agents.PollChatResult(ctx, "agent-id", queued.ProcessingID)
+    // Status: queued | running | complete | failed.
+    // While running, Response carries partial assistant text and
+    // Phase/Tool reflect the latest progressive-elaboration event.
+    if result.IsTerminal() {
+        fmt.Println(result.Response, string(result.SideEffects))
+        break
+    }
+    time.Sleep(delay)
+    if delay < 5*time.Second {
+        delay *= 2
+    }
+}
+
+// Convenience: queue + poll until terminal in one call.
+result, err := client.Agents.ChatAsyncBlocking(ctx, sonzai.AgentChatParams{
+    AgentID: "agent-id",
+    ChatOptions: sonzai.ChatOptions{
+        Messages: []sonzai.ChatMessage{{Role: "user", Content: "Plan my week."}},
+        UserID:   "user-123",
+    },
+})
+```
+
 ### Sync vs async memory recall (`memoryMode`)
 
 Supplementary memory recall can be **synchronous** (blocks on recall, facts always land in the current turn) or **asynchronous** (races a deadline, slow hits spill to the next turn for lower first-token latency). Default is `sync`.
@@ -331,19 +377,80 @@ overlay, _ := client.Agents.Personality.GetUserOverlay(ctx, "agent-id", "user-12
 
 ### Sessions & instances
 
+`Sessions.Start` returns a `*Session` handle that bundles the identity tuple
+(`AgentID`, `UserID`, `SessionID`, `InstanceID`) plus session-level
+`Provider`/`Model` defaults. The handle drives the per-turn loop with one
+fresh enriched context per turn — so the LLM you call out to (OpenAI,
+Anthropic, Gemini, your own) sees an up-to-date mood, recalled facts,
+and recent turns on every message.
+
 ```go
-client.Agents.Sessions.Start(ctx, "agent-id", sonzai.SessionStartOptions{
+session, _ := client.Agents.Sessions.Start(ctx, "agent-id", sonzai.SessionStartOptions{
     UserID:    "user-123",
     SessionID: "session-456",
+    Provider:  "gemini",                              // session-level default
+    Model:     "gemini-3.1-flash-lite-preview",       // (per-turn overrides OK)
 })
 
+// Per-turn loop: fetch enriched context, hand it to your LLM, submit the turn.
+enriched, _ := session.Context(ctx, sonzai.ContextOptions{
+    Query: "what's the user about to say?",
+})
+// ... build your prompt with `enriched`, call your LLM, get assistantReply ...
+
+result, _ := session.Turn(ctx, sonzai.TurnOptions{
+    Messages: []sonzai.TurnMessage{
+        {Role: "user", Content: "what did we talk about last week?"},
+        {Role: "assistant", Content: assistantReply},
+    },
+    // Prefetch the *next* enriched context in the same round-trip
+    // so the next user message renders without a second fetch.
+    FetchNextContext: &sonzai.FetchNextContext{Query: "anticipated next user message"},
+})
+fmt.Println(result.Mood)            // sync mood update (nil if none)
+fmt.Println(result.ExtractionID)    // async fact-extraction job id
+fmt.Println(result.NextContext)     // populated when FetchNextContext is set
+
+// Poll deferred extraction (memory write-back) when you need to know it landed.
+for {
+    status, _ := session.TurnStatus(ctx, result.ExtractionID)
+    if status.IsTerminal() { // "done" or "failed"
+        break
+    }
+    time.Sleep(500 * time.Millisecond) // then back off
+}
+
+// End the session. Wait=true forces the CE pipeline to run synchronously
+// (use in benchmarks/tests that query memory immediately after).
+_ = session.End(ctx, sonzai.SessionEndOptions{
+    TotalMessages:   10,
+    DurationSeconds: 300,
+    Wait:            true,
+})
+```
+
+`TurnMessage` carries `ToolCallID` and `ToolCalls` for function-calling
+turns; plain `ChatMessage` (used by `Chat` / `ChatStream`) is text-only.
+Per-call `Provider`/`Model` on `TurnOptions` override the session
+defaults; leave both empty to fall through.
+
+#### Legacy void-style start/end
+
+`Sessions.End` still accepts a void-style call when you don't need the
+handle:
+
+```go
 client.Agents.Sessions.End(ctx, "agent-id", sonzai.SessionEndOptions{
     UserID:          "user-123",
     SessionID:       "session-456",
     TotalMessages:   10,
     DurationSeconds: 300,
 })
+```
 
+#### Instances
+
+```go
 // Parallel agent instances for A/B testing or sandboxed forks
 instance, _ := client.Agents.Instances.Create(ctx, "agent-id", sonzai.InstanceCreateOptions{Name: "Beta"})
 client.Agents.Instances.Reset(ctx, "agent-id", instance.InstanceID)
