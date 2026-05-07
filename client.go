@@ -138,6 +138,22 @@ type Client struct {
 	// capability. Includes CRUD, relations, bulk import, and audit.
 	Wisdom *WisdomResource
 
+	// Schedules is a top-level alias of Agents.Schedules. The HTTP
+	// endpoints live under /api/v1/agents/{agentID}/users/{userID}/...
+	// but app code commonly reaches for client.Schedules at the top
+	// level (matching the Python SDK shape). Both fields point at the
+	// same instance.
+	Schedules *SchedulesResource
+
+	// EvalRuns is a top-level alias of Eval.Runs. Provided for parity
+	// with the Python and TypeScript SDKs which expose evalRuns at the
+	// top level. Both fields point at the same instance.
+	EvalRuns *eval.RunsResource
+
+	// EvalTemplates is a top-level alias of Eval.Templates. Provided for
+	// parity with the Python and TypeScript SDKs.
+	EvalTemplates *eval.TemplatesResource
+
 	http *httpClient
 }
 
@@ -184,10 +200,15 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 
 	hc := newHTTPClient(cfg.baseURL, apiKey, cfg.timeout, cfg.httpClient)
 
+	agents := newAgentsResource(hc)
+	evalClient := eval.New(hc)
+
 	return &Client{
-		Agents:               newAgentsResource(hc),
+		Agents:               agents,
 		Knowledge:            &KnowledgeResource{http: hc},
-		Eval:                 eval.New(hc),
+		Eval:                 evalClient,
+		EvalRuns:             evalClient.Runs,
+		EvalTemplates:        evalClient.Templates,
 		Voices:               &VoicesResource{http: hc},
 		Webhooks:             &WebhooksResource{http: hc},
 		ProjectConfig:        &ProjectConfigResource{http: hc},
@@ -206,6 +227,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Composio:             &ComposioResource{http: hc},
 		Skills:               &SkillsResource{http: hc},
 		Wisdom:               &WisdomResource{http: hc},
+		Schedules:            agents.Schedules,
 		http:                 hc,
 	}, nil
 }
