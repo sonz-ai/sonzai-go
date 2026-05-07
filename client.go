@@ -93,6 +93,10 @@ type Client struct {
 	// CustomLLM provides project-scoped custom LLM configuration.
 	CustomLLM *CustomLLMResource
 
+	// BYOK provides project-scoped bring-your-own-key configuration for
+	// supported providers (openai, gemini, xai, openrouter).
+	BYOK *BYOKResource
+
 	// ProjectNotifications provides project-scoped notification polling.
 	ProjectNotifications *ProjectNotificationsResource
 
@@ -214,6 +218,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		ProjectConfig:        &ProjectConfigResource{http: hc},
 		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},
+		BYOK:                 &BYOKResource{http: hc},
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		Tenants:              &TenantsResource{http: hc},
 		Projects:             &ProjectsResource{http: hc},
