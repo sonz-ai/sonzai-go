@@ -162,11 +162,35 @@ type AgentToolCapabilities struct {
 	// agent's project-scoped KB). Pointer so omission leaves the current
 	// value unchanged on update.
 	KnowledgeBase *bool `json:"knowledge_base,omitempty"`
+	// KnowledgeBaseWrite enables knowledge_create / knowledge_update /
+	// knowledge_delete tools. Requires KnowledgeBase.
+	KnowledgeBaseWrite *bool `json:"knowledge_base_write,omitempty"`
+	// KnowledgeBaseScopeMode selects how the agent reads across project and
+	// organization-global KB scopes. One of "project_only" (default),
+	// "cascade", "union", "org_only". Empty string leaves current value.
+	KnowledgeBaseScopeMode string `json:"knowledge_base_scope_mode,omitempty"`
+	// Composio enables per-agent Composio SaaS integrations.
+	Composio *bool `json:"composio,omitempty"`
+	// Wisdom enables the cross-user generalization pipeline. Default ON
+	// for new agents; pass &false to opt out. Required precondition for
+	// SharedMemory.
+	Wisdom *bool `json:"wisdom,omitempty"`
+	// SharedMemory enables person/entity-attributed memory shared across
+	// users of this agent. Off by default; requires Wisdom.
+	SharedMemory *bool `json:"shared_memory,omitempty"`
+	// Skills enables project-library skill loading via sonzai_load_skill.
+	// Required precondition for AutoLearnSkills.
+	Skills *bool `json:"skills,omitempty"`
+	// AutoLearnSkills enables agent-authored skills (sonzai_create_skill /
+	// sonzai_update_skill). Requires Skills.
+	AutoLearnSkills *bool `json:"auto_learn_skills,omitempty"`
 	// MemoryMode selects supplementary memory recall timing: "sync"
 	// (default) blocks context build until recall returns; "async" lets
 	// recall race a deadline for lower first-token latency. Empty string
 	// leaves the current value unchanged on update.
 	MemoryMode string `json:"memory_mode,omitempty"` // "sync" | "async"
+	// MCPEnabled lists project MCP catalog entry IDs this agent uses.
+	MCPEnabled []string `json:"mcp_enabled,omitempty"`
 }
 
 // AgentChatParams is the single-struct params type for Chat, ChatStream, and ChatStreamChannel.
@@ -773,7 +797,12 @@ type AgentCapabilities struct {
 	ImageGeneration        bool                   `json:"imageGeneration"`
 	Inventory              bool                   `json:"inventory"`
 	KnowledgeBase          bool                   `json:"knowledgeBase,omitempty"`
+	KnowledgeBaseWrite     bool                   `json:"knowledgeBaseWrite,omitempty"`
 	KnowledgeBaseProjectID string                 `json:"knowledgeBaseProjectId,omitempty"`
+	// KnowledgeBaseScopeMode selects how the agent reads across project and
+	// organization-global KB scopes. One of "project_only" (default),
+	// "cascade", "union", "org_only".
+	KnowledgeBaseScopeMode string `json:"knowledgeBaseScopeMode,omitempty"`
 	VoiceGeneration        bool                   `json:"voiceGeneration"`
 	VoiceID                string                 `json:"voiceId,omitempty"`
 	VoiceTier              int                    `json:"voiceTier,omitempty"`
@@ -783,8 +812,27 @@ type AgentCapabilities struct {
 	MusicUnlockedAt        string                 `json:"musicUnlockedAt,omitempty"`
 	VideoGeneration        bool                   `json:"videoGeneration"`
 	VideoUnlockedAt        string                 `json:"videoUnlockedAt,omitempty"`
-	PendingCapabilities    []PendingCapability    `json:"pendingCapabilities,omitempty"`
-	CustomTools            []CustomToolDefinition `json:"customTools,omitempty"`
+	// Composio enables per-agent Composio SaaS integrations (Gmail, Calendar,
+	// Slack, GitHub, Linear, etc.). Tools are declared dynamically based on
+	// which apps the admin has connected for the agent.
+	Composio bool `json:"composio,omitempty"`
+	// Wisdom (cross-user generalization) — default ON for new agents. Pointer
+	// so callers can distinguish "unset" (= use platform default) from "off".
+	Wisdom *bool `json:"wisdom,omitempty"`
+	// SharedMemory enables person/entity-attributed memory shared across users
+	// of this agent (teams, parties, business context). Off by default.
+	// Requires Wisdom.
+	SharedMemory bool `json:"sharedMemory,omitempty"`
+	// Skills lets the agent load project-library playbooks via
+	// sonzai_load_skill. Required precondition for AutoLearnSkills.
+	Skills bool `json:"skills,omitempty"`
+	// AutoLearnSkills lets the agent author skills via sonzai_create_skill /
+	// sonzai_update_skill. Requires Skills.
+	AutoLearnSkills     bool                   `json:"autoLearnSkills,omitempty"`
+	MCPEnabled          []string               `json:"mcpEnabled,omitempty"`
+	MemoryMode          string                 `json:"memoryMode,omitempty"`
+	PendingCapabilities []PendingCapability    `json:"pendingCapabilities,omitempty"`
+	CustomTools         []CustomToolDefinition `json:"customTools,omitempty"`
 }
 
 // UpdateCapabilitiesOptions configures a capabilities update request.
@@ -794,12 +842,20 @@ type AgentCapabilities struct {
 // deadline for lower first-token latency. Leave empty to keep the current
 // value.
 type UpdateCapabilitiesOptions struct {
-	WebSearch       *bool  `json:"webSearch,omitempty"`
-	RememberName    *bool  `json:"rememberName,omitempty"`
-	ImageGeneration *bool  `json:"imageGeneration,omitempty"`
-	Inventory       *bool  `json:"inventory,omitempty"`
-	KnowledgeBase   *bool  `json:"knowledgeBase,omitempty"`
-	MemoryMode      string `json:"memoryMode,omitempty"` // "sync" | "async"
+	WebSearch              *bool    `json:"webSearch,omitempty"`
+	RememberName           *bool    `json:"rememberName,omitempty"`
+	ImageGeneration        *bool    `json:"imageGeneration,omitempty"`
+	Inventory              *bool    `json:"inventory,omitempty"`
+	KnowledgeBase          *bool    `json:"knowledgeBase,omitempty"`
+	KnowledgeBaseWrite     *bool    `json:"knowledgeBaseWrite,omitempty"`
+	KnowledgeBaseScopeMode string   `json:"knowledgeBaseScopeMode,omitempty"` // "project_only" | "cascade" | "union" | "org_only"
+	Composio               *bool    `json:"composio,omitempty"`
+	Wisdom                 *bool    `json:"wisdom,omitempty"`
+	SharedMemory           *bool    `json:"sharedMemory,omitempty"`
+	Skills                 *bool    `json:"skills,omitempty"`
+	AutoLearnSkills        *bool    `json:"autoLearnSkills,omitempty"`
+	MemoryMode             string   `json:"memoryMode,omitempty"` // "sync" | "async"
+	MCPEnabled             []string `json:"mcpEnabled,omitempty"`
 }
 
 // CustomToolListResponse is the response from listing custom tools.

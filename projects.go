@@ -15,15 +15,54 @@ type Project struct {
 	ProjectID   string `json:"project_id"`
 	TenantID    string `json:"tenant_id,omitempty"`
 	Name        string `json:"name"`
-	Environment string `json:"environment,omitempty"`
-	IsActive    bool   `json:"is_active"`
-	CreatedAt   string `json:"created_at,omitempty"`
+	// GameName is the legacy alias of BusinessName. The API emits both
+	// keys with the same value; new code should read BusinessName.
+	//
+	// Deprecated: use BusinessName.
+	GameName     string `json:"game_name,omitempty"`
+	BusinessName string `json:"business_name,omitempty"`
+	Environment  string `json:"environment,omitempty"`
+	IsActive     bool   `json:"is_active"`
+	CreatedAt    string `json:"created_at,omitempty"`
+
+	// DefaultAgentKBWrite is the project-level default for whether agents
+	// in this project may autonomously edit the knowledge base. The
+	// platform OR-resolves this with each agent's own knowledgeBaseWrite
+	// capability — agent flag true wins immediately; only when off does
+	// the project default apply. nil = not configured (no default).
+	DefaultAgentKBWrite *bool `json:"default_agent_kb_write,omitempty"`
 }
 
 // CreateProjectOptions configures a project creation request.
 type CreateProjectOptions struct {
-	Name        string `json:"name"`
-	Environment string `json:"environment,omitempty"`
+	Name                string `json:"name"`
+	Environment         string `json:"environment,omitempty"`
+	DefaultAgentKBWrite *bool  `json:"default_agent_kb_write,omitempty"`
+}
+
+// UpdateProjectOptions configures a project update request. All fields are
+// optional — only non-nil/non-empty values are sent. Pass a *bool pointer
+// for DefaultAgentKBWrite to set true/false explicitly.
+type UpdateProjectOptions struct {
+	Name string `json:"name,omitempty"`
+	// GameName is the legacy alias of BusinessName. Either is accepted on
+	// the wire; BusinessName wins when both are set.
+	//
+	// Deprecated: use BusinessName.
+	GameName            string `json:"game_name,omitempty"`
+	BusinessName        string `json:"business_name,omitempty"`
+	Environment         string `json:"environment,omitempty"`
+	DefaultAgentKBWrite *bool  `json:"default_agent_kb_write,omitempty"`
+}
+
+// Update modifies an existing project's settings. Org-admin only on the
+// platform side; non-admin callers get 403.
+func (p *ProjectsResource) Update(ctx context.Context, projectID string, opts UpdateProjectOptions) (*Project, error) {
+	var result Project
+	if err := p.http.Put(ctx, fmt.Sprintf("/api/v1/projects/%s", projectID), opts, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // List returns all projects for the authenticated tenant.

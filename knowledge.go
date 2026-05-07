@@ -511,6 +511,77 @@ func (k *KnowledgeResource) DeleteNode(ctx context.Context, projectID, nodeID st
 	return k.http.Delete(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes/%s", projectID, nodeID), nil)
 }
 
+// AgentCreateNodeRequest is the body of POST /projects/{projectId}/knowledge/nodes
+// when called as an agent-driven write. Confidence defaults to 0.7 server-side
+// when nil. NodeType and Label are required.
+type AgentCreateNodeRequest struct {
+	NodeType   string         `json:"node_type"`
+	Label      string         `json:"label"`
+	Properties map[string]any `json:"properties"`
+	Confidence *float64       `json:"confidence,omitempty"`
+}
+
+// AgentCreateNode creates a KB node on behalf of an agent. The agentID is
+// stamped onto every property's PropertySource.Source as `agent:<agentID>`
+// so the audit trail shows which agent made the write. Mirrors the
+// `knowledge_create` agent tool. agentID must be non-empty — the server
+// rejects writes without an X-Agent-Id header.
+func (k *KnowledgeResource) AgentCreateNode(ctx context.Context, projectID, agentID string, req AgentCreateNodeRequest) (*KBNode, error) {
+	var result struct {
+		Node *KBNode `json:"node"`
+	}
+	err := k.http.PostWithHeaders(
+		ctx,
+		fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes", projectID),
+		req,
+		map[string]string{"X-Agent-Id": agentID},
+		&result,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return result.Node, nil
+}
+
+// CASPair is one property's compare-and-swap payload — Current is the value
+// the agent saw on its last read; Next is the value the agent wants to write.
+// The server compares Current against the stored value and returns 409
+// stale_value (with all mismatches in the error detail) when any disagree.
+type CASPair struct {
+	Current any `json:"current"`
+	Next    any `json:"next"`
+}
+
+// AgentUpdateNodeRequest is the body of PATCH /projects/{projectId}/knowledge/nodes/{nodeId}.
+// At least one of Label or Properties must be set. Each property the agent
+// claims to update must already exist on the stored node — agents create
+// new properties through AgentCreateNode, not through update.
+type AgentUpdateNodeRequest struct {
+	Label      *CASPair           `json:"label,omitempty"`
+	Properties map[string]CASPair `json:"properties,omitempty"`
+}
+
+// AgentUpdateNode applies a compare-and-swap update to a KB node on behalf of
+// an agent. Returns 409 (surfaced as an HTTPError) when any Current value
+// disagrees with the stored value — the agent must re-read and try again.
+// Mirrors the `knowledge_update` agent tool.
+func (k *KnowledgeResource) AgentUpdateNode(ctx context.Context, projectID, nodeID, agentID string, req AgentUpdateNodeRequest) (*KBNode, error) {
+	var result struct {
+		Node *KBNode `json:"node"`
+	}
+	err := k.http.PatchWithHeaders(
+		ctx,
+		fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes/%s", projectID, nodeID),
+		req,
+		map[string]string{"X-Agent-Id": agentID},
+		&result,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return result.Node, nil
+}
+
 // AgentDeleteNodeRequest is the body of the agent-scoped soft-delete with
 // label CAS. The expected_label must match the node's stored label or the
 // server returns 409 stale_value (surfaced as an HTTPError).
@@ -525,12 +596,17 @@ type AgentDeleteNodeResponse struct {
 }
 
 // AgentDeleteNode performs an agent-scoped soft-delete of a KB node with a
-// label compare-and-swap. Used by the knowledge_delete agent tool. The X-Agent-Id
-// audit header is not yet plumbed through this binding; callers needing it
-// should fall back to the lower-level transport.
-func (k *KnowledgeResource) AgentDeleteNode(ctx context.Context, projectID, nodeID string, req AgentDeleteNodeRequest) (*AgentDeleteNodeResponse, error) {
+// label compare-and-swap. Used by the `knowledge_delete` agent tool. agentID
+// is stamped onto the audit log entry server-side via the X-Agent-Id header.
+func (k *KnowledgeResource) AgentDeleteNode(ctx context.Context, projectID, nodeID, agentID string, req AgentDeleteNodeRequest) (*AgentDeleteNodeResponse, error) {
 	var result AgentDeleteNodeResponse
-	err := k.http.Post(ctx, fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes/%s/agent-delete", projectID, nodeID), req, &result)
+	err := k.http.PostWithHeaders(
+		ctx,
+		fmt.Sprintf("/api/v1/projects/%s/knowledge/nodes/%s/agent-delete", projectID, nodeID),
+		req,
+		map[string]string{"X-Agent-Id": agentID},
+		&result,
+	)
 	if err != nil {
 		return nil, err
 	}

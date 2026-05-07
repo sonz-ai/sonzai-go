@@ -64,6 +64,10 @@ func isIdempotent(method string) bool {
 }
 
 func (c *httpClient) request(ctx context.Context, method, path string, body interface{}, params map[string]string) ([]byte, error) {
+	return c.requestWithHeaders(ctx, method, path, body, params, nil)
+}
+
+func (c *httpClient) requestWithHeaders(ctx context.Context, method, path string, body interface{}, params map[string]string, extraHeaders map[string]string) ([]byte, error) {
 	u, err := url.Parse(c.baseURL + path)
 	if err != nil {
 		return nil, fmt.Errorf("invalid URL: %w", err)
@@ -122,6 +126,11 @@ func (c *httpClient) request(ctx context.Context, method, path string, body inte
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+		for k, v := range extraHeaders {
+			if v != "" {
+				req.Header.Set(k, v)
+			}
+		}
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
@@ -207,6 +216,32 @@ func (c *httpClient) Put(ctx context.Context, path string, body interface{}, res
 // Patch performs an HTTP PATCH request and unmarshals the response into result.
 func (c *httpClient) Patch(ctx context.Context, path string, body interface{}, result interface{}) error {
 	data, err := c.request(ctx, http.MethodPatch, path, body, nil)
+	if err != nil {
+		return err
+	}
+	if result != nil {
+		return json.Unmarshal(data, result)
+	}
+	return nil
+}
+
+// PostWithHeaders is Post with additional per-request headers (e.g. X-Agent-Id
+// for KB agent-write endpoints).
+func (c *httpClient) PostWithHeaders(ctx context.Context, path string, body interface{}, headers map[string]string, result interface{}) error {
+	data, err := c.requestWithHeaders(ctx, http.MethodPost, path, body, nil, headers)
+	if err != nil {
+		return err
+	}
+	if result != nil {
+		return json.Unmarshal(data, result)
+	}
+	return nil
+}
+
+// PatchWithHeaders is Patch with additional per-request headers (e.g. X-Agent-Id
+// for KB agent-write endpoints).
+func (c *httpClient) PatchWithHeaders(ctx context.Context, path string, body interface{}, headers map[string]string, result interface{}) error {
+	data, err := c.requestWithHeaders(ctx, http.MethodPatch, path, body, nil, headers)
 	if err != nil {
 		return err
 	}
