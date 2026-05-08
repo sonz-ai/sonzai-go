@@ -354,6 +354,9 @@ type MemoryTimelineOptions struct {
 // ---------------------------------------------------------------------------
 
 // Big5Trait represents a single Big Five personality trait.
+// Score is on the 0-100 canonical scale that the platform stores natively.
+// The API permissively accepts 0-1 fractional inputs on writes (auto-rescaled
+// to 0-100), but reads always return 0-100.
 type Big5Trait struct {
 	Score      float64 `json:"score"`
 	Percentile int     `json:"percentile"`
