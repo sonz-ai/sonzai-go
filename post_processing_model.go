@@ -34,9 +34,9 @@ type PostProcessingModelEntry struct {
 // Example:
 //
 //	sonzai.PostProcessingModelMap{
-//	    "gemini-3.1-pro-preview":  {Provider: "gemini",     Model: "gemini-3.1-flash-lite-preview"},
+//	    "gemini-3.1-pro-preview":  {Provider: "gemini",     Model: "gemini-3.1-flash-lite"},
 //	    "claude-opus-4.6":         {Provider: "openrouter", Model: "anthropic/claude-haiku-4.5"},
-//	    sonzai.PostProcessingWildcardKey: {Provider: "gemini", Model: "gemini-3.1-flash-lite-preview"},
+//	    sonzai.PostProcessingWildcardKey: {Provider: "gemini", Model: "gemini-3.1-flash-lite"},
 //	}
 type PostProcessingModelMap map[string]PostProcessingModelEntry
 

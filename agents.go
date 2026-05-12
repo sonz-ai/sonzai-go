@@ -221,6 +221,42 @@ func (a *AgentsResource) GetMood(ctx context.Context, agentID string, userID, in
 	return &result, err
 }
 
+// UpdateMoodOptions configures an absolute mood override. All four
+// dimensions are on a 0-100 scale.
+type UpdateMoodOptions struct {
+	Valence     float64
+	Arousal     float64
+	Tension     float64
+	Affiliation float64
+	UserID      string // optional; empty = agent-global mood
+	InstanceID  string // optional; scoped with user_id
+}
+
+// UpdateMood hard-sets the agent's current mood dimensions. Overrides are
+// NOT pinned — subsequent turns continue to drift mood normally.
+func (a *AgentsResource) UpdateMood(ctx context.Context, agentID string, opts UpdateMoodOptions) (*MoodResponse, error) {
+	path := fmt.Sprintf("/api/v1/agents/%s/mood", agentID)
+	qs := url.Values{}
+	if opts.UserID != "" {
+		qs.Set("user_id", opts.UserID)
+	}
+	if opts.InstanceID != "" {
+		qs.Set("instance_id", opts.InstanceID)
+	}
+	if encoded := qs.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	body := map[string]float64{
+		"valence":     opts.Valence,
+		"arousal":     opts.Arousal,
+		"tension":     opts.Tension,
+		"affiliation": opts.Affiliation,
+	}
+	var result MoodResponse
+	err := a.http.Put(ctx, path, body, &result)
+	return &result, err
+}
+
 // GetMoodHistory returns mood history for an agent.
 func (a *AgentsResource) GetMoodHistory(ctx context.Context, agentID string, userID, instanceID string) (*MoodHistoryResponse, error) {
 	params := map[string]string{}

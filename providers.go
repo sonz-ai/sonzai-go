@@ -37,7 +37,7 @@ const (
 
 	// ModelGeminiFlashLite is the fast, cost-efficient Gemini model.
 	// This is the platform's recommended default for most use cases.
-	ModelGeminiFlashLite = "gemini-3.1-flash-lite-preview"
+	ModelGeminiFlashLite = "gemini-3.1-flash-lite"
 
 	// ---------------------------------------------------------------------------
 	// Model IDs — Zhipu AI

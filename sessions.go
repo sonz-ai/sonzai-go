@@ -17,7 +17,7 @@ type SessionsResource struct {
 // post-processing tasks (fact extraction, mood analysis, per-turn extraction).
 // Both must be set together to take effect; per-call /turn or /sessions/end
 // requests can override them. Otherwise the server-side resolver picks a
-// default (currently gemini-3.1-flash-lite-preview).
+// default (currently gemini-3.1-flash-lite).
 type SessionStartOptions struct {
 	UserID          string           `json:"user_id"`
 	UserDisplayName string           `json:"user_display_name,omitempty"`

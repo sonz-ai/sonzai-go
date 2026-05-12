@@ -106,18 +106,18 @@ func TestSession_StartSession_ReturnsHandle(t *testing.T) {
 		UserID:    "user-1",
 		SessionID: "sess-1",
 		Provider:  "gemini",
-		Model:     "gemini-3.1-flash-lite-preview",
+		Model:     "gemini-3.1-flash-lite",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if gotStartBody.Provider != "gemini" || gotStartBody.Model != "gemini-3.1-flash-lite-preview" {
+	if gotStartBody.Provider != "gemini" || gotStartBody.Model != "gemini-3.1-flash-lite" {
 		t.Fatalf("provider/model not forwarded on /start: %+v", gotStartBody)
 	}
 	if sess.AgentID != "agent-1" || sess.UserID != "user-1" || sess.SessionID != "sess-1" {
 		t.Fatalf("Session handle not populated: %+v", sess)
 	}
-	if sess.Provider != "gemini" || sess.Model != "gemini-3.1-flash-lite-preview" {
+	if sess.Provider != "gemini" || sess.Model != "gemini-3.1-flash-lite" {
 		t.Fatalf("Session defaults not stored: %+v", sess)
 	}
 }
@@ -149,7 +149,7 @@ func TestSession_Turn_AppliesDefaultsAndOverride(t *testing.T) {
 		UserID:    "user-1",
 		SessionID: "sess-1",
 		Provider:  "gemini",
-		Model:     "gemini-3.1-flash-lite-preview",
+		Model:     "gemini-3.1-flash-lite",
 	})
 	if err != nil {
 		t.Fatalf("StartSession err: %v", err)
@@ -173,7 +173,7 @@ func TestSession_Turn_AppliesDefaultsAndOverride(t *testing.T) {
 	if len(bodies) != 2 {
 		t.Fatalf("expected 2 turn bodies, got %d", len(bodies))
 	}
-	if bodies[0].Provider != "gemini" || bodies[0].Model != "gemini-3.1-flash-lite-preview" {
+	if bodies[0].Provider != "gemini" || bodies[0].Model != "gemini-3.1-flash-lite" {
 		t.Fatalf("turn 1 should have inherited session defaults: %+v", bodies[0])
 	}
 	if bodies[0].UserID != "user-1" {

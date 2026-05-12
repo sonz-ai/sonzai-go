@@ -207,7 +207,7 @@ resp, _ := client.Agents.Chat(ctx, sonzai.AgentChatParams{
         UserID:    "user-123",
         SessionID: "session-456", // auto-created if omitted
         Provider:  "gemini",
-        Model:     "gemini-3.1-flash-lite-preview",
+        Model:     "gemini-3.1-flash-lite",
     },
 })
 fmt.Println(resp.Content)
@@ -320,7 +320,7 @@ ChatOptions{
     SessionID:            "session-456",
     InstanceID:           "instance-789",     // parallel branch
     Provider:             "gemini",            // gemini | zhipu | volcengine | openrouter | custom
-    Model:                "gemini-3.1-flash-lite-preview",
+    Model:                "gemini-3.1-flash-lite",
     Language:             "en",
     Timezone:             "America/New_York",
     CompiledSystemPrompt: "You are a helpful assistant.",
@@ -426,7 +426,7 @@ session, _ := client.Agents.Sessions.Start(ctx, "agent-id", sonzai.SessionStartO
     UserID:    "user-123",
     SessionID: "session-456",
     Provider:  "gemini",                              // session-level default
-    Model:     "gemini-3.1-flash-lite-preview",       // (per-turn overrides OK)
+    Model:     "gemini-3.1-flash-lite",       // (per-turn overrides OK)
 })
 
 // Per-turn loop: fetch enriched context, hand it to your LLM, submit the turn.

@@ -7,9 +7,9 @@ import (
 
 func TestPostProcessingModelMap_RoundTripJSON(t *testing.T) {
 	want := PostProcessingModelMap{
-		"gemini-3.1-pro-preview":  {Provider: "gemini", Model: "gemini-3.1-flash-lite-preview"},
+		"gemini-3.1-pro-preview":  {Provider: "gemini", Model: "gemini-3.1-flash-lite"},
 		"claude-opus-4.6":         {Provider: "openrouter", Model: "anthropic/claude-haiku-4.5"},
-		PostProcessingWildcardKey: {Provider: "gemini", Model: "gemini-3.1-flash-lite-preview"},
+		PostProcessingWildcardKey: {Provider: "gemini", Model: "gemini-3.1-flash-lite"},
 	}
 
 	data, err := json.Marshal(want)
@@ -53,7 +53,7 @@ func TestPostProcessingModelMap_Wildcard(t *testing.T) {
 	// A map with only a wildcard entry must be valid — that's how operators
 	// express "use one model for every chat model" in a single line.
 	m := PostProcessingModelMap{
-		PostProcessingWildcardKey: {Provider: "gemini", Model: "gemini-3.1-flash-lite-preview"},
+		PostProcessingWildcardKey: {Provider: "gemini", Model: "gemini-3.1-flash-lite"},
 	}
 
 	data, err := json.Marshal(m)
@@ -67,7 +67,7 @@ func TestPostProcessingModelMap_Wildcard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if got[PostProcessingWildcardKey].Model != "gemini-3.1-flash-lite-preview" {
+	if got[PostProcessingWildcardKey].Model != "gemini-3.1-flash-lite" {
 		t.Fatalf("wildcard entry lost in round-trip: %+v", got)
 	}
 }
