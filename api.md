@@ -25,6 +25,99 @@ client := sonzai.NewClient("sk-...",
 | `Chat(ctx, agentID, opts)` | `*ChatResponse, error` | Non-streaming chat response |
 | `ChatStream(ctx, agentID, opts, callback)` | `error` | Streaming chat via SSE with callback |
 | `ChatStreamChannel(ctx, agentID, opts)` | `<-chan ChatStreamEvent` | Streaming chat via channel |
+| `ChatDetached(parent, opts, detachOpts)` | `*ChatResponse, error` | Same as Chat but decoupled from caller's `ctx.Done()` — see [Streaming and cancellation](#streaming-and-cancellation) |
+| `ChatStreamDetached(parent, opts, detachOpts, callback)` | `error` | Detached counterpart of `ChatStream` |
+| `ChatStreamChannelDetached(parent, opts, detachOpts)` | `<-chan ChatStreamEvent` | Detached counterpart of `ChatStreamChannel` |
+
+### Streaming and cancellation
+
+Every Sonzai streaming endpoint is a long-lived SSE call — a single chat
+turn routinely runs 30s, occasionally several minutes. The default
+`Chat` / `ChatStream` / `ChatStreamChannel` methods honour the caller's
+`context.Context`: if `ctx` is cancelled mid-stream the HTTP request is
+aborted and the call returns an error. That's the right shape for an
+interactive UI (user pressed Stop, request was abandoned) but it is a
+foot-gun in three common server-side patterns:
+
+- **Watermill / NATS message handlers** — the message ack deadline
+  (~30s) is far shorter than an LLM stream. When the NATS lib cancels
+  its derived context the streaming HTTP request aborts with
+  `context canceled` and the conversation never finishes.
+- **Queue workers** with bounded per-job contexts.
+- **Short-lived HTTP requests** that hand work off to a goroutine and
+  return to the client before the AI is done.
+
+For these patterns use the `*Detached` variants. They internally apply
+`context.WithoutCancel(parent)` (preserving auth, tracing, logger
+values), wrap the result in a 5-minute SDK-managed timeout (overridable
+via `DetachOptions.Timeout`), and spawn a watchdog that **logs a
+warning** when the parent context is cancelled mid-stream — so accidental
+misuse is caught during dev without aborting the in-flight request.
+
+#### When to reach for which variant
+
+| You're calling from… | Use |
+|----------------------|-----|
+| React Native / web request servicing a live user | `Chat` / `ChatStream` |
+| Long-lived gRPC stream tied to a connected client | `Chat` / `ChatStream` |
+| Watermill subscriber, NATS handler, queue worker | `ChatDetached` / `ChatStreamDetached` |
+| Wakeup / scheduled job dispatched from a message bus | `ChatDetached` |
+| Background goroutine spawned from a short HTTP request | `ChatDetached` |
+
+#### Canonical example: orchestrator wakeup handler
+
+This is the exact pattern that produced the incident this helper exists
+to prevent. A NATS message triggers a wakeup; the handler streams an AI
+response back to the user over Centrifuge. The ack window is short, the
+generation is long:
+
+```go
+func (j *WakeupJob) Handle(natsCtx context.Context, msg *message.Message) error {
+    // natsCtx is tied to the message ack deadline (~30s). DO NOT pass it
+    // straight into a Sonzai streaming call — it will be cancelled long
+    // before the LLM finishes.
+
+    err := client.Agents.ChatStreamDetached(
+        natsCtx, // parent — values preserved, cancellation decoupled
+        sonzai.AgentChatParams{
+            AgentID:     wakeup.AgentID,
+            ChatOptions: sonzai.ChatOptions{ /* ... */ },
+        },
+        sonzai.DetachOptions{
+            // Override the 5m default if you have a tighter SLO:
+            Timeout: 3 * time.Minute,
+            // Optional: route the "parent cancelled mid-stream" signal
+            // into Prometheus instead of logs.
+            OnParentCancel: func(err error) {
+                metrics.WakeupParentCancelled.Inc()
+            },
+        },
+        func(event sonzai.ChatStreamEvent) error {
+            return publishChunkToCentrifuge(event.Content())
+        },
+    )
+    return err
+}
+```
+
+#### Pitfall: forgetting to detach
+
+If you pass a NATS-derived context into the default `Chat`/`ChatStream`,
+generations longer than the ack window abort with `context canceled`
+and the front-end renders `an error occurred while generating the
+response`. The fix is to switch the call site to `*Detached`, not to
+wrap with `context.WithoutCancel` inline (which loses the timeout
+guard and the misuse warning).
+
+#### DetachOptions
+
+```go
+type DetachOptions struct {
+    Timeout        time.Duration                 // default: 5m via DefaultDetachedTimeout
+    Logger         *slog.Logger                  // default: slog.Default()
+    OnParentCancel func(parentErr error)         // alt to slog warning
+}
+```
 
 ### Agent Management
 

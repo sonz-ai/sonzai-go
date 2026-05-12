@@ -38,6 +38,17 @@
 //	    return nil
 //	})
 //
+// # Streaming from message handlers
+//
+// When invoking the SDK from a NATS handler, Watermill subscriber, queue
+// worker, or any other context whose cancellation deadline is shorter
+// than an LLM generation, use the *Detached variants — ChatDetached,
+// ChatStreamDetached, ChatStreamChannelDetached. They decouple the
+// network call from the caller's ctx.Done() while still applying an
+// SDK-managed timeout. See api.md "Streaming and cancellation" for the
+// pitfall, a worked wakeup-handler example, and the DetachOptions
+// reference.
+//
 // # Resources
 //
 // The client exposes the following resource groups:

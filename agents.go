@@ -137,6 +137,67 @@ func (a *AgentsResource) ChatStreamChannel(ctx context.Context, params AgentChat
 	return ch, errCh
 }
 
+// ChatDetached behaves like Chat but detaches the underlying network call
+// from the caller's context cancellation. Use this when invoking the SDK
+// from a NATS handler, Watermill subscriber, queue worker, or short-lived
+// HTTP request whose context lifetime is shorter than an AI generation.
+//
+// The detached call honours an SDK-managed timeout (default 5 minutes,
+// override via opts.Timeout) so it cannot leak indefinitely. Values from
+// the parent context (auth, tracing, etc.) are preserved.
+//
+// While the call is in flight, a watchdog logs a warning (or invokes
+// opts.OnParentCancel) if the parent context is cancelled — this catches
+// misuse during dev without aborting the request. The default Chat
+// method stays cancellation-honoring; use it for interactive UI callers.
+//
+// Canonical use case: an orchestrator wakeup handler dispatched from a
+// NATS message whose ack window is far shorter than an LLM stream.
+func (a *AgentsResource) ChatDetached(parent context.Context, params AgentChatParams, opts DetachOptions) (*ChatResponse, error) {
+	ctx, cancel := detachContext(parent, opts)
+	defer cancel()
+	return a.Chat(ctx, params)
+}
+
+// ChatStreamDetached is the detached counterpart of ChatStream. See
+// ChatDetached for when and why to use this variant.
+func (a *AgentsResource) ChatStreamDetached(parent context.Context, params AgentChatParams, opts DetachOptions, callback func(ChatStreamEvent) error) error {
+	ctx, cancel := detachContext(parent, opts)
+	defer cancel()
+	return a.ChatStream(ctx, params, callback)
+}
+
+// ChatStreamChannelDetached is the detached counterpart of
+// ChatStreamChannel. The returned channel closes when the stream ends or
+// when the detached timeout fires — NOT when the parent context is
+// cancelled. See ChatDetached for guidance.
+func (a *AgentsResource) ChatStreamChannelDetached(parent context.Context, params AgentChatParams, opts DetachOptions) (<-chan ChatStreamEvent, <-chan error) {
+	ctx, cancel := detachContext(parent, opts)
+
+	ch := make(chan ChatStreamEvent, 64)
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer cancel()
+		defer close(ch)
+		defer close(errCh)
+
+		err := a.ChatStream(ctx, params, func(event ChatStreamEvent) error {
+			select {
+			case ch <- event:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		})
+		if err != nil {
+			errCh <- err
+		}
+	}()
+
+	return ch, errCh
+}
+
 // ChatAsync queues a chat request for background processing and
 // returns a processing_id immediately (iter-140u-2). Use this when
 // the chat may run longer than your network's tolerance for an open
