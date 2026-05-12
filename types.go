@@ -358,8 +358,8 @@ type MemoryTimelineOptions struct {
 // The API permissively accepts 0-1 fractional inputs on writes (auto-rescaled
 // to 0-100), but reads always return 0-100.
 type Big5Trait struct {
-	Score      float64 `json:"score"`
-	Percentile int     `json:"percentile"`
+	Score      float64 `json:"score"`      // 0-100
+	Percentile int     `json:"percentile"` // 0-100
 	Confidence float64 `json:"confidence,omitempty"`
 }
 
@@ -1092,26 +1092,26 @@ type ExtractionFact struct {
 	TopicTags  []string `json:"topic_tags"`
 }
 
-// ExtractionPDelta represents a personality trait delta.
+// ExtractionPDelta represents a personality trait delta on the 0-100 scale.
 type ExtractionPDelta struct {
 	Trait  string  `json:"trait"`
-	Delta  float64 `json:"delta"`
+	Delta  float64 `json:"delta"` // applied to 0-100 Big5 score
 	Reason string  `json:"reason"`
 }
 
-// ExtractionDDelta represents a personality dimension delta.
+// ExtractionDDelta represents a personality dimension delta on the 0-100 scale.
 type ExtractionDDelta struct {
 	Dimension string  `json:"dimension"`
-	Delta     float64 `json:"delta"`
+	Delta     float64 `json:"delta"` // applied to 0-100 BFAS dimension score
 	Reason    string  `json:"reason"`
 }
 
-// ExtractionMoodDelta represents a mood state delta.
+// ExtractionMoodDelta represents a mood state delta (±35 max per turn on the 0-100 mood scale).
 type ExtractionMoodDelta struct {
-	Happiness float64 `json:"happiness"`
-	Energy    float64 `json:"energy"`
-	Calmness  float64 `json:"calmness"`
-	Affection float64 `json:"affection"`
+	Happiness float64 `json:"happiness"` // ±35
+	Energy    float64 `json:"energy"`    // ±35
+	Calmness  float64 `json:"calmness"`  // ±35
+	Affection float64 `json:"affection"` // ±35
 	Reason    string  `json:"reason"`
 }
 
@@ -1394,12 +1394,13 @@ type UpdateInstanceOptions struct {
 // Mood
 // ---------------------------------------------------------------------------
 
-// MoodState represents agent mood dimensions (valence-arousal-tension-affiliation model).
+// MoodState represents agent mood dimensions on a 0-100 scale
+// (valence-arousal-tension-affiliation model).
 type MoodState struct {
-	Valence     float64 `json:"valence"`
-	Arousal     float64 `json:"arousal"`
-	Tension     float64 `json:"tension"`
-	Affiliation float64 `json:"affiliation"`
+	Valence     float64 `json:"valence"`     // 0-100
+	Arousal     float64 `json:"arousal"`     // 0-100
+	Tension     float64 `json:"tension"`     // 0-100
+	Affiliation float64 `json:"affiliation"` // 0-100
 	Label       string  `json:"label,omitempty"`
 }
 
