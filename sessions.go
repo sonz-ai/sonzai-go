@@ -334,3 +334,50 @@ func (s *Session) End(ctx context.Context, opts ...SessionEndOptions) error {
 	_, err := s.sessions.End(ctx, s.AgentID, endOpts)
 	return err
 }
+
+// ---------------------------------------------------------------------------
+// Per-user proxy methods — auto-scope by (AgentID, UserID, InstanceID)
+// ---------------------------------------------------------------------------
+//
+// The platform scopes per-user rows under inst:<instanceID>:<userID> when
+// a session was started with an InstanceID. Calling agent-level helpers
+// (e.g. client.Agents.GetMood(ctx, agentID, userID, "")) without
+// InstanceID silently targets the UNSCOPED row, which Session.Context
+// then never reads — leading to the classic "I overrode mood but the
+// next reply uses the old one" footgun. These wrappers eliminate it by
+// always forwarding InstanceID from the Session handle.
+
+// UpdateMood hard-sets this session-user's mood (0-100 per dimension).
+func (s *Session) UpdateMood(ctx context.Context, valence, arousal, tension, affiliation float64) (*MoodResponse, error) {
+	return (&AgentsResource{http: s.sessions.http}).UpdateMood(ctx, s.AgentID, UpdateMoodOptions{
+		Valence: valence, Arousal: arousal, Tension: tension, Affiliation: affiliation,
+		UserID: s.UserID, InstanceID: s.InstanceID,
+	})
+}
+
+// GetMood returns this session-user's current mood (0-100 per dimension).
+func (s *Session) GetMood(ctx context.Context) (*MoodResponse, error) {
+	return (&AgentsResource{http: s.sessions.http}).GetMood(ctx, s.AgentID, s.UserID, s.InstanceID)
+}
+
+// ListFacts returns active facts about this session's user.
+func (s *Session) ListFacts(ctx context.Context, limit int) (*ListAllFactsResponse, error) {
+	return (&InventoryResource{http: s.sessions.http}).ListAllFacts(ctx, s.AgentID, s.UserID, ListAllFactsOptions{
+		Limit: limit, InstanceID: s.InstanceID,
+	})
+}
+
+// ScheduleWakeup queues a proactive wakeup for this session's user.
+// Forwards UserID from the Session handle; the platform wakeup endpoint
+// does not currently scope by InstanceID.
+func (s *Session) ScheduleWakeup(ctx context.Context, opts ScheduleWakeupOptions) (*ScheduledWakeup, error) {
+	if opts.UserID == "" {
+		opts.UserID = s.UserID
+	}
+	return (&WakeupResource{http: s.sessions.http}).Schedule(ctx, s.AgentID, opts)
+}
+
+// Constellation returns the concept-graph constellation for this session's user.
+func (s *Session) Constellation(ctx context.Context) (*ConstellationResponse, error) {
+	return (&AgentsResource{http: s.sessions.http}).GetConstellation(ctx, s.AgentID, s.UserID, s.InstanceID)
+}
