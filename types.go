@@ -220,6 +220,16 @@ type ChatOptions struct {
 	ToolCapabilities     *AgentToolCapabilities `json:"tool_capabilities,omitempty"`
 	ToolDefinitions      []ToolDefinition       `json:"tool_definitions,omitempty"`
 	MaxTurns             int                    `json:"max_turns,omitempty"`
+	// Temperature overrides the AI service's default sampling temperature
+	// for this chat turn. Leave nil to inherit the AI service's per-model
+	// default.
+	//
+	// The Platform automatically adapts or omits this value for providers
+	// whose models require it (for example, models that only accept the
+	// vendor default). Callers do not need to know provider-specific
+	// constraints — pass the value you want, and the Platform will
+	// silently reconcile it where necessary.
+	Temperature *float64 `json:"temperature,omitempty"`
 	SkipContextBuild     bool                   `json:"skip_context_build,omitempty"`
 	// SkipServerHistoryCache instructs the Platform NOT to load or write
 	// its Redis session message cache for this turn. Set true when this

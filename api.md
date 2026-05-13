@@ -119,6 +119,20 @@ type DetachOptions struct {
 }
 ```
 
+#### Selected `ChatOptions` fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Messages` | `[]ChatMessage` | Conversation turns to send. |
+| `UserID` | `string` | User this chat is on behalf of (multi-tenant scoping). |
+| `SessionID` | `string` | Session identifier — enables Platform-side history caching and tool registration. |
+| `Provider` | `string` | Optional pin: `openai` / `anthropic` / `gemini` / `xai` / `openrouter`. |
+| `Model` | `string` | Optional model pin (must be in the provider's allow-list). |
+| `Temperature` | `*float64` | Optional sampling temperature override. `nil` inherits the AI service's per-model default. The Platform automatically adapts or omits this value for providers whose models require it — callers do not need to know provider-specific constraints. Pointer-typed so `omitempty` can suppress the field for server-side defaulting. |
+| `MaxTurns` | `int` | Cap on multi-turn tool-call chains. `0` = use AI service default (3). |
+| `RequestType` | `string` | One of `chat` / `outing` / `situation` / `post` / `opinion` / `comment` / `dialogue` / `diary` / `proactive`. |
+| `ToolCapabilities` | `*AgentToolCapabilities` | Auto-heal flags (e.g. `WebSearch`, `RememberName`). |
+
 ### Agent Management
 
 | Method | Returns | Description |
