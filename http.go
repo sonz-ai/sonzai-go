@@ -18,7 +18,7 @@ import (
 )
 
 // SDKVersion is the current version of the sonzai-go SDK.
-const SDKVersion = "1.5.5"
+const SDKVersion = "1.6.0"
 
 type httpClient struct {
 	baseURL    string
