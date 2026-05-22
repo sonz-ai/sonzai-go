@@ -58,6 +58,11 @@ type CreateAgentOptions struct {
 	GenerateOriginStory          bool                      `json:"generate_origin_story,omitempty"`
 	GeneratePersonalizedMemories bool                      `json:"generate_personalized_memories,omitempty"`
 	InitialGoals                 []InitialGoal             `json:"initial_goals,omitempty"`
+	// ProactiveMode sets the initial per-agent proactive-messaging mode.
+	// One of "full" (default; all wakeup types fire), "scheduled_only"
+	// (only tenant-defined reminder schedules fire), or "off" (no
+	// proactive outreach of any kind). Omitted defaults to "full".
+	ProactiveMode                string                    `json:"proactiveMode,omitempty"`
 }
 
 // InitialGoal defines a goal to set during agent creation.

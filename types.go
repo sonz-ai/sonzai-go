@@ -844,6 +844,12 @@ type AgentCapabilities struct {
 	AutoLearnSkills     bool                   `json:"autoLearnSkills,omitempty"`
 	MCPEnabled          []string               `json:"mcpEnabled,omitempty"`
 	MemoryMode          string                 `json:"memoryMode,omitempty"`
+	// ProactiveMode controls whether the agent decides to message users on
+	// its own. One of "full" (default; all wakeup types fire),
+	// "scheduled_only" (only tenant-defined reminder schedules fire), or
+	// "off" (no proactive outreach of any kind). Empty string is read as
+	// "full" everywhere.
+	ProactiveMode       string                 `json:"proactiveMode,omitempty"`
 	PendingCapabilities []PendingCapability    `json:"pendingCapabilities,omitempty"`
 	CustomTools         []CustomToolDefinition `json:"customTools,omitempty"`
 }
@@ -869,6 +875,10 @@ type UpdateCapabilitiesOptions struct {
 	AutoLearnSkills        *bool    `json:"autoLearnSkills,omitempty"`
 	MemoryMode             string   `json:"memoryMode,omitempty"` // "sync" | "async"
 	MCPEnabled             []string `json:"mcpEnabled,omitempty"`
+	// ProactiveMode controls whether the agent decides to message users on
+	// its own. One of "full", "scheduled_only", or "off". Empty string =
+	// no change. Server validates the enum and rejects unknown values with 400.
+	ProactiveMode          string   `json:"proactiveMode,omitempty"`
 }
 
 // CustomToolListResponse is the response from listing custom tools.
