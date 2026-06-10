@@ -393,6 +393,169 @@ func (c *httpClient) PostMultipart(ctx context.Context, path string, fields map[
 	return nil
 }
 
+// longRunningClient returns the underlying *http.Client with the overall
+// request timeout removed. Some endpoints (built-in agent invocations) can
+// legitimately run for 15+ minutes; for those calls the caller's context
+// deadline is the only cap.
+func (c *httpClient) longRunningClient() *http.Client {
+	if c.httpClient.Timeout == 0 {
+		return c.httpClient
+	}
+	clone := *c.httpClient
+	clone.Timeout = 0
+	return &clone
+}
+
+// PostLongRunning performs an HTTP POST with optional query parameters and
+// without the client's overall request timeout. Use it for endpoints that can
+// run for many minutes; cancellation is governed solely by ctx.
+func (c *httpClient) PostLongRunning(ctx context.Context, path string, params map[string]string, body interface{}, result interface{}) error {
+	u, err := url.Parse(c.baseURL + path)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+
+	if len(params) > 0 {
+		q := u.Query()
+		for k, v := range params {
+			if v != "" {
+				q.Set(k, v)
+			}
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	var bodyReader io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal body: %w", err)
+		}
+		bodyReader = bytes.NewReader(data)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bodyReader)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+
+	resp, err := c.longRunningClient().Do(req)
+	if err != nil {
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read body: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		msg := string(respBody)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+			msg = errResp.Error
+		}
+		return newErrorForStatus(resp.StatusCode, msg, nil)
+	}
+
+	if result != nil {
+		return json.Unmarshal(respBody, result)
+	}
+	return nil
+}
+
+// StreamSSENamed is like StreamSSE but also reports the SSE event name for
+// streams that multiplex event types (e.g. update/result/error frames), and
+// accepts query parameters. It runs without the client's overall request
+// timeout — long-running streams are capped only by ctx.
+func (c *httpClient) StreamSSENamed(ctx context.Context, method, path string, params map[string]string, body interface{}, callback func(event string, data json.RawMessage) error) error {
+	u, err := url.Parse(c.baseURL + path)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+
+	if len(params) > 0 {
+		q := u.Query()
+		for k, v := range params {
+			if v != "" {
+				q.Set(k, v)
+			}
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	var bodyReader io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal body: %w", err)
+		}
+		bodyReader = bytes.NewReader(data)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), bodyReader)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+
+	resp, err := c.longRunningClient().Do(req)
+	if err != nil {
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		msg := string(respBody)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+			msg = errResp.Error
+		}
+		return newErrorForStatus(resp.StatusCode, msg, nil)
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
+	eventName := "message"
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			// Blank line terminates an SSE frame; the event name resets.
+			eventName = "message"
+			continue
+		}
+		if strings.HasPrefix(line, "event:") {
+			eventName = strings.TrimSpace(line[len("event:"):])
+			continue
+		}
+		if line == "data: [DONE]" {
+			return nil
+		}
+		if strings.HasPrefix(line, "data:") {
+			data := strings.TrimSpace(line[len("data:"):])
+			if err := callback(eventName, json.RawMessage(data)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return scanner.Err()
+}
+
 // StreamSSE sends a request and calls the callback for each parsed SSE event.
 func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body interface{}, callback func(json.RawMessage) error) error {
 	u, err := url.Parse(c.baseURL + path)

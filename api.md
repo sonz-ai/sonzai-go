@@ -319,6 +319,38 @@ Project-scoped knowledge base operations accessed via `client.Knowledge`.
 |--------|---------|-------------|
 | `List(ctx, opts)` | `*VoiceListResponse, error` | List available voices from catalog |
 
+## BuiltinAgents
+
+Sonzai Built-in Agents are platform-hosted vertical task agents — the platform
+manages prompting, tools, and execution. Catalog slugs: `lead_research`,
+`market_intel`, `lead_extract`, `lead_score`, `lead_qualifier` (constants
+`BuiltinAgentLeadResearch`, `BuiltinAgentMarketIntel`, `BuiltinAgentLeadExtract`,
+`BuiltinAgentLeadScore`, `BuiltinAgentLeadQualifier`).
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `List(ctx)` | `[]BuiltinAgent, error` | Catalog with per-project provisioning state |
+| `Invoke(ctx, slug, params)` | `*BuiltinAgentInvokeResult, error` | Run an agent to completion (blocking; can take 15+ min — capped only by ctx) |
+| `InvokeStream(ctx, slug, params, onUpdate)` | `*BuiltinAgentInvokeResult, error` | Run an agent with SSE progress updates; returns the terminal result |
+| `CreateSession(ctx, params)` | `*BuiltinAgentSession, error` | Open a conversation session without invoking |
+| `ListSessions(ctx, limit)` | `[]BuiltinAgentSession, error` | Recent sessions, newest first (`limit <= 0` → server default) |
+| `GetSession(ctx, sessionID)` | `*BuiltinAgentSession, error` | One session including billed token totals |
+| `SendMessage(ctx, sessionID, text, onUpdate)` | `*BuiltinAgentChatTurnResult, error` | One chat turn; nil `onUpdate` blocks, non-nil streams updates |
+
+```go
+result, err := client.BuiltinAgents.InvokeStream(ctx, sonzai.BuiltinAgentLeadResearch,
+    sonzai.BuiltinAgentInvokeParams{Input: map[string]any{"company": "Acme Corp"}},
+    func(u sonzai.BuiltinAgentStreamUpdate) { log.Println(u.Type, u.Tool, u.Text) })
+if err != nil { ... }
+// result.Findings is raw JSON (agent-specific shape); result.Summary is prose.
+// Follow up in the same session:
+turn, err := client.BuiltinAgents.SendMessage(ctx, result.SessionID, "Who is the decision maker?", nil)
+```
+
+`Invoke` and `SendMessage` ignore the client-level HTTP timeout — pass a
+context with the deadline you want (research invocations legitimately run for
+many minutes).
+
 ## Eval
 
 ```go

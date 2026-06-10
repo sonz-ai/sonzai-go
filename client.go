@@ -97,6 +97,13 @@ type Client struct {
 	// supported providers (openai, gemini, xai, openrouter).
 	BYOK *BYOKResource
 
+	// BuiltinAgents provides access to Sonzai Built-in Agents —
+	// platform-hosted vertical task agents (lead_research, market_intel,
+	// lead_extract, lead_score, lead_qualifier). Invoke them directly or
+	// hold multi-turn sessions; the platform manages prompting, tools,
+	// and execution.
+	BuiltinAgents *BuiltinAgentsResource
+
 	// ProjectNotifications provides project-scoped notification polling.
 	ProjectNotifications *ProjectNotificationsResource
 
@@ -225,6 +232,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},
 		BYOK:                 &BYOKResource{http: hc},
+		BuiltinAgents:        &BuiltinAgentsResource{http: hc},
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		Tenants:              &TenantsResource{http: hc},
 		Projects:             &ProjectsResource{http: hc},
