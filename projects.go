@@ -68,11 +68,15 @@ func (p *ProjectsResource) Update(ctx context.Context, projectID string, opts Up
 // List returns all projects for the authenticated tenant.
 // If the tenant has no projects, the platform auto-creates a default project and returns it.
 func (p *ProjectsResource) List(ctx context.Context) ([]Project, error) {
-	var result []Project
+	var result struct {
+		Items     []Project `json:"items"`
+		NextCursor string   `json:"next_cursor,omitempty"`
+		HasMore    bool     `json:"has_more,omitempty"`
+	}
 	if err := p.http.Get(ctx, "/api/v1/projects", nil, &result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return result.Items, nil
 }
 
 // Get returns a single project by ID.
