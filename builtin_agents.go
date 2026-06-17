@@ -283,6 +283,150 @@ func (c *BuiltinAgentsResource) SendMessage(ctx context.Context, sessionID, text
 	return result, nil
 }
 
+// ---- Lead-scoring feedback loop (bandit) ----
+
+// SegmentCal is a per-segment calibration adjustment derived from realized
+// lead outcomes. Adjust is a multiplicative correction the lead_score agent
+// applies to future leads matching this segment.
+type SegmentCal struct {
+	Segment     string  `json:"segment"`
+	N           int     `json:"n"`
+	Conversions int     `json:"conversions"`
+	PHat        float64 `json:"p_hat"`
+	Adjust      float64 `json:"adjust"`
+}
+
+// BandAccuracy compares the predicted conversion rate of a score band against
+// the realized rate, exposing the calibration gap per band.
+type BandAccuracy struct {
+	Band           string  `json:"band"`
+	N              int     `json:"n"`
+	Conversions    int     `json:"conversions"`
+	PredictedRate  float64 `json:"predicted_rate"`
+	ActualRate     float64 `json:"actual_rate"`
+	AvgScore       float64 `json:"avg_score"`
+	CalibrationGap float64 `json:"calibration_gap"`
+}
+
+// Calibration is the project's current lead-scoring calibration: predicted-vs-
+// actual accuracy by band plus multiplicative segment adjustments. The
+// lead_score agent applies it to future leads.
+type Calibration struct {
+	Segments  []SegmentCal   `json:"segments"`
+	Bands     []BandAccuracy `json:"bands"`
+	BaseRate  float64        `json:"base_rate"`
+	UpdatedAt string         `json:"updated_at"`
+}
+
+// LeadOutcomeParams is the request body for recording a realized lead-scoring
+// outcome. LeadRef and Outcome are required.
+type LeadOutcomeParams struct {
+	// LeadRef identifies the lead this outcome belongs to. Required.
+	LeadRef string `json:"lead_ref"`
+
+	// PredictedScore is the score the agent assigned, if known.
+	PredictedScore int `json:"predicted_score,omitempty"`
+
+	// PredictedBand is the score band the agent assigned, if known.
+	PredictedBand string `json:"predicted_band,omitempty"`
+
+	// Features captures the lead's scored features for segment calibration.
+	Features map[string]any `json:"features,omitempty"`
+
+	// Outcome is the realized result (e.g. "won", "lost"). Required.
+	Outcome string `json:"outcome"`
+
+	// ScoreSignal optionally overrides how the outcome maps to a conversion.
+	ScoreSignal string `json:"score_signal,omitempty"`
+
+	// Note is an optional free-text annotation.
+	Note string `json:"note,omitempty"`
+}
+
+// RecordLeadOutcome records a realized lead-scoring outcome (won/lost/…) and
+// returns the recomputed project calibration the lead_score agent applies to
+// future leads.
+func (c *BuiltinAgentsResource) RecordLeadOutcome(ctx context.Context, params LeadOutcomeParams) (*Calibration, error) {
+	var result Calibration
+	if err := c.http.Post(ctx, "/api/v1/builtin-agents/lead_score/outcome", params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetLeadCalibration returns the current lead-scoring calibration (predicted-
+// vs-actual by band plus per-segment adjustments).
+func (c *BuiltinAgentsResource) GetLeadCalibration(ctx context.Context) (*Calibration, error) {
+	var result Calibration
+	if err := c.http.Get(ctx, "/api/v1/builtin-agents/lead_score/calibration", nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ---- Closed-loop agent self-improvement (learned guidance) ----
+
+// LearnResult is the outcome of one agent distillation cycle. Changed reports
+// whether a new guidance version was applied; Guidance carries the applied
+// guidance when it did, and Violations lists any bounds the candidate breached.
+type LearnResult struct {
+	Changed    bool           `json:"changed"`
+	Reason     string         `json:"reason,omitempty"`
+	Guidance   map[string]any `json:"guidance,omitempty"`
+	Violations []string       `json:"violations,omitempty"`
+}
+
+// AgentGuidance is an agent's learned guidance: the active version plus recent
+// version history. Both fields may be nil when no guidance has been distilled.
+type AgentGuidance struct {
+	Active  map[string]any   `json:"active"`
+	History []map[string]any `json:"history"`
+}
+
+// LearnAgent runs one distillation cycle for an agent, turning accumulated
+// critiques/outcomes into a new, bounded, auto-applied guidance version. It
+// respects the project kill switch (see SetAgentLearning). Pass nil evidence
+// to distill from accumulated signals only.
+func (c *BuiltinAgentsResource) LearnAgent(ctx context.Context, slug string, evidence any) (*LearnResult, error) {
+	var result LearnResult
+	path := fmt.Sprintf("/api/v1/builtin-agents/%s/learn", slug)
+	if err := c.http.Post(ctx, path, map[string]any{"evidence": evidence}, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetAgentGuidance returns an agent's active learned guidance plus recent
+// version history.
+func (c *BuiltinAgentsResource) GetAgentGuidance(ctx context.Context, slug string) (*AgentGuidance, error) {
+	var result AgentGuidance
+	path := fmt.Sprintf("/api/v1/builtin-agents/%s/guidance", slug)
+	if err := c.http.Get(ctx, path, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// RollbackAgentGuidance rolls an agent's active guidance back to the prior
+// version and returns the now-active guidance.
+func (c *BuiltinAgentsResource) RollbackAgentGuidance(ctx context.Context, slug string) (*AgentGuidance, error) {
+	var result AgentGuidance
+	path := fmt.Sprintf("/api/v1/builtin-agents/%s/guidance/rollback", slug)
+	if err := c.http.Post(ctx, path, map[string]any{}, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// SetAgentLearning toggles closed-loop auto-apply for the project (the kill
+// switch). When disabled, LearnAgent distills but does not auto-apply guidance.
+func (c *BuiltinAgentsResource) SetAgentLearning(ctx context.Context, enabled bool) error {
+	var result struct {
+		Enabled bool `json:"enabled"`
+	}
+	return c.http.Put(ctx, "/api/v1/builtin-agents/learning", map[string]bool{"enabled": enabled}, &result)
+}
+
 // builtinAgentStreamError decodes a terminal SSE `error` frame.
 func builtinAgentStreamError(data json.RawMessage) error {
 	var e struct {
