@@ -364,6 +364,65 @@ func (c *BuiltinAgentsResource) GetLeadCalibration(ctx context.Context) (*Calibr
 	return &result, nil
 }
 
+// ---- Async lead enrichment ----
+
+// EnrichLeadInput is the raw lead payload submitted for enrichment. All
+// fields are optional; richer input yields a richer enriched profile.
+type EnrichLeadInput struct {
+	Name     string `json:"name,omitempty"`
+	Phone    string `json:"phone,omitempty"`
+	Email    string `json:"email,omitempty"`
+	Company  string `json:"company,omitempty"`
+	Brand    string `json:"brand,omitempty"`
+	Vertical string `json:"vertical,omitempty"`
+	Raw      string `json:"raw,omitempty"`
+}
+
+// EnrichLeadParams is the request body for enqueueing a lead-enrichment job.
+type EnrichLeadParams struct {
+	// Lead is the raw lead payload to enrich. Required.
+	Lead EnrichLeadInput `json:"lead"`
+
+	// WebhookURL optionally receives a callback when the job completes.
+	WebhookURL string `json:"webhook_url,omitempty"`
+}
+
+// EnrichJob is the state of an async lead-enrichment job. Status moves
+// "queued" → "processing" → "done" (or "error"). When done, Result carries
+// the rich, evolving enrichment object (identity, affiliations,
+// current_location, net_worth, score, band, intent, value, recommended_brand,
+// next_best_action, recommended_message, …) — decode it into your own struct
+// as needed.
+type EnrichJob struct {
+	JobID  string         `json:"job_id"`
+	Status string         `json:"status"`
+	Result map[string]any `json:"result,omitempty"`
+	Error  string         `json:"error,omitempty"`
+}
+
+// EnrichLead enqueues an async lead-enrichment job and returns the job
+// handle (job_id + status "queued"). Poll GetEnrichment with the returned
+// JobID until Status is "done" or "error".
+func (c *BuiltinAgentsResource) EnrichLead(ctx context.Context, params EnrichLeadParams) (*EnrichJob, error) {
+	var result EnrichJob
+	if err := c.http.Post(ctx, "/api/v1/builtin-agents/lead/enrich", params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetEnrichment returns the current state of an async lead-enrichment job.
+// When Status is "done", Result carries the enriched lead profile; when
+// "error", Error carries the failure reason.
+func (c *BuiltinAgentsResource) GetEnrichment(ctx context.Context, jobID string) (*EnrichJob, error) {
+	var result EnrichJob
+	path := fmt.Sprintf("/api/v1/builtin-agents/lead/enrich/%s", jobID)
+	if err := c.http.Get(ctx, path, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ---- Closed-loop agent self-improvement (learned guidance) ----
 
 // LearnResult is the outcome of one agent distillation cycle. Changed reports
