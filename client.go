@@ -104,6 +104,12 @@ type Client struct {
 	// and execution.
 	BuiltinAgents *BuiltinAgentsResource
 
+	// ML provides the platform's generalized, multi-tenant / multi-vertical
+	// ML & RL primitives keyed by a use_case string: supervised scoring
+	// (train + calibrated predict), contextual-bandit next-best-action
+	// (decide + learn), and off-policy evaluation.
+	ML *MLResource
+
 	// ProjectNotifications provides project-scoped notification polling.
 	ProjectNotifications *ProjectNotificationsResource
 
@@ -233,6 +239,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		CustomLLM:            &CustomLLMResource{http: hc},
 		BYOK:                 &BYOKResource{http: hc},
 		BuiltinAgents:        &BuiltinAgentsResource{http: hc},
+		ML:                   &MLResource{http: hc},
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		Tenants:              &TenantsResource{http: hc},
 		Projects:             &ProjectsResource{http: hc},
