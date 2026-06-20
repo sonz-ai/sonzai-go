@@ -351,3 +351,116 @@ func TestML_SimulateRounds_URLBodyAndDecode(t *testing.T) {
 		t.Errorf("decoded ope mismatch: %+v", res.OPE)
 	}
 }
+
+func TestML_RecordFeedback_URLBodyAndDecode(t *testing.T) {
+	var seen struct {
+		path, method string
+		body         map[string]any
+	}
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen.path = r.URL.Path
+		seen.method = r.Method
+		raw, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(raw, &seen.body)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"ok":               true,
+			"use_case":         "lead_score",
+			"converted":        true,
+			"outcome_recorded": true,
+			"bandit_updated":   true,
+			"bandit_n":         5002,
+			"message":          "outcome recorded; bandit updated",
+		})
+	})
+	client := newTestClient(t, h)
+
+	predicted := 82
+	prop := 0.62
+	reward := 1.0
+	res, err := client.ML.RecordFeedback(context.Background(), "lead_score", RecordFeedbackParams{
+		SubjectID:      "lead_123",
+		Features:       map[string]any{"net_worth": 2_000_000, "intent": "high"},
+		Converted:      true,
+		PredictedScore: &predicted,
+		Note:           "closed after site visit",
+		ActionID:       "sms",
+		Context:        map[string]any{"hour": 14, "band": "hot"},
+		ActionFeatures: map[string]any{"cost": 0.01},
+		Propensity:     &prop,
+		Reward:         &reward,
+	})
+	if err != nil {
+		t.Fatalf("RecordFeedback: %v", err)
+	}
+	if seen.method != http.MethodPost {
+		t.Errorf("method: got %s, want POST", seen.method)
+	}
+	if seen.path != "/api/v1/builtin-agents/ml/lead_score/feedback" {
+		t.Errorf("path: got %q", seen.path)
+	}
+	if got := seen.body["converted"]; got != true {
+		t.Errorf("converted body: got %v, want true", got)
+	}
+	if got := seen.body["action_id"]; got != "sms" {
+		t.Errorf("action_id body: got %v, want sms", got)
+	}
+	if got := seen.body["predicted_score"]; got != float64(82) {
+		t.Errorf("predicted_score body: got %v, want 82", got)
+	}
+	if got := seen.body["propensity"]; got != 0.62 {
+		t.Errorf("propensity body: got %v, want 0.62", got)
+	}
+	if got := seen.body["reward"]; got != float64(1.0) {
+		t.Errorf("reward body: got %v, want 1.0", got)
+	}
+	if !res.OK || res.UseCase != "lead_score" || !res.Converted {
+		t.Errorf("decoded result mismatch: %+v", res)
+	}
+	if !res.OutcomeRecorded || !res.BanditUpdated || res.BanditN != 5002 {
+		t.Errorf("decoded bandit fields mismatch: %+v", res)
+	}
+	if res.Message != "outcome recorded; bandit updated" {
+		t.Errorf("decoded message mismatch: %+v", res)
+	}
+}
+
+func TestML_RecordFeedback_OmitsOptionalsWhenUnset(t *testing.T) {
+	var seen map[string]any
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(raw, &seen)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"ok":               true,
+			"use_case":         "churn",
+			"converted":        false,
+			"outcome_recorded": true,
+			"bandit_updated":   false,
+			"message":          "outcome recorded",
+		})
+	})
+	client := newTestClient(t, h)
+
+	res, err := client.ML.RecordFeedback(context.Background(), "churn", RecordFeedbackParams{
+		SubjectID: "user_9",
+		Converted: false,
+	})
+	if err != nil {
+		t.Fatalf("RecordFeedback: %v", err)
+	}
+	// converted is always present (no omitempty); false is the realized outcome.
+	if got, present := seen["converted"]; !present || got != false {
+		t.Errorf("converted should be present and false, body: %v", seen)
+	}
+	for _, k := range []string{"features", "predicted_score", "note", "action_id", "context", "action_features", "propensity", "reward"} {
+		if _, present := seen[k]; present {
+			t.Errorf("%s should be omitted when unset, body: %v", k, seen)
+		}
+	}
+	if !res.OK || res.BanditUpdated {
+		t.Errorf("decoded result mismatch: %+v", res)
+	}
+	// bandit_n / bandit_error omitted on the wire → zero values.
+	if res.BanditN != 0 || res.BanditError != "" {
+		t.Errorf("decoded omitted optionals should be zero: %+v", res)
+	}
+}

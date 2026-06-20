@@ -267,6 +267,69 @@ type SimulateRoundsResult struct {
 	} `json:"ope"`
 }
 
+// RecordFeedbackParams is the request body for the unified feedback call — the
+// single operator-facing way to teach the platform from a realized outcome. It
+// persists the labeled outcome for scoring (which retrains on the platform
+// schedule) and, when ActionID is set, immediately teaches the bandit the
+// realized reward. Only Converted is required; everything else is optional.
+type RecordFeedbackParams struct {
+	// SubjectID optionally identifies the subject of the outcome (e.g. the
+	// lead/user the prediction was about), for joining back to the prediction.
+	SubjectID string `json:"subject_id,omitempty"`
+
+	// Features is the subject's feature map at decision time. Provide it to
+	// persist a fully-labeled scoring example; leave nil to record the outcome
+	// against a previously logged prediction.
+	Features map[string]any `json:"features,omitempty"`
+
+	// Converted is the realized binary outcome (true = positive). Required.
+	Converted bool `json:"converted"`
+
+	// PredictedScore optionally records the score the model predicted, for
+	// calibration tracking. Leave nil if unknown.
+	PredictedScore *int `json:"predicted_score,omitempty"`
+
+	// Note is an optional free-form annotation for the outcome.
+	Note string `json:"note,omitempty"`
+
+	// ActionID optionally identifies the action that was taken. When set, the
+	// bandit is taught the realized reward immediately.
+	ActionID string `json:"action_id,omitempty"`
+
+	// Context is the bandit decision context that was used. Provide it with
+	// ActionID for unbiased bandit learning.
+	Context map[string]any `json:"context,omitempty"`
+
+	// ActionFeatures is the taken action's feature map.
+	ActionFeatures map[string]any `json:"action_features,omitempty"`
+
+	// Propensity is the probability the policy assigned to the taken action at
+	// decision time (from DecideNBAResult.Propensity). Pass it for unbiased
+	// off-policy learning; leave nil if unknown.
+	Propensity *float64 `json:"propensity,omitempty"`
+
+	// Reward is the realized reward for the taken action. Leave nil to default
+	// to Converted ? 1 : 0.
+	Reward *float64 `json:"reward,omitempty"`
+}
+
+// RecordFeedbackResult acknowledges a unified feedback call. OutcomeRecorded
+// reports whether the labeled scoring outcome was persisted; BanditUpdated
+// reports whether the bandit was taught (only when ActionID was given), with
+// BanditN as the policy's running learning-example count and BanditError
+// carrying any non-fatal bandit-update error. Message is a human-readable
+// summary.
+type RecordFeedbackResult struct {
+	OK              bool   `json:"ok"`
+	UseCase         string `json:"use_case"`
+	Converted       bool   `json:"converted"`
+	OutcomeRecorded bool   `json:"outcome_recorded"`
+	BanditUpdated   bool   `json:"bandit_updated"`
+	BanditN         int    `json:"bandit_n,omitempty"`
+	BanditError     string `json:"bandit_error,omitempty"`
+	Message         string `json:"message"`
+}
+
 // MLResource provides the platform's generalized ML & RL primitives keyed by
 // a use_case string: supervised scoring, contextual-bandit next-best-action,
 // and off-policy evaluation.
@@ -350,6 +413,21 @@ func (c *MLResource) SimulateRounds(ctx context.Context, useCase string, params 
 	var result SimulateRoundsResult
 	path := fmt.Sprintf("/api/v1/builtin-agents/ml/%s/simulate-rounds", useCase)
 	if err := c.http.PostLongRunning(ctx, path, nil, params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// RecordFeedback is the single unified operator call for teaching the platform
+// from a realized outcome. It persists the labeled outcome for the use case's
+// scoring model (which retrains on the platform schedule) and, when params
+// includes an ActionID, immediately teaches the bandit the realized reward.
+// Reward defaults to Converted ? 1 : 0 when not supplied. Prefer this over
+// composing the scoring-outcome and LearnNBA calls by hand.
+func (c *MLResource) RecordFeedback(ctx context.Context, useCase string, params RecordFeedbackParams) (*RecordFeedbackResult, error) {
+	var result RecordFeedbackResult
+	path := fmt.Sprintf("/api/v1/builtin-agents/ml/%s/feedback", useCase)
+	if err := c.http.Post(ctx, path, params, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

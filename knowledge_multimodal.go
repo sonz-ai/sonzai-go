@@ -2,13 +2,13 @@
 // surface for the Go SDK. These methods extend KnowledgeResource with the
 // new endpoints introduced by the multimodal pipeline:
 //
-//   PATCH  /knowledge/documents/{id}/classification — resolve needs_classification
-//   GET    /knowledge/facts                          — list active facts
-//   GET    /knowledge/facts/active                   — fetch active fact for a tuple
-//   GET    /knowledge/facts/history                  — version chain for a tuple
-//   GET    /knowledge/entities/{type}/{key}          — kb_get_entity
-//   GET    /knowledge/traverse                       — kb_traverse
-//   POST   /knowledge/compare                        — kb_compare
+//	PATCH  /knowledge/documents/{id}/classification — resolve needs_classification
+//	GET    /knowledge/facts                          — list active facts
+//	GET    /knowledge/facts/active                   — fetch active fact for a tuple
+//	GET    /knowledge/facts/history                  — version chain for a tuple
+//	GET    /knowledge/entities/{type}/{key}          — kb_get_entity
+//	GET    /knowledge/traverse                       — kb_traverse
+//	POST   /knowledge/compare                        — kb_compare
 //
 // Spec: docs/superpowers/specs/2026-05-22-multimodal-kb-ingestion-design.md §6.4
 package sonzai
@@ -112,6 +112,172 @@ type CompareRequest struct {
 	ViaRelation  string        `json:"via_relation"`
 	TargetEntity KBEntityRef   `json:"target_entity"`
 	PropertyPath string        `json:"property_path"`
+}
+
+// ---------------------------------------------------------------------------
+// Multimodal schema CRUD + document reingest / cost
+//
+//   GET  /knowledge/multimodal-schemas                  — list schema versions
+//   POST /knowledge/multimodal-schemas                  — create a draft version
+//   POST /knowledge/multimodal-schemas/{version}/activate — activate a version
+//   POST /knowledge/documents/{id}/reingest             — re-run ingestion
+//   GET  /knowledge/documents/{id}/cost                 — billed-cost breakdown
+//
+// Mirrors python kb_list/create/activate_multimodal_schema,
+// kb_reingest_document, kb_get_document_cost (sonzai/_generated/resources/
+// knowledge.py) and the openapi.json KBSchema / Kb*OutputBody shapes.
+// ---------------------------------------------------------------------------
+
+// KBSchemaConfig is the per-version model + threshold configuration that
+// governs the multimodal ingestion pipeline (classification, extraction,
+// verification). All fields are optional; the platform fills defaults.
+type KBSchemaConfig struct {
+	AbstainBelowConfidence         float64 `json:"abstain_below_confidence,omitempty"`
+	ClassifyAutoThreshold          float64 `json:"classify_auto_threshold,omitempty"`
+	ClassifyModel                  string  `json:"classify_model,omitempty"`
+	ExtractMinProvenanceConfidence float64 `json:"extract_min_provenance_confidence,omitempty"`
+	ExtractModel                   string  `json:"extract_model,omitempty"`
+	IngestionVerifierModel         string  `json:"ingestion_verifier_model,omitempty"`
+	SchemaProposeModel             string  `json:"schema_propose_model,omitempty"`
+	UseDocumentAIPreprocessor      bool    `json:"use_document_ai_preprocessor,omitempty"`
+}
+
+// KBDocType declares a document type and the root entity its pages resolve to.
+type KBDocType struct {
+	Type                  string   `json:"type"`
+	RootEntityType        string   `json:"root_entity_type"`
+	ExpectedRelationships []string `json:"expected_relationships,omitempty"`
+}
+
+// KBEntityType declares an entity type, its identity key fields, and whether
+// it can be a document's root entity.
+type KBEntityType struct {
+	Type            string   `json:"type"`
+	IsRootCandidate bool     `json:"is_root_candidate"`
+	KeyFields       []string `json:"key_fields"`
+	Properties      []string `json:"properties,omitempty"`
+	AliasesField    string   `json:"aliases_field,omitempty"`
+}
+
+// KBRelationType declares a relationship type between two entity types and the
+// fields whose change supersedes a prior fact version.
+type KBRelationType struct {
+	Type                 string   `json:"type"`
+	From                 string   `json:"from"`
+	To                   string   `json:"to"`
+	Properties           []string `json:"properties,omitempty"`
+	SupersessionIdentity []string `json:"supersession_identity"`
+}
+
+// KBSchema is one multimodal KB schema version: the doc/entity/relationship
+// type catalog plus the pipeline config. It is both the create request body
+// and the element type returned by the list/create responses.
+type KBSchema struct {
+	ProjectID         string           `json:"project_id"`
+	SchemaVersion     int              `json:"schema_version"`
+	Status            string           `json:"status"` // "draft" | "active" | ...
+	Config            KBSchemaConfig   `json:"config"`
+	DocTypes          []KBDocType      `json:"doc_types"`
+	EntityTypes       []KBEntityType   `json:"entity_types"`
+	RelationshipTypes []KBRelationType `json:"relationship_types"`
+	CreatedAt         string           `json:"created_at"`
+	CreatedBy         string           `json:"created_by,omitempty"`
+	TemplateLineage   string           `json:"template_lineage,omitempty"`
+	VerticalTemplate  string           `json:"vertical_template,omitempty"`
+}
+
+// KBMultimodalSchemaListResponse is the list-schemas response.
+type KBMultimodalSchemaListResponse struct {
+	Schemas []*KBSchema `json:"schemas"`
+}
+
+// KBMultimodalSchemaCreateResponse wraps the newly created schema version.
+type KBMultimodalSchemaCreateResponse struct {
+	Schema *KBSchema `json:"schema"`
+}
+
+// KBMultimodalSchemaActivateResponse reports the now-active version.
+type KBMultimodalSchemaActivateResponse struct {
+	ActiveVersion int    `json:"active_version"`
+	Status        string `json:"status"`
+}
+
+// KBReingestResponse is the result of triggering a document reingest.
+type KBReingestResponse struct {
+	DocumentID string `json:"document_id"`
+	Mode       string `json:"mode"`
+	Status     string `json:"status"`
+}
+
+// KBDocCostBreakdown is one billed operation line in a document's cost report.
+type KBDocCostBreakdown struct {
+	Operation string  `json:"operation"`
+	Model     string  `json:"model"`
+	CostUSD   float64 `json:"cost_usd"`
+	Pages     int     `json:"pages,omitempty"`
+}
+
+// KBDocCostResponse is the per-document billed-cost breakdown.
+type KBDocCostResponse struct {
+	DocumentID     string                `json:"document_id"`
+	TotalCostUSD   float64               `json:"total_cost_usd"`
+	DocumentAIRows []*KBDocCostBreakdown `json:"document_ai_rows"`
+	LLMRows        []*KBDocCostBreakdown `json:"llm_rows"`
+}
+
+// ListMultimodalSchemas returns every multimodal KB schema version for a
+// project (drafts and the active version).
+func (k *KnowledgeResource) ListMultimodalSchemas(ctx context.Context, projectID string) (*KBMultimodalSchemaListResponse, error) {
+	var result KBMultimodalSchemaListResponse
+	path := fmt.Sprintf("/api/v1/projects/%s/knowledge/multimodal-schemas", projectID)
+	if err := k.http.Get(ctx, path, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// CreateMultimodalSchema creates a new (draft) multimodal KB schema version
+// from the supplied type catalog + config and returns the created version.
+func (k *KnowledgeResource) CreateMultimodalSchema(ctx context.Context, projectID string, schema KBSchema) (*KBMultimodalSchemaCreateResponse, error) {
+	var result KBMultimodalSchemaCreateResponse
+	path := fmt.Sprintf("/api/v1/projects/%s/knowledge/multimodal-schemas", projectID)
+	if err := k.http.Post(ctx, path, schema, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ActivateMultimodalSchema promotes a draft schema version to active. New
+// document ingestions for the project will use it.
+func (k *KnowledgeResource) ActivateMultimodalSchema(ctx context.Context, projectID string, version int) (*KBMultimodalSchemaActivateResponse, error) {
+	var result KBMultimodalSchemaActivateResponse
+	path := fmt.Sprintf("/api/v1/projects/%s/knowledge/multimodal-schemas/%d/activate", projectID, version)
+	if err := k.http.Post(ctx, path, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ReingestDocument re-runs the ingestion pipeline for a previously uploaded
+// document (e.g. after activating a new schema version).
+func (k *KnowledgeResource) ReingestDocument(ctx context.Context, projectID, documentID string) (*KBReingestResponse, error) {
+	var result KBReingestResponse
+	path := fmt.Sprintf("/api/v1/projects/%s/knowledge/documents/%s/reingest", projectID, documentID)
+	if err := k.http.Post(ctx, path, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetDocumentCost returns the per-document billed-cost breakdown (Document AI
+// preprocessing rows + LLM rows) and the total in USD.
+func (k *KnowledgeResource) GetDocumentCost(ctx context.Context, projectID, documentID string) (*KBDocCostResponse, error) {
+	var result KBDocCostResponse
+	path := fmt.Sprintf("/api/v1/projects/%s/knowledge/documents/%s/cost", projectID, documentID)
+	if err := k.http.Get(ctx, path, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // ---------------------------------------------------------------------------

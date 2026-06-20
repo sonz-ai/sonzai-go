@@ -12,9 +12,9 @@ type ProjectsResource struct {
 
 // Project represents a Sonzai project.
 type Project struct {
-	ProjectID   string `json:"project_id"`
-	TenantID    string `json:"tenant_id,omitempty"`
-	Name        string `json:"name"`
+	ProjectID string `json:"project_id"`
+	TenantID  string `json:"tenant_id,omitempty"`
+	Name      string `json:"name"`
 	// GameName is the legacy alias of BusinessName. The API emits both
 	// keys with the same value; new code should read BusinessName.
 	//
@@ -69,9 +69,9 @@ func (p *ProjectsResource) Update(ctx context.Context, projectID string, opts Up
 // If the tenant has no projects, the platform auto-creates a default project and returns it.
 func (p *ProjectsResource) List(ctx context.Context) ([]Project, error) {
 	var result struct {
-		Items     []Project `json:"items"`
-		NextCursor string   `json:"next_cursor,omitempty"`
-		HasMore    bool     `json:"has_more,omitempty"`
+		Items      []Project `json:"items"`
+		NextCursor string    `json:"next_cursor,omitempty"`
+		HasMore    bool      `json:"has_more,omitempty"`
 	}
 	if err := p.http.Get(ctx, "/api/v1/projects", nil, &result); err != nil {
 		return nil, err
@@ -92,6 +92,21 @@ func (p *ProjectsResource) Get(ctx context.Context, projectID string) (*Project,
 func (p *ProjectsResource) Create(ctx context.Context, opts CreateProjectOptions) (*Project, error) {
 	var result Project
 	if err := p.http.Post(ctx, "/api/v1/projects", opts, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteProjectResponse is the response from deleting a project.
+type DeleteProjectResponse struct {
+	Status string `json:"status"`
+}
+
+// Delete deletes a project by ID. Org-admin only on the platform side;
+// non-admin callers get 403.
+func (p *ProjectsResource) Delete(ctx context.Context, projectID string) (*DeleteProjectResponse, error) {
+	var result DeleteProjectResponse
+	if err := p.http.Delete(ctx, fmt.Sprintf("/api/v1/projects/%s", projectID), &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

@@ -18,6 +18,18 @@ type OrgSubscribeOptions struct {
 	ContractID string `json:"contractId"`
 }
 
+// Me returns the authenticated user's profile and organization memberships
+// (GET /api/v1/me). It is the same endpoint as the top-level Client.Me,
+// exposed here on Org for parity with the Python (org.me) and TypeScript
+// (org.me) SDKs, which group it under their org resource.
+func (o *OrgResource) Me(ctx context.Context) (*MeResponse, error) {
+	var result MeResponse
+	if err := o.http.Get(ctx, "/api/v1/me", nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // GetBilling returns the org's current billing status.
 func (o *OrgResource) GetBilling(ctx context.Context) (map[string]any, error) {
 	var result map[string]any
