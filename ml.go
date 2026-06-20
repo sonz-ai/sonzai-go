@@ -181,6 +181,92 @@ type EvaluateOPEResult struct {
 	EstimatorCI string  `json:"estimator_ci"`
 }
 
+// SimulateRoundsParams is the request body for a single-call learning
+// simulation. The platform runs the entire closed loop in-process — many
+// rounds of (accrue outcomes → train the auto-tuned scoring model → bandit
+// decide/reward/learn → off-policy evaluation) — so an integrator can trigger
+// and observe the whole self-learning pipeline with one call instead of wiring
+// TrainScoring + DecideNBA + LearnNBA + EvaluateOPE together by hand.
+//
+// It runs on a built-in synthetic Scenario (a learnable, reproducible world),
+// so it is the canonical way to smoke-test, demo, or benchmark the learning
+// machinery end-to-end without supplying real data. The use_case argument
+// scopes an ephemeral model that never touches your production models or the
+// cross-tenant global prior.
+type SimulateRoundsParams struct {
+	// Scenario selects the built-in synthetic world to learn (e.g.
+	// "real_estate"). Leave empty for the platform default.
+	Scenario string `json:"scenario,omitempty"`
+
+	// Rounds is how many learning rounds to run (the platform clamps to a
+	// sane range). Leave 0 for the platform default.
+	Rounds int `json:"rounds,omitempty"`
+
+	// Seed optionally makes the run reproducible (same seed → same curve).
+	// Leave nil for a fresh cold-start each call.
+	Seed *int `json:"seed,omitempty"`
+}
+
+// SimulateRoundPoint is one round of the learning curve. AUC is the scoring
+// model's held-out accuracy that round; NBAValue is the bandit policy's
+// off-policy value; OPEDR/CILow/CIHigh report the doubly-robust estimate and
+// its confidence interval on that round's logged decisions.
+type SimulateRoundPoint struct {
+	Round     int     `json:"round"`
+	N         int     `json:"n"`
+	AUC       float64 `json:"auc"`
+	NBAValue  float64 `json:"nba_value"`
+	NBAReward float64 `json:"nba_reward"`
+	OPEDR     float64 `json:"ope_dr"`
+	CILow     float64 `json:"ci_low"`
+	CIHigh    float64 `json:"ci_high"`
+}
+
+// SimulateModelSummary reports the final scoring model after the last round —
+// the same shape TrainScoring returns, summarized for display.
+type SimulateModelSummary struct {
+	AUC               float64             `json:"auc"`
+	Brier             float64             `json:"brier"`
+	ECE               float64             `json:"ece"`
+	N                 int                 `json:"n"`
+	CalibrationMethod string              `json:"calibration_method"`
+	BestParams        map[string]any      `json:"best_params"`
+	Importances       []FeatureImportance `json:"importances"`
+}
+
+// SimulatePolicyActionScore is one action's learned value within a segment's
+// policy, with a human-readable label.
+type SimulatePolicyActionScore struct {
+	ActionID string  `json:"action_id"`
+	Score    float64 `json:"score"`
+	Label    string  `json:"label"`
+}
+
+// SimulatePolicyEntry is the learned next-best-action policy for one lead
+// segment: the recommended action plus every action's learned value.
+type SimulatePolicyEntry struct {
+	Segment           string                      `json:"segment"`
+	RecommendedAction string                      `json:"recommended_action"`
+	RecommendedLabel  string                      `json:"recommended_label"`
+	Scores            []SimulatePolicyActionScore `json:"scores"`
+}
+
+// SimulateRoundsResult is the outcome of a learning simulation: the per-round
+// learning curve plus the final trained model, the learned policy per segment,
+// and the off-policy value estimate of the final policy.
+type SimulateRoundsResult struct {
+	Scenario     string                `json:"scenario"`
+	ActionLabels map[string]string     `json:"action_labels"`
+	Series       []SimulateRoundPoint  `json:"series"`
+	Model        *SimulateModelSummary `json:"model"`
+	Policy       []SimulatePolicyEntry `json:"policy"`
+	OPE          struct {
+		DR     float64 `json:"dr"`
+		CILow  float64 `json:"ci_low"`
+		CIHigh float64 `json:"ci_high"`
+	} `json:"ope"`
+}
+
 // MLResource provides the platform's generalized ML & RL primitives keyed by
 // a use_case string: supervised scoring, contextual-bandit next-best-action,
 // and off-policy evaluation.
@@ -243,6 +329,27 @@ func (c *MLResource) EvaluateOPE(ctx context.Context, useCase string, params Eva
 	var result EvaluateOPEResult
 	path := fmt.Sprintf("/api/v1/builtin-agents/ml/%s/ope/evaluate", useCase)
 	if err := c.http.Post(ctx, path, params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// SimulateRounds runs the entire self-learning loop end-to-end in one call:
+// the platform repeatedly accrues outcomes, retrains the auto-tuned scoring
+// model, runs the contextual bandit (decide → reward → learn), and off-policy-
+// evaluates the policy — for `Rounds` rounds on a built-in synthetic scenario —
+// then returns the per-round learning curve plus the final model and learned
+// policy. This is the easiest way to trigger and observe all of the platform's
+// learning machinery without composing the individual primitives yourself.
+//
+// The run is self-contained and reproducible (pass a Seed) and uses an
+// ephemeral model scoped to useCase, so it never affects production models or
+// the cross-tenant global prior. The job runs for tens of seconds; pass a
+// context with a generous deadline.
+func (c *MLResource) SimulateRounds(ctx context.Context, useCase string, params SimulateRoundsParams) (*SimulateRoundsResult, error) {
+	var result SimulateRoundsResult
+	path := fmt.Sprintf("/api/v1/builtin-agents/ml/%s/simulate-rounds", useCase)
+	if err := c.http.PostLongRunning(ctx, path, nil, params, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

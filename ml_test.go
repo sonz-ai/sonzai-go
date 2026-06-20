@@ -282,3 +282,72 @@ func TestML_EvaluateOPE_URLBodyAndDecode(t *testing.T) {
 		t.Errorf("decoded n/ess mismatch: %+v", res)
 	}
 }
+
+func TestML_SimulateRounds_URLBodyAndDecode(t *testing.T) {
+	var seen struct {
+		path, method string
+		body         map[string]any
+	}
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen.path = r.URL.Path
+		seen.method = r.Method
+		raw, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(raw, &seen.body)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"scenario":      "real_estate",
+			"action_labels": map[string]any{"book_viewing": "Book a viewing"},
+			"series": []map[string]any{
+				{"round": 1, "n": 12, "auc": 0.55, "nba_value": 0.40, "nba_reward": 0.31, "ope_dr": 0.30, "ci_low": 0.10, "ci_high": 0.50},
+				{"round": 5, "n": 60, "auc": 0.88, "nba_value": 0.63, "nba_reward": 0.59, "ope_dr": 0.61, "ci_low": 0.45, "ci_high": 0.77},
+			},
+			"model": map[string]any{
+				"auc": 0.88, "brier": 0.17, "ece": 0.05, "n": 60,
+				"calibration_method": "sigmoid",
+				"best_params":        map[string]any{"iterations": 358.0, "depth": 6.0},
+				"importances":        []map[string]any{{"name": "financing", "gain": 100.0}},
+			},
+			"policy": []map[string]any{
+				{
+					"segment": "Hot · financed · engaged", "recommended_action": "book_viewing", "recommended_label": "Book a viewing",
+					"scores": []map[string]any{{"action_id": "book_viewing", "score": 1.09, "label": "Book a viewing"}},
+				},
+			},
+			"ope": map[string]any{"dr": 0.61, "ci_low": 0.45, "ci_high": 0.77},
+		})
+	})
+	client := newTestClient(t, h)
+
+	seed := 12345
+	res, err := client.ML.SimulateRounds(context.Background(), "demo_real_estate", SimulateRoundsParams{
+		Scenario: "real_estate",
+		Rounds:   5,
+		Seed:     &seed,
+	})
+	if err != nil {
+		t.Fatalf("SimulateRounds: %v", err)
+	}
+	if seen.method != http.MethodPost {
+		t.Errorf("method: got %s, want POST", seen.method)
+	}
+	if seen.path != "/api/v1/builtin-agents/ml/demo_real_estate/simulate-rounds" {
+		t.Errorf("path: got %q", seen.path)
+	}
+	if seen.body["scenario"] != "real_estate" || seen.body["rounds"] != float64(5) || seen.body["seed"] != float64(12345) {
+		t.Errorf("body mismatch: %+v", seen.body)
+	}
+	if res.Scenario != "real_estate" || len(res.Series) != 2 {
+		t.Fatalf("decoded series mismatch: %+v", res)
+	}
+	if res.Series[0].AUC != 0.55 || res.Series[1].AUC != 0.88 || res.Series[1].NBAValue != 0.63 {
+		t.Errorf("decoded curve mismatch: %+v", res.Series)
+	}
+	if res.Model == nil || res.Model.CalibrationMethod != "sigmoid" || len(res.Model.Importances) != 1 {
+		t.Errorf("decoded model mismatch: %+v", res.Model)
+	}
+	if len(res.Policy) != 1 || res.Policy[0].RecommendedAction != "book_viewing" || res.Policy[0].Scores[0].Score != 1.09 {
+		t.Errorf("decoded policy mismatch: %+v", res.Policy)
+	}
+	if res.OPE.DR != 0.61 || res.OPE.CIHigh != 0.77 {
+		t.Errorf("decoded ope mismatch: %+v", res.OPE)
+	}
+}
