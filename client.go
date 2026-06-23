@@ -86,6 +86,14 @@ type Client struct {
 	// webhook delivery destinations for platform events).
 	Channels *ChannelsResource
 
+	// CustomAgents manages tenant-defined backend agents (own prompt/model/
+	// schema/tools) that run + bill like Sonzai built-ins.
+	CustomAgents *CustomAgentsResource
+
+	// Pipelines manages ordered chains of agents (built-in or custom) that run
+	// one after another, threading each step's findings into the next.
+	Pipelines *PipelinesResource
+
 	// ProjectConfig provides project-scoped configuration management.
 	ProjectConfig *ProjectConfigResource
 
@@ -239,6 +247,8 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Voices:               &VoicesResource{http: hc},
 		Webhooks:             &WebhooksResource{http: hc},
 		Channels:             &ChannelsResource{http: hc},
+		CustomAgents:         &CustomAgentsResource{http: hc},
+		Pipelines:            &PipelinesResource{http: hc},
 		ProjectConfig:        &ProjectConfigResource{http: hc},
 		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},
