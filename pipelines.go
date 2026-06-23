@@ -1,6 +1,9 @@
 package sonzai
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // ---------------------------------------------------------------------------
 // Custom agents — a company's OWN backend agents (own prompt/model/schema/tools).
@@ -129,18 +132,35 @@ type PipelineStepResult struct {
 	Error    string      `json:"error,omitempty"`
 }
 
-// PipelineRun is the result of executing a pipeline end to end.
+// PipelineRun is an async execution of a pipeline. Starting a run returns this
+// with Status "queued" and a RunID; poll GetRun for progress. Status is one of
+// "queued" | "running" | "completed" | "failed".
 type PipelineRun struct {
+	RunID         string               `json:"run_id"`
 	PipelineID    string               `json:"pipeline_id"`
+	Status        string               `json:"status"`
 	Steps         []PipelineStepResult `json:"steps"`
 	FinalFindings interface{}          `json:"final_findings"`
 	TotalCostUSD  float64              `json:"total_cost_usd"`
+	Error         string               `json:"error,omitempty"`
 	Completed     bool                 `json:"completed"`
+	CreatedAt     string               `json:"created_at,omitempty"`
+	UpdatedAt     string               `json:"updated_at,omitempty"`
+}
+
+// Terminal reports whether the run has finished (completed or failed).
+func (r *PipelineRun) Terminal() bool {
+	return r.Status == "completed" || r.Status == "failed"
 }
 
 // PipelineListResponse is the response from listing pipelines.
 type PipelineListResponse struct {
 	Pipelines []Pipeline `json:"pipelines"`
+}
+
+// PipelineRunListResponse is the response from listing runs.
+type PipelineRunListResponse struct {
+	Runs []PipelineRun `json:"runs"`
 }
 
 func (r *PipelinesResource) List(ctx context.Context) (*PipelineListResponse, error) {
@@ -188,14 +208,58 @@ func (r *PipelinesResource) AppendStep(ctx context.Context, pipelineID string, s
 	return &out, nil
 }
 
-// Run executes the pipeline end to end, threading each step's findings into the
-// next, and returns the full run. Uses the long-running transport since a
-// multi-step run can take minutes (each step bills like any invocation).
+// Run starts an asynchronous pipeline run and returns immediately with the
+// queued run (RunID + Status "queued"). Poll GetRun for progress + results, or
+// use RunAndWait to block until the run finishes.
 func (r *PipelinesResource) Run(ctx context.Context, pipelineID string, input map[string]interface{}) (*PipelineRun, error) {
 	var out PipelineRun
 	body := map[string]interface{}{"input": input}
-	if err := r.http.PostLongRunning(ctx, "/api/v1/pipelines/"+pipelineID+"/run", nil, body, &out); err != nil {
+	if err := r.http.Post(ctx, "/api/v1/pipelines/"+pipelineID+"/run", body, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
+}
+
+// GetRun returns a single run — poll this for status and accumulated results.
+func (r *PipelinesResource) GetRun(ctx context.Context, pipelineID, runID string) (*PipelineRun, error) {
+	var out PipelineRun
+	if err := r.http.Get(ctx, "/api/v1/pipelines/"+pipelineID+"/runs/"+runID, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ListRuns returns recent runs for a pipeline, newest first.
+func (r *PipelinesResource) ListRuns(ctx context.Context, pipelineID string) (*PipelineRunListResponse, error) {
+	var out PipelineRunListResponse
+	if err := r.http.Get(ctx, "/api/v1/pipelines/"+pipelineID+"/runs", nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// RunAndWait starts a run and polls until it finishes (completed or failed) or
+// the context is cancelled. pollInterval defaults to 2s. Convenience over
+// Run + GetRun for callers that just want the final result.
+func (r *PipelinesResource) RunAndWait(ctx context.Context, pipelineID string, input map[string]interface{}, pollInterval time.Duration) (*PipelineRun, error) {
+	run, err := r.Run(ctx, pipelineID, input)
+	if err != nil {
+		return nil, err
+	}
+	if pollInterval <= 0 {
+		pollInterval = 2 * time.Second
+	}
+	for !run.Terminal() {
+		select {
+		case <-ctx.Done():
+			return run, ctx.Err()
+		case <-time.After(pollInterval):
+		}
+		got, err := r.GetRun(ctx, pipelineID, run.RunID)
+		if err != nil {
+			return run, err
+		}
+		run = got
+	}
+	return run, nil
 }
