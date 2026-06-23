@@ -82,6 +82,10 @@ type Client struct {
 	// Webhooks provides webhook registration and management.
 	Webhooks *WebhooksResource
 
+	// Channels provides notification-channel management (email / Slack /
+	// webhook delivery destinations for platform events).
+	Channels *ChannelsResource
+
 	// ProjectConfig provides project-scoped configuration management.
 	ProjectConfig *ProjectConfigResource
 
@@ -234,6 +238,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		EvalTemplates:        evalClient.Templates,
 		Voices:               &VoicesResource{http: hc},
 		Webhooks:             &WebhooksResource{http: hc},
+		Channels:             &ChannelsResource{http: hc},
 		ProjectConfig:        &ProjectConfigResource{http: hc},
 		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},
