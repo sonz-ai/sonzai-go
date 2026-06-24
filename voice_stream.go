@@ -132,7 +132,7 @@ func (v *VoiceResource) GetToken(ctx context.Context, agentID string, opts Voice
 //	stream, _ := client.Agents.Voice.Stream(ctx, token)
 //	defer stream.Close()
 //
-//	// Send PCM audio chunks (16kHz, 16-bit, mono)
+//	// Send PCM audio chunks (24kHz, 16-bit, mono)
 //	stream.SendAudio(audioBytes)
 //
 //	// Or send text input instead of audio
