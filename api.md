@@ -15,6 +15,8 @@ client := sonzai.NewClient("sk-...",
 | `client.Knowledge` | `*KnowledgeResource` | Project-scoped knowledge base operations |
 | `client.Eval` | `*eval.Client` | Evaluation, simulation, and benchmarking |
 | `client.Voices` | `*VoicesResource` | Global voice catalog |
+| `client.Conversations` | `*ConversationsResource` | Omnichannel conversation inbox, messages, takeover, and stream |
+| `client.ChannelConnections` | `*ChannelConnectionsResource` | Meta channel connections for WhatsApp, Messenger, and Instagram |
 
 ## Agents
 
@@ -174,6 +176,32 @@ type DetachOptions struct {
 | `Language` | `string` | Optional locale override. |
 | `InstanceID` | `string` | Optional instance scope. |
 | `Messages` | `[]ChatMessage` | Optional raw conversation messages that triggered this event. When present, Platform API uses these directly for context-sensitive generation (e.g. diary, summaries) instead of reconstructing from lossy consolidation summaries. Older servers ignore this field. |
+
+## Conversations
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `List(ctx, opts)` | `*ConversationListResponse, error` | List conversations filtered by channel, agent, user, controller, status, query, or cursor |
+| `Get(ctx, conversationID)` | `*ConversationDetailResponse, error` | Get a conversation |
+| `Messages(ctx, conversationID, opts)` | `*ConversationMessagesResponse, error` | List cursor-paginated conversation messages |
+| `Stream(ctx, opts, callback)` | `error` | Stream conversation events over SSE |
+| `StreamChannel(ctx, opts)` | `<-chan ConversationStreamEvent` | Stream conversation events via channel |
+| `TakeOver(ctx, conversationID, opts)` | `*Conversation, error` | Take human/operator control |
+| `Release(ctx, conversationID)` | `*Conversation, error` | Release takeover back to the agent |
+| `SendAsAgent(ctx, conversationID, opts)` | `*Conversation, error` | Send an outbound message |
+| `MarkRead(ctx, conversationID)` | `*Conversation, error` | Mark the conversation read |
+| `Update(ctx, conversationID, opts)` | `*Conversation, error` | Update status or reassign agent |
+
+## ChannelConnections
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `List(ctx, projectID)` | `*ChannelConnectionListResponse, error` | List project channel connections |
+| `Create(ctx, projectID, opts)` | `*ChannelConnection, error` | Create a WhatsApp, Messenger, or Instagram connection |
+| `Get(ctx, projectID, connectionID)` | `*ChannelConnection, error` | Get a channel connection |
+| `Update(ctx, projectID, connectionID, opts)` | `*ChannelConnection, error` | Update status, default agent, or templates |
+| `Delete(ctx, projectID, connectionID)` | `error` | Delete a channel connection |
+| `Test(ctx, projectID, connectionID, opts)` | `*ChannelConnection, error` | Send a test message and update health metadata |
 
 ## Agents.Memory
 

@@ -101,6 +101,8 @@ The `Client` exposes these top-level resource groups:
 | `Eval` | Evaluations, simulations, eval runs, templates (sub-package) |
 | `Voices` | Global voice catalog |
 | `Webhooks` | Webhook registration, rotation, delivery inspection |
+| `Conversations` | Omnichannel conversation inbox, messages, takeover, SSE stream |
+| `ChannelConnections` | Meta channel connections for WhatsApp, Messenger, Instagram |
 | `ProjectConfig` / `AccountConfig` | Scoped key-value configuration |
 | `CustomLLM` | Bring-your-own-model (BYOM) configuration |
 | `ProjectNotifications` | Project notification polling |
@@ -694,11 +696,58 @@ run, _ := client.Eval.Runs.Get(ctx, "run-id")
 client.Eval.Runs.Delete(ctx, "run-id")
 ```
 
+### Conversations
+
+```go
+list, _ := client.Conversations.List(ctx, &sonzai.ConversationListOptions{
+    Channel: "whatsapp",
+    Status:  "open",
+    Query:   "refund",
+})
+
+detail, _   := client.Conversations.Get(ctx, "conversation-id")
+messages, _ := client.Conversations.Messages(ctx, "conversation-id", &sonzai.ConversationMessagesOptions{Limit: 50})
+
+client.Conversations.Stream(ctx, &sonzai.ConversationStreamOptions{ProjectID: "project-id"},
+    func(event sonzai.ConversationStreamEvent) error {
+        fmt.Println(event.Type)
+        return nil
+    })
+
+client.Conversations.TakeOver(ctx, "conversation-id", &sonzai.TakeOverConversationOptions{OperatorID: "operator-id"})
+client.Conversations.SendAsAgent(ctx, "conversation-id", sonzai.SendConversationMessageOptions{Content: "Thanks for waiting."})
+client.Conversations.MarkRead(ctx, "conversation-id")
+client.Conversations.Release(ctx, "conversation-id")
+client.Conversations.Update(ctx, "conversation-id", sonzai.UpdateConversationOptions{Status: "closed"})
+```
+
+### Channel connections
+
+```go
+created, _ := client.ChannelConnections.Create(ctx, "project-id", sonzai.CreateChannelConnectionOptions{
+    ChannelType:   sonzai.ChannelTypeWhatsApp,
+    ProviderMode:  sonzai.ChannelProviderModeBYOApp,
+    AppID:         "meta-app-id",
+    AppSecret:     "meta-app-secret",
+    PhoneNumberID: "phone-number-id",
+    WABAID:        "waba-id",
+    AccessToken:   "system-user-token",
+    VerifyToken:   "webhook-verify-token",
+    DisplayName:   "Support",
+})
+
+connections, _ := client.ChannelConnections.List(ctx, "project-id")
+conn, _        := client.ChannelConnections.Get(ctx, "project-id", created.ConnectionID)
+updated, _     := client.ChannelConnections.Update(ctx, "project-id", conn.ConnectionID, sonzai.UpdateChannelConnectionOptions{DefaultAgentID: "agent-id"})
+tested, _      := client.ChannelConnections.Test(ctx, "project-id", conn.ConnectionID, sonzai.TestChannelConnectionOptions{To: "recipient-id", Message: "Ping"})
+client.ChannelConnections.Delete(ctx, "project-id", conn.ConnectionID)
+```
+
 ### Webhooks
 
 ```go
 // Register/update a webhook
-resp, _ := client.Webhooks.Register(ctx, "agent.message.created", sonzai.WebhookRegisterOptions{
+resp, _ := client.Webhooks.Register(ctx, sonzai.WebhookEventConversationMessage, sonzai.WebhookRegisterOptions{
     WebhookURL: "https://example.com/hook",
     AuthHeader: "Bearer your-secret", // optional header added to deliveries
 })
