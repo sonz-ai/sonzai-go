@@ -11,7 +11,7 @@ import (
 // read or write config for the tenant they are currently authenticated to.
 //
 // Account configuration lives in a JSONB KV store backed by
-// platform.account_config in CockroachDB. Use it for settings that should
+// platform.account_config in Postgres. Use it for settings that should
 // apply to every project inside the tenant without per-project duplication:
 // for example, the default post-processing model map (see
 // PostProcessingModelMapKey).
