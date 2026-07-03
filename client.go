@@ -82,6 +82,14 @@ type Client struct {
 	// Webhooks provides webhook registration and management.
 	Webhooks *WebhooksResource
 
+	// Conversations provides omnichannel conversation inbox, message,
+	// takeover, and streaming operations.
+	Conversations *ConversationsResource
+
+	// ChannelConnections provides project-scoped Meta channel connection
+	// management for WhatsApp, Messenger, and Instagram.
+	ChannelConnections *ChannelConnectionsResource
+
 	// ProjectConfig provides project-scoped configuration management.
 	ProjectConfig *ProjectConfigResource
 
@@ -221,6 +229,8 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		EvalTemplates:        evalClient.Templates,
 		Voices:               &VoicesResource{http: hc},
 		Webhooks:             &WebhooksResource{http: hc},
+		Conversations:        &ConversationsResource{http: hc},
+		ChannelConnections:   &ChannelConnectionsResource{http: hc},
 		ProjectConfig:        &ProjectConfigResource{http: hc},
 		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},

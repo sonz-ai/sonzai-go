@@ -10,6 +10,16 @@ type WebhooksResource struct {
 	http *httpClient
 }
 
+// Webhook event type constants.
+const (
+	WebhookEventConversationStarted          = "conversation.started"
+	WebhookEventConversationMessage          = "conversation.message"
+	WebhookEventConversationTakeoverStarted  = "conversation.takeover.started"
+	WebhookEventConversationTakeoverReleased = "conversation.takeover.released"
+	WebhookEventConversationMessageFailed    = "conversation.message.failed"
+	WebhookEventConversationUnrouted         = "conversation.unrouted"
+)
+
 // WebhookEndpoint represents a registered webhook.
 type WebhookEndpoint struct {
 	EventType  string `json:"event_type"`
@@ -60,7 +70,8 @@ type DeliveryAttemptsResponse struct {
 // Returns a WebhookRegisterResponse which includes the signing secret on first
 // registration. The signing secret is only returned once at creation time.
 //
-// Event types include: "on_wakeup_ready", "on_diary_generated",
+// Event types include WebhookEventConversationStarted,
+// WebhookEventConversationMessage, "on_wakeup_ready", "on_diary_generated",
 // "on_personality_updated", "on_recurring_event_due", etc.
 func (w *WebhooksResource) Register(ctx context.Context, eventType string, opts WebhookRegisterOptions) (*WebhookRegisterResponse, error) {
 	var result WebhookRegisterResponse

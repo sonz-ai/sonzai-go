@@ -95,6 +95,12 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Support == nil {
 		t.Fatal("Support is nil")
 	}
+	if c.Conversations == nil {
+		t.Fatal("Conversations is nil")
+	}
+	if c.ChannelConnections == nil {
+		t.Fatal("ChannelConnections is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
