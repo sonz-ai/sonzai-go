@@ -101,6 +101,12 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.ChannelConnections == nil {
 		t.Fatal("ChannelConnections is nil")
 	}
+	if c.BuiltinAgents == nil {
+		t.Fatal("BuiltinAgents is nil")
+	}
+	if c.ML == nil {
+		t.Fatal("ML is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------

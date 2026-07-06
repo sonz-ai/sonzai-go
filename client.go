@@ -172,6 +172,16 @@ type Client struct {
 	// parity with the Python and TypeScript SDKs.
 	EvalTemplates *eval.TemplatesResource
 
+	// BuiltinAgents provides operations for the platform's built-in agents
+	// (e.g. lead_score): recording realized outcomes and reading the
+	// learned calibration snapshot.
+	BuiltinAgents *BuiltinAgentsResource
+
+	// ML provides the platform's generalized, multi-tenant / multi-vertical
+	// ML & RL surface: contextual-bandit next-best-action (decide + learn)
+	// and the unified feedback call.
+	ML *MLResource
+
 	http *httpClient
 }
 
@@ -250,6 +260,8 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Skills:               &SkillsResource{http: hc},
 		Wisdom:               &WisdomResource{http: hc},
 		Schedules:            agents.Schedules,
+		BuiltinAgents:        &BuiltinAgentsResource{http: hc},
+		ML:                   &MLResource{http: hc},
 		http:                 hc,
 	}, nil
 }
