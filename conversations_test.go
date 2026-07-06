@@ -162,6 +162,43 @@ func TestConversationsStream(t *testing.T) {
 	}
 }
 
+func TestConversationsPush(t *testing.T) {
+	server, client := testServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/conversations/push" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		var body PushMessageOptions
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if body.AgentID != "agent-1" || body.UserID != "user-1" || body.Content != "New lead: score 82 Hot" || body.ChannelType != "whatsapp" {
+			t.Fatalf("unexpected push body: %+v", body)
+		}
+		jsonResponse(w, 200, PushMessageResult{
+			ConversationID: "conv-1",
+			ChannelType:    "whatsapp",
+			ExternalID:     "+639171234567",
+			DeliveryStatus: "sent",
+			SessionID:      "sess-1",
+			UsedTemplate:   true,
+		})
+	})
+	defer server.Close()
+
+	result, err := client.Conversations.Push(context.Background(), PushMessageOptions{
+		AgentID:     "agent-1",
+		UserID:      "user-1",
+		Content:     "New lead: score 82 Hot",
+		ChannelType: "whatsapp",
+	})
+	if err != nil {
+		t.Fatalf("Push: %v", err)
+	}
+	if result.ConversationID != "conv-1" || result.DeliveryStatus != "sent" || !result.UsedTemplate {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+}
+
 func TestWebhookConversationEventConstants(t *testing.T) {
 	events := []string{
 		WebhookEventConversationStarted,

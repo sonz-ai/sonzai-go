@@ -107,6 +107,12 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.ML == nil {
 		t.Fatal("ML is nil")
 	}
+	if c.LeadAssignments == nil {
+		t.Fatal("LeadAssignments is nil")
+	}
+	if c.Ingest == nil {
+		t.Fatal("Ingest is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------

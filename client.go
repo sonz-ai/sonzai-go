@@ -182,6 +182,16 @@ type Client struct {
 	// and the unified feedback call.
 	ML *MLResource
 
+	// LeadAssignments provides the tenant-generic work-distribution
+	// primitive: offer/claim/release/complete a unit of work to a rep from
+	// a candidate roster, with structural dedup and SLA re-offer.
+	LeadAssignments *LeadAssignmentsResource
+
+	// Ingest provides the adapter-ingestion surface: a customer-owned
+	// adapter POSTs normalized DomainEvents/contacts here so the platform's
+	// pipelines, lead-assignment ledger, and outbound webhooks can react.
+	Ingest *IngestResource
+
 	http *httpClient
 }
 
@@ -262,6 +272,8 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Schedules:            agents.Schedules,
 		BuiltinAgents:        &BuiltinAgentsResource{http: hc},
 		ML:                   &MLResource{http: hc},
+		LeadAssignments:      &LeadAssignmentsResource{http: hc},
+		Ingest:               &IngestResource{http: hc},
 		http:                 hc,
 	}, nil
 }

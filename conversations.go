@@ -351,3 +351,51 @@ func (c *ConversationsResource) Update(ctx context.Context, conversationID strin
 	}
 	return &result, nil
 }
+
+// PushMessageOptions configures a proactive agent→channel push (POST
+// /conversations/push): an agent-authored message delivered to a user's
+// connected messaging channel (WhatsApp/Messenger/Instagram) outside the
+// reply-to-inbound flow.
+type PushMessageOptions struct {
+	// ProjectID is optional; it defaults to the authenticated project/default
+	// project when omitted.
+	ProjectID string `json:"project_id,omitempty"`
+	// AgentID is the agent UUID or name authoring the message.
+	AgentID string `json:"agent_id"`
+	// UserID is the platform user id to deliver to (channel identity owner).
+	UserID string `json:"user_id"`
+	// Content is the message text.
+	Content string `json:"content"`
+	// ChannelType restricts delivery to one channel (whatsapp, messenger,
+	// instagram); when omitted, the first identity found is used.
+	ChannelType string `json:"channel_type,omitempty"`
+	// ConnectionID pins the outbound channel connection UUID; when omitted,
+	// the conversation's or the project's connection for the channel is used.
+	ConnectionID string `json:"connection_id,omitempty"`
+}
+
+// PushMessageResult is the outcome of a proactive channel push.
+type PushMessageResult struct {
+	ConversationID   string `json:"conversation_id,omitempty"`
+	ChannelType      string `json:"channel_type"`
+	ExternalID       string `json:"external_id"`
+	ChannelMessageID string `json:"channel_message_id,omitempty"`
+	// DeliveryStatus is the provider delivery status (sent|delivered|read|failed).
+	DeliveryStatus string `json:"delivery_status"`
+	SessionID      string `json:"session_id,omitempty"`
+	// UsedTemplate is true when the 24h window was closed and the send used
+	// the connection's approved re-engagement template.
+	UsedTemplate bool `json:"used_template"`
+}
+
+// Push delivers an agent-authored message to a user's connected messaging
+// channel (WhatsApp/Messenger/Instagram) without waiting for an inbound
+// message — the proactive agent→channel delivery surface used by wakeups,
+// lead-offer notifications, and research/outcome pings.
+func (c *ConversationsResource) Push(ctx context.Context, opts PushMessageOptions) (*PushMessageResult, error) {
+	var result PushMessageResult
+	if err := c.http.Post(ctx, "/api/v1/conversations/push", opts, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
