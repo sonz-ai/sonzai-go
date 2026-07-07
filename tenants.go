@@ -2,6 +2,7 @@ package sonzai
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 )
@@ -75,4 +76,69 @@ func (t *TenantsResource) ListOrgKnowledgeNodes(ctx context.Context, tenantID st
 		return nil, err
 	}
 	return &result, nil
+}
+
+// HostManifestOptions configures a GetHostManifest request.
+type HostManifestOptions struct {
+	// IfNoneMatch, when set, is sent as the If-None-Match request header for
+	// a conditional fetch; a matching ETag yields NotModified=true with no
+	// Manifest body, instead of re-transferring an unchanged manifest.
+	IfNoneMatch string
+}
+
+// HostManifestResult is the response from GetHostManifest.
+type HostManifestResult struct {
+	// Manifest is the raw manifest JSON body (nil when NotModified is true).
+	Manifest json.RawMessage
+	// ETag is the upstream's ETag response header, if present.
+	ETag string
+	// CacheControl is the upstream's Cache-Control response header, if present.
+	CacheControl string
+	// NotModified is true on a 304 response to a conditional request
+	// (opts.IfNoneMatch matched the current ETag).
+	NotModified bool
+}
+
+// GetHostManifest fetches the tenant manifest resolved from host — the
+// unauthenticated, host-routed GET /v1/host/manifest endpoint a managed-
+// placement multi-tenant runtime uses to pull branding/module/terminology
+// configuration for the tenant whose domain it's currently serving (see
+// docs/design/platform-deployment-tiers.md §3). Pair this with
+// sonzai.WithTenantHost(ctx, host) so the request forwards the right Host /
+// X-Sonzai-Tenant-Host — this endpoint has no {id} path parameter; the
+// tenant is resolved entirely from the request's Host.
+//
+// A 404 (unknown host, or no manifest set for the tenant yet) surfaces as
+// *NotFoundError, same as every other typed method in this SDK.
+func (t *TenantsResource) GetHostManifest(ctx context.Context, opts HostManifestOptions) (*HostManifestResult, error) {
+	headers := map[string]string{}
+	if opts.IfNoneMatch != "" {
+		headers["If-None-Match"] = opts.IfNoneMatch
+	}
+	raw, err := t.http.doRaw(ctx, "GET", "/v1/host/manifest", nil, headers)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &HostManifestResult{
+		ETag:         raw.Header.Get("ETag"),
+		CacheControl: raw.Header.Get("Cache-Control"),
+	}
+	switch {
+	case raw.StatusCode == 304:
+		result.NotModified = true
+		return result, nil
+	case raw.StatusCode >= 400:
+		msg := string(raw.Body)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(raw.Body, &errResp) == nil && errResp.Error != "" {
+			msg = errResp.Error
+		}
+		return nil, newErrorForStatus(raw.StatusCode, msg, nil)
+	default:
+		result.Manifest = raw.Body
+		return result, nil
+	}
 }

@@ -126,6 +126,7 @@ func (c *httpClient) requestWithHeaders(ctx context.Context, method, path string
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+		applyRuntimeContextHeaders(ctx, req)
 		for k, v := range extraHeaders {
 			if v != "" {
 				req.Header.Set(k, v)
@@ -442,6 +443,7 @@ func (c *httpClient) PostLongRunning(ctx context.Context, path string, params ma
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+	applyRuntimeContextHeaders(ctx, req)
 
 	resp, err := c.longRunningClient().Do(req)
 	if err != nil {
@@ -509,6 +511,7 @@ func (c *httpClient) StreamSSENamed(ctx context.Context, method, path string, pa
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+	applyRuntimeContextHeaders(ctx, req)
 
 	resp, err := c.longRunningClient().Do(req)
 	if err != nil {
@@ -581,6 +584,7 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+	applyRuntimeContextHeaders(ctx, req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -619,6 +623,65 @@ func (c *httpClient) StreamSSE(ctx context.Context, method, path string, body in
 	}
 
 	return scanner.Err()
+}
+
+// buildRawRequest constructs the *http.Request shared by doRaw/doRawStream:
+// the standard auth/User-Agent headers, the ctx-scoped WithTenantHost /
+// WithOperatorID overrides (see runtime_context.go), and extraHeaders.
+func (c *httpClient) buildRawRequest(ctx context.Context, method, path string, body []byte, extraHeaders map[string]string) (*http.Request, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("User-Agent", fmt.Sprintf("sonzai-go/%s", SDKVersion))
+	applyRuntimeContextHeaders(ctx, req)
+	for k, v := range extraHeaders {
+		if v != "" {
+			req.Header.Set(k, v)
+		}
+	}
+	return req, nil
+}
+
+// doRaw performs a single, unretried request and returns the raw response
+// (status/body/headers) without translating a non-2xx status into an error —
+// see RawResponse in raw.go for why a proxy/BFF consumer needs this.
+func (c *httpClient) doRaw(ctx context.Context, method, path string, body []byte, extraHeaders map[string]string) (*RawResponse, error) {
+	req, err := c.buildRawRequest(ctx, method, path, body, extraHeaders)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
+	}
+	return &RawResponse{StatusCode: resp.StatusCode, Body: respBody, Header: resp.Header}, nil
+}
+
+// doRawStream performs a single, unretried request and returns the live
+// *http.Response for incremental reading (no body buffering) — for relaying
+// a long-lived stream (e.g. SSE) byte-for-byte. It runs without the client's
+// overall request timeout (see longRunningClient), same as StreamSSE/
+// StreamSSENamed; the caller owns closing the response body.
+func (c *httpClient) doRawStream(ctx context.Context, method, path string, body []byte, extraHeaders map[string]string) (*http.Response, error) {
+	req, err := c.buildRawRequest(ctx, method, path, body, extraHeaders)
+	if err != nil {
+		return nil, err
+	}
+	return c.longRunningClient().Do(req)
 }
 
 // UploadFile sends a multipart/form-data POST request and unmarshals the
