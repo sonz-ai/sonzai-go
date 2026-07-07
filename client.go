@@ -128,6 +128,10 @@ type Client struct {
 	// Tenants provides tenant lookup operations.
 	Tenants *TenantsResource
 
+	// Models provides access to trained model artifacts exported for local
+	// (on-runtime) inference.
+	Models *ModelsResource
+
 	// Projects provides project management operations.
 	Projects *ProjectsResource
 
@@ -257,6 +261,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		ML:                   &MLResource{http: hc},
 		ProjectNotifications: &ProjectNotificationsResource{http: hc},
 		Tenants:              &TenantsResource{http: hc},
+		Models:               &ModelsResource{http: hc},
 		Projects:             &ProjectsResource{http: hc},
 		MCPCatalog:           &MCPCatalogResource{http: hc},
 		APIKeys:              &APIKeysResource{http: hc},

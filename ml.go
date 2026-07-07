@@ -432,3 +432,134 @@ func (c *MLResource) RecordFeedback(ctx context.Context, useCase string, params 
 	}
 	return &result, nil
 }
+
+// --- Wave-1 ML product suite (docs/design/ml-product-suite.md) -------------
+//
+// Unlike the use-case-keyed primitives above, these four live at fixed
+// /api/v1/ml/... paths (no use_case in the path — features/context carry
+// whatever the caller's own model needs).
+
+// EVParams is the request body for EV.
+type EVParams struct {
+	// Features is the example's feature map. Required.
+	Features map[string]float64 `json:"features"`
+}
+
+// EVResult is expected value = P(convert) x predicted value for one example.
+// ProbServedFrom / ValueServedFrom report which tier answered each half
+// (e.g. a trained model vs. a cross-tenant prior).
+type EVResult struct {
+	Probability     float64 `json:"probability"`
+	Value           float64 `json:"value"`
+	ExpectedValue   float64 `json:"expected_value"`
+	ProbServedFrom  string  `json:"prob_served_from"`
+	ValueServedFrom string  `json:"value_served_from"`
+}
+
+// EV scores expected value (P(convert) x predicted value) for one example.
+func (c *MLResource) EV(ctx context.Context, params EVParams) (*EVResult, error) {
+	var result EVResult
+	if err := c.http.Post(ctx, "/api/v1/ml/ev", params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ForecastOptions configures a Forecast request.
+type ForecastOptions struct {
+	// WindowDays optionally restricts the forecast to pipeline expected to
+	// close within this many days. Leave 0 for the platform default.
+	WindowDays int
+}
+
+// ForecastResult sums calibrated P(convert) x predicted value over open
+// pipeline, with a P10/P50/P90 uncertainty band. Assumptions documents the
+// method's caveats (e.g. thin data for a segment).
+type ForecastResult struct {
+	ExpectedRevenue float64  `json:"expected_revenue"`
+	P10             float64  `json:"p10"`
+	P50             float64  `json:"p50"`
+	P90             float64  `json:"p90"`
+	OpenLeads       int      `json:"open_leads"`
+	Assumptions     []string `json:"assumptions"`
+}
+
+// Forecast returns the pipeline revenue forecast (expected value over open
+// pipeline with an uncertainty band).
+func (c *MLResource) Forecast(ctx context.Context, opts ForecastOptions) (*ForecastResult, error) {
+	params := map[string]string{}
+	if opts.WindowDays > 0 {
+		params["window_days"] = fmt.Sprintf("%d", opts.WindowDays)
+	}
+	var result ForecastResult
+	if err := c.http.Get(ctx, "/api/v1/ml/forecast", params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ContactTimingSuggestParams is the request body for TimingSuggest.
+type ContactTimingSuggestParams struct {
+	// ContactID is the stable contact/lead identifier. Required.
+	ContactID string `json:"contact_id"`
+	// Channels are the candidate send channels for this contact (e.g.
+	// "whatsapp", "sms", "email"). Required, nonempty.
+	Channels []string `json:"channels"`
+	// Context optionally carries bandit context features (e.g. this
+	// contact's engagement signals).
+	Context map[string]any `json:"context,omitempty"`
+}
+
+// SendBucket is a recommended send-time bucket.
+type SendBucket struct {
+	Daypart string `json:"daypart"`
+	DayType string `json:"day_type"`
+}
+
+// ContactTimingSuggestResult is the recommended send bucket + channel for a
+// contact. ActionID identifies the bandit decision for TimingFeedback.
+type ContactTimingSuggestResult struct {
+	SendBucket SendBucket `json:"send_bucket"`
+	Channel    string     `json:"channel"`
+	ActionID   string     `json:"action_id"`
+	Propensity float64    `json:"propensity"`
+}
+
+// TimingSuggest recommends the best send-time bucket + channel for a contact
+// (the "contact_timing" contextual-bandit use case). Report the realized
+// reply via RecordFeedback (use_case "contact_timing", ActionID from the
+// result) once the outcome is known.
+func (c *MLResource) TimingSuggest(ctx context.Context, params ContactTimingSuggestParams) (*ContactTimingSuggestResult, error) {
+	var result ContactTimingSuggestResult
+	if err := c.http.Post(ctx, "/api/v1/ml/contact_timing/suggest", params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// RevivalQueueItem is one dormant contact ranked worth reviving.
+type RevivalQueueItem struct {
+	ContactID     string   `json:"contact_id"`
+	AgentID       string   `json:"agent_id"`
+	RevivalScore  float64  `json:"revival_score"`
+	ExpectedValue *float64 `json:"expected_value,omitempty"`
+	DormancyDays  float64  `json:"dormancy_days"`
+	Reason        string   `json:"reason"`
+}
+
+// RevivalQueueResult is the latest weekly-computed dead-lead revival queue.
+type RevivalQueueResult struct {
+	ComputedAt string             `json:"computed_at"`
+	Items      []RevivalQueueItem `json:"items"`
+}
+
+// RevivalQueue returns the latest ranked list of dormant contacts worth
+// reviving. A 404 (no queue computed yet for this tenant) surfaces as
+// *NotFoundError.
+func (c *MLResource) RevivalQueue(ctx context.Context) (*RevivalQueueResult, error) {
+	var result RevivalQueueResult
+	if err := c.http.Get(ctx, "/api/v1/ml/revival-queue", nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

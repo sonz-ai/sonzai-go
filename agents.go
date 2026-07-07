@@ -588,6 +588,47 @@ func (a *AgentsResource) GetUsers(ctx context.Context, agentID string, opts *Get
 	return &result, err
 }
 
+// UserConversationMessage is one entry in an (agent, user) conversation
+// history — backed by the memory-episode timeline (session-end-segmenter
+// summaries), not a raw per-turn transcript (the AI service is stateless; the
+// platform never stores raw dialogue). Role is "summary" for every entry
+// today, reflecting that.
+type UserConversationMessage struct {
+	Role      string `json:"role"`
+	Content   string `json:"content"`
+	Timestamp string `json:"timestamp"`
+	SessionID string `json:"session_id"`
+}
+
+// UserConversationsResponse is the (agent, user) conversation history.
+// Source is always "memory_timeline" — no raw transcript is fabricated.
+type UserConversationsResponse struct {
+	Messages []UserConversationMessage `json:"messages"`
+	Source   string                    `json:"source"`
+}
+
+// ListUserConversationsOptions configures a ListUserConversations request.
+type ListUserConversationsOptions struct {
+	// Limit caps the number of messages returned (platform default 50, max 200).
+	Limit int
+}
+
+// ListUserConversations returns the (agent, user) conversation history,
+// newest-first. A 503 (no episode store configured on this platform-api
+// deployment) surfaces as *InternalServerError; check its StatusCode field
+// to distinguish "not available" from a genuine 5xx.
+func (a *AgentsResource) ListUserConversations(ctx context.Context, agentID, userID string, opts *ListUserConversationsOptions) (*UserConversationsResponse, error) {
+	params := map[string]string{}
+	if opts != nil && opts.Limit > 0 {
+		params["limit"] = fmt.Sprintf("%d", opts.Limit)
+	}
+	var result UserConversationsResponse
+	if err := a.http.Get(ctx, fmt.Sprintf("/api/v1/agents/%s/users/%s/conversations", agentID, userID), params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // TriggerEvent triggers a backend event / activity for an agent.
 func (a *AgentsResource) TriggerEvent(ctx context.Context, agentID string, opts TriggerEventOptions) (*TriggerEventResponse, error) {
 	var result TriggerEventResponse
