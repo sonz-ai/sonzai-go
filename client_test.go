@@ -95,6 +95,9 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Support == nil {
 		t.Fatal("Support is nil")
 	}
+	if c.Crm == nil {
+		t.Fatal("Crm is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------
