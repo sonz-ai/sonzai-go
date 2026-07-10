@@ -22,10 +22,6 @@ project follows [Semantic Versioning](https://semver.org/). Dates are `YYYY-MM-D
 - The adapter-token surface intentionally excludes staff CRM CRUD routes,
   which require browser-session authentication in the runtime.
 
-## Unreleased
-
-### Added
-
 - New `BuiltinAgents` resource on the client (`client.BuiltinAgents`) for
   Sonzai Built-in Agents — platform-hosted vertical task agents
   (`lead_research`, `market_intel`, `lead_extract`, `lead_score`,
