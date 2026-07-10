@@ -89,7 +89,7 @@ _check-tag-free VERSION:
     fi
 
 _test:
-    go test ./... -count=1
+    GOWORK=off go test ./... -count=1
 
 _bump VERSION:
     #!/usr/bin/env bash
@@ -99,8 +99,8 @@ _bump VERSION:
     echo "bumped to {{VERSION}}"
 
 _build:
-    go build ./...
-    go vet ./...
+    GOWORK=off go build ./...
+    GOWORK=off go vet ./...
 
 _commit VERSION:
     git add http.go README.md
