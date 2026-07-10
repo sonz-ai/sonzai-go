@@ -190,6 +190,15 @@ func (c *httpClient) Get(ctx context.Context, path string, params map[string]str
 	return json.Unmarshal(data, result)
 }
 
+// GetWithHeaders is Get with additional per-request headers.
+func (c *httpClient) GetWithHeaders(ctx context.Context, path string, params map[string]string, headers map[string]string, result interface{}) error {
+	data, err := c.requestWithHeaders(ctx, http.MethodGet, path, nil, params, headers)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, result)
+}
+
 // Post performs an HTTP POST request and unmarshals the response into result.
 func (c *httpClient) Post(ctx context.Context, path string, body interface{}, result interface{}) error {
 	data, err := c.request(ctx, http.MethodPost, path, body, nil)

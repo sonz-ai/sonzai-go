@@ -42,14 +42,22 @@ const (
 type ClientOption func(*clientConfig)
 
 type clientConfig struct {
-	baseURL    string
-	timeout    time.Duration
-	httpClient *http.Client
+	baseURL        string
+	runtimeBaseURL string
+	timeout        time.Duration
+	httpClient     *http.Client
 }
 
 // WithBaseURL sets the API base URL.
 func WithBaseURL(url string) ClientOption {
 	return func(c *clientConfig) { c.baseURL = url }
+}
+
+// WithRuntimeBaseURL sets the deployed app-runtime base URL used by runtime-local
+// resources such as Crm. This is distinct from WithBaseURL, which targets the
+// Sonzai platform API.
+func WithRuntimeBaseURL(url string) ClientOption {
+	return func(c *clientConfig) { c.runtimeBaseURL = url }
 }
 
 // WithTimeout sets the HTTP request timeout.
@@ -177,6 +185,10 @@ type Client struct {
 	// capability. Includes CRUD, relations, bulk import, and audit.
 	Wisdom *WisdomResource
 
+	// Crm provides adapter-token access to the deployed runtime-local CRM.
+	// Configure it with WithRuntimeBaseURL or SONZAI_RUNTIME_BASE_URL.
+	Crm *CrmResource
+
 	// Schedules is a top-level alias of Agents.Schedules. The HTTP
 	// endpoints live under /api/v1/agents/{agentID}/users/{userID}/...
 	// but app code commonly reaches for client.Schedules at the top
@@ -232,12 +244,19 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 	if envURL := os.Getenv("SONZAI_BASE_URL"); envURL != "" {
 		cfg.baseURL = envURL
 	}
+	if envURL := os.Getenv("SONZAI_RUNTIME_BASE_URL"); envURL != "" {
+		cfg.runtimeBaseURL = envURL
+	}
 
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
 	hc := newHTTPClient(cfg.baseURL, apiKey, cfg.timeout, cfg.httpClient)
+	var runtimeHC *httpClient
+	if cfg.runtimeBaseURL != "" {
+		runtimeHC = newHTTPClient(cfg.runtimeBaseURL, apiKey, cfg.timeout, cfg.httpClient)
+	}
 
 	agents := newAgentsResource(hc)
 	evalClient := eval.New(hc)
@@ -274,6 +293,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Composio:             &ComposioResource{http: hc},
 		Skills:               &SkillsResource{http: hc},
 		Wisdom:               &WisdomResource{http: hc},
+		Crm:                  &CrmResource{http: runtimeHC},
 		Schedules:            agents.Schedules,
 		http:                 hc,
 	}, nil
