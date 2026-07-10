@@ -102,6 +102,10 @@ type Client struct {
 	// one after another, threading each step's findings into the next.
 	Pipelines *PipelinesResource
 
+	// Routing manages project routing tiers, guide/handoff rules, channel
+	// bindings, and permanent contact-to-agent routes.
+	Routing *RoutingResource
+
 	// ProjectConfig provides project-scoped configuration management.
 	ProjectConfig *ProjectConfigResource
 
@@ -189,6 +193,12 @@ type Client struct {
 	// Configure it with WithRuntimeBaseURL or SONZAI_RUNTIME_BASE_URL.
 	Crm *CrmResource
 
+	// Runtime provides the stable control-plane contract used by custom
+	// runtimes: fetch context, read/report turns, and submit signed usage.
+	// LLM provider calls deliberately do not live here; they execute inside
+	// the caller's runtime, directly against the selected provider.
+	Runtime *RuntimeResource
+
 	// Schedules is a top-level alias of Agents.Schedules. The HTTP
 	// endpoints live under /api/v1/agents/{agentID}/users/{userID}/...
 	// but app code commonly reaches for client.Schedules at the top
@@ -272,6 +282,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Channels:             &ChannelsResource{http: hc},
 		CustomAgents:         &CustomAgentsResource{http: hc},
 		Pipelines:            &PipelinesResource{http: hc},
+		Routing:              &RoutingResource{http: hc},
 		ProjectConfig:        &ProjectConfigResource{http: hc},
 		AccountConfig:        &AccountConfigResource{http: hc},
 		CustomLLM:            &CustomLLMResource{http: hc},
@@ -294,6 +305,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 		Skills:               &SkillsResource{http: hc},
 		Wisdom:               &WisdomResource{http: hc},
 		Crm:                  &CrmResource{http: runtimeHC},
+		Runtime:              &RuntimeResource{http: hc},
 		Schedules:            agents.Schedules,
 		http:                 hc,
 	}, nil

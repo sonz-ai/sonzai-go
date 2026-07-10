@@ -33,8 +33,9 @@ type CustomAgent struct {
 	UpdatedAt      string                 `json:"updated_at"`
 }
 
-// CustomAgentInput is the create/update payload. Model must be an allowed
-// Anthropic model (claude-sonnet-4-6 | claude-haiku-4-5).
+// CustomAgentInput is the create/update payload. New runtime-owned
+// definitions should use Model="runtime-default"; legacy Anthropic model
+// hints remain accepted during migration.
 type CustomAgentInput struct {
 	Slug           string                 `json:"slug"`
 	Name           string                 `json:"name"`

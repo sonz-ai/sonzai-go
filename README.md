@@ -4,7 +4,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/sonz-ai/sonzai-go)](https://goreportcard.com/report/github.com/sonz-ai/sonzai-go)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The official Go SDK for the [Sonzai Mind Layer API](https://sonz.ai). Build AI agents with persistent memory, evolving personality, proactive behaviors, and real-time voice.
+The official Go SDK for the [Sonzai Mind Layer API](https://sonz.ai). Build
+tenant runtimes that use Sonzai memory while calling their LLM provider
+directly.
 
 Zero dependencies — Go standard library only.
 
@@ -39,25 +41,25 @@ func main() {
     client := sonzai.MustNewClient("")
     ctx := context.Background()
 
-    // Stream a chat response
-    err := client.Agents.ChatStream(ctx,
-        sonzai.AgentChatParams{
-            AgentID: "your-agent-id",
-            ChatOptions: sonzai.ChatOptions{
-                Messages: []sonzai.ChatMessage{{Role: "user", Content: "Hello!"}},
-                UserID:   "user-123",
-            },
-        },
-        func(event sonzai.ChatStreamEvent) error {
-            fmt.Print(event.Content())
-            return nil
-        },
-    )
-    if err != nil {
-        panic(err)
-    }
+    // Sonzai Cloud supplies memory and tool definitions only.
+    bundle, err := client.Runtime.ContextBundle(ctx, "your-agent-id",
+        sonzai.RuntimeContextBundleParams{
+            UserID: "user-123", SessionID: "session-123",
+            CurrentMessage: "Hello!",
+        })
+    if err != nil { panic(err) }
+
+    // Invoke OpenAI, Gemini, OpenRouter, or your own endpoint here, from this
+    // runtime. Provider credentials and quota never pass through platform-api.
+    fmt.Printf("context ready: %d system parts\n", len(bundle.SystemPromptParts))
 }
 ```
+
+`Client.Runtime` intentionally has no completion method. After a direct
+provider call, use `ReportTurns` to persist the transcript and
+`SignRuntimeUsageReport` + `SubmitUsageReport` for attributed billing. Standard
+usage is benchmark provider cost × 1.33; BYOK/BYOM usage is a 33% Sonzai
+service fee because the tenant pays its provider directly.
 
 See the [examples/](examples/) directory for complete, runnable programs covering chat, agent lifecycle, memory, voice, and evaluation.
 

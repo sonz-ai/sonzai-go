@@ -3,6 +3,28 @@
 All notable changes to `github.com/sonz-ai/sonzai-go` are documented here. The
 project follows [Semantic Versioning](https://semver.org/). Dates are `YYYY-MM-DD`.
 
+## 1.9.0 — 2026-07-10
+
+### Added
+
+- `Client.Runtime`, the provider-neutral custom-runtime contract for fetching
+  per-turn context, reading and reporting transcripts, downloading versioned
+  backend-agent artifacts, and submitting invoice-grade signed usage reports.
+- Cross-language usage schema v2, canonical HMAC-SHA256 signing helpers,
+  provider/model/agent/project attribution, cache token fields, billing mode,
+  idempotent report IDs, and unreported-turn accounting.
+- `Client.Routing` for routing policies, guide/handoff configuration, channel
+  bindings, contact classification, and permanent-route overrides.
+
+### Changed
+
+- Runtime architecture is now explicit: the SDK control plane contains no LLM
+  completion method. Custom runtimes call their provider directly and use
+  `Client.Runtime` for Sonzai memory and metering.
+- `RuntimeBillingModeStandard` represents provider benchmark cost × 1.33;
+  `RuntimeBillingModeBYOK` represents the 33% service fee when BYOK/BYOM pays
+  the upstream provider directly.
+
 ## 1.8.0 — 2026-07-10
 
 ### Added

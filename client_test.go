@@ -98,6 +98,12 @@ func TestNewClientCreatesResources(t *testing.T) {
 	if c.Crm == nil {
 		t.Fatal("Crm is nil")
 	}
+	if c.Runtime == nil {
+		t.Fatal("Runtime is nil")
+	}
+	if c.Routing == nil {
+		t.Fatal("Routing is nil")
+	}
 }
 
 // ---------------------------------------------------------------------------

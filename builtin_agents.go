@@ -7,7 +7,9 @@ import (
 	"strconv"
 )
 
-// Sonzai Built-in Agents are platform-hosted vertical task agents. They run
+// Deprecated execution client for the legacy platform-hosted built-in-agent
+// surface. New runtimes download provider-neutral artifacts through
+// Client.Runtime.BackendAgentArtifacts and execute them locally. Legacy agents run
 // fully managed on the Sonzai platform — no provisioning, prompting, or tool
 // wiring required — and bill per invocation (with BYOK pass-through where
 // configured). Catalog slugs are listed below; call List for live metadata.
