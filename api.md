@@ -5,6 +5,7 @@
 ```go
 client := sonzai.NewClient("sk-...",
     sonzai.WithBaseURL("https://api.sonz.ai"),  // or SONZAI_BASE_URL env var
+    sonzai.WithRuntimeBaseURL("https://runtime.example.com"), // or SONZAI_RUNTIME_BASE_URL env var
     sonzai.WithTimeout(60 * time.Second),
 )
 ```
@@ -15,6 +16,24 @@ client := sonzai.NewClient("sk-...",
 | `client.Knowledge` | `*KnowledgeResource` | Project-scoped knowledge base operations |
 | `client.Eval` | `*eval.Client` | Evaluation, simulation, and benchmarking |
 | `client.Voices` | `*VoicesResource` | Global voice catalog |
+| `client.Crm` | `*CrmResource` | Runtime-local CRM adapter import and event feed |
+
+## Runtime CRM
+
+Configure `WithRuntimeBaseURL` or `SONZAI_RUNTIME_BASE_URL`; the normal
+`WithBaseURL` setting continues to target the platform API. Use the runtime
+adapter token as the client API key.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `Import(ctx, contacts, opts)` | `*CrmImportResult, error` | Bulk upsert contacts via `POST /api/rt/crm/import`; idempotent by `external_ref` |
+| `ImportContacts(ctx, contacts, opts)` | `*CrmImportResult, error` | Alias for `Import` |
+| `Events(ctx, opts)` | `*CrmEventEnvelope, error` | Fetch one cursor-paginated page from `GET /api/rt/crm/events` |
+| `EventIterator(opts)` | `*CrmEventIterator` | Pull helper over the CRM event feed; `Next` returns `io.EOF` on an empty poll |
+
+`CrmImportOptions.TenantID` and `CrmEventsOptions.TenantID` are sent as
+`X-Sonzai-Tenant-ID` for managed/shared runtimes where tenant ID is not pinned
+in the app-runtime process.
 
 ## Agents
 

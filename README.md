@@ -75,6 +75,7 @@ client := sonzai.MustNewClient("")
 // Options
 client := sonzai.MustNewClient("",
     sonzai.WithBaseURL("https://api.sonz.ai"),      // or SONZAI_BASE_URL env var
+    sonzai.WithRuntimeBaseURL("https://runtime.example.com"), // or SONZAI_RUNTIME_BASE_URL env var
     sonzai.WithTimeout(60*time.Second),              // default 30s
     sonzai.WithHTTPClient(&http.Client{...}),        // custom transport / proxy / mTLS
 )
@@ -112,6 +113,7 @@ The `Client` exposes these top-level resource groups:
 | `Org` | Organization billing and usage |
 | `Workbench` | Internal simulation and debugging |
 | `Support` | Support tickets |
+| `Crm` | Runtime-local CRM adapter import and event feed |
 
 Sub-resources on `client.Agents`:
 
@@ -130,6 +132,36 @@ client.Agents.Priming       // user priming & batch import
 client.Agents.Inventory     // user inventory
 client.Agents.Schedules     // user-scoped recurring events
 ```
+
+## Runtime CRM
+
+The runtime CRM is served by a deployed `app-runtime` instance under
+`/api/rt/crm/*`, not by the Sonzai platform API. Configure both the adapter
+token and runtime base URL before using `client.Crm`:
+
+```go
+client := sonzai.MustNewClient("adapter-token",
+    sonzai.WithRuntimeBaseURL("https://runtime.example.com"),
+)
+
+result, err := client.Crm.Import(ctx, []sonzai.CrmImportItem{{
+    ExternalRef: "sf-123",
+    FirstName:   "Grace",
+    LastName:    "Hopper",
+    Emails:      json.RawMessage(`["grace@example.com"]`),
+}}, &sonzai.CrmImportOptions{TenantID: "tenant-a"})
+
+events, err := client.Crm.Events(ctx, &sonzai.CrmEventsOptions{
+    Cursor:   savedCursor,
+    Limit:    100,
+    TenantID: "tenant-a",
+})
+savedCursor = events.NextCursor
+```
+
+Only the adapter-token surface is exposed: bulk contact import and the cursor
+event feed. Staff CRM CRUD routes are browser-session routes in the runtime and
+are not part of the headless SDK surface.
 
 ## Bring Your Own Key (BYOK)
 
