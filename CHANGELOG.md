@@ -3,6 +3,25 @@
 All notable changes to `github.com/sonz-ai/sonzai-go` are documented here. The
 project follows [Semantic Versioning](https://semver.org/). Dates are `YYYY-MM-DD`.
 
+## 1.8.0 — 2026-07-10
+
+### Added
+
+- New `Crm` resource on the client (`client.Crm`) for adapter-token access to
+  a deployed app-runtime's runtime-local CRM. Configure its target with
+  `WithRuntimeBaseURL` or `SONZAI_RUNTIME_BASE_URL`; it uses that runtime base
+  URL rather than `https://api.sonz.ai`.
+- Runtime CRM adapter routes: bulk contact upsert through
+  `POST /api/rt/crm/import` (idempotent by `external_ref`) and the
+  cursor-paginated change feed at `GET /api/rt/crm/events`, including the
+  `EventIterator` pull helper.
+- Runtime CRM request and response types for contacts, companies, pipelines,
+  stages, deals, activities, custom fields, imports, and change-feed events.
+  Managed/shared runtimes can receive `X-Sonzai-Tenant-ID` through the CRM
+  import and events options.
+- The adapter-token surface intentionally excludes staff CRM CRUD routes,
+  which require browser-session authentication in the runtime.
+
 ## Unreleased
 
 ### Added
