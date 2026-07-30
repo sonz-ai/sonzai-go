@@ -505,6 +505,13 @@ func TestVoiceGetToken(t *testing.T) {
 		if r.URL.Path != "/api/v1/agents/agent-1/voice/live-ws-token" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
+		var body VoiceTokenOptions
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if body.AdditionalSystemContext != "Bond stage: Close" {
+			t.Fatalf("additional system context = %q", body.AdditionalSystemContext)
+		}
 		jsonResponse(w, 200, VoiceStreamToken{
 			WSURL: "wss://api.sonz.ai/ws/voice/live", AuthToken: "tok-123",
 		})
@@ -512,7 +519,7 @@ func TestVoiceGetToken(t *testing.T) {
 	defer server.Close()
 
 	result, err := client.Agents.Voice.GetToken(context.Background(), "agent-1", VoiceTokenOptions{
-		VoiceName: "Kore", Language: "en-US",
+		VoiceName: "Kore", Language: "en-US", AdditionalSystemContext: "Bond stage: Close",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
