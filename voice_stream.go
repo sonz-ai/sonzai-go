@@ -105,10 +105,11 @@ type VoiceStreamToken struct {
 
 // VoiceTokenOptions configures a voice live WebSocket token request.
 type VoiceTokenOptions struct {
-	VoiceName            string `json:"voiceName,omitempty"`
-	Language             string `json:"language,omitempty"`
-	UserID               string `json:"userId,omitempty"`
-	CompiledSystemPrompt string `json:"compiledSystemPrompt,omitempty"`
+	VoiceName               string `json:"voiceName,omitempty"`
+	Language                string `json:"language,omitempty"`
+	UserID                  string `json:"userId,omitempty"`
+	CompiledSystemPrompt    string `json:"compiledSystemPrompt,omitempty"`
+	AdditionalSystemContext string `json:"additionalSystemContext,omitempty"`
 }
 
 // GetToken obtains a short-lived token for voice live WebSocket streaming.
